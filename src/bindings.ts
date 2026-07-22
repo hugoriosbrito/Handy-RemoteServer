@@ -133,86 +133,6 @@ async changeExtraRecordingBufferSetting(ms: number) : Promise<Result<null, strin
     else return { status: "error", error: e  as any };
 }
 },
-async getRemoteServerStatus() : Promise<Result<RemoteServerStatus, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("get_remote_server_status") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changeRemoteServerEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_remote_server_enabled_setting", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changeRemoteServerPortSetting(port: number) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_remote_server_port_setting", { port }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changeRemoteLocalNetworkEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_remote_local_network_enabled_setting", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changeRemoteAccessEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_remote_access_enabled_setting", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async changeRemoteDeviceApprovalRequiredSetting(enabled: boolean) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("change_remote_device_approval_required_setting", { enabled }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async createRemotePairingSession() : Promise<Result<PairingSessionResponse, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("create_remote_pairing_session") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async approveRemotePairingSession(sessionId: string, approve: boolean) : Promise<Result<PairingApproveResult, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("approve_remote_pairing_session", { sessionId, approve }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async listRemoteDevices() : Promise<Result<DeviceInfo[], string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("list_remote_devices") };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
-async revokeRemoteDevice(deviceId: string) : Promise<Result<null, string>> {
-    try {
-    return { status: "ok", data: await TAURI_INVOKE("revoke_remote_device", { deviceId }) };
-} catch (e) {
-    if(e instanceof Error) throw e;
-    else return { status: "error", error: e  as any };
-}
-},
 async changePasteDelayMsSetting(ms: number) : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("change_paste_delay_ms_setting", { ms }) };
@@ -559,6 +479,86 @@ async triggerUpdateCheck() : Promise<Result<null, string>> {
 async showMainWindowCommand() : Promise<Result<null, string>> {
     try {
     return { status: "ok", data: await TAURI_INVOKE("show_main_window_command") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async getRemoteServerStatus() : Promise<Result<RemoteServerStatus, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("get_remote_server_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeRemoteServerEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_remote_server_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeRemoteServerPortSetting(port: number) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_remote_server_port_setting", { port }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeRemoteLocalNetworkEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_remote_local_network_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeRemoteAccessEnabledSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_remote_access_enabled_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async changeRemoteDeviceApprovalRequiredSetting(enabled: boolean) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("change_remote_device_approval_required_setting", { enabled }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async createRemotePairingSession() : Promise<Result<PairingSessionResponse, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("create_remote_pairing_session") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async approveRemotePairingSession(sessionId: string, approve: boolean) : Promise<Result<PairingApproveResult, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("approve_remote_pairing_session", { sessionId, approve }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async listRemoteDevices() : Promise<Result<DeviceInfo[], string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("list_remote_devices") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async revokeRemoteDevice(deviceId: string) : Promise<Result<null, string>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("revoke_remote_device", { deviceId }) };
 } catch (e) {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
@@ -926,10 +926,8 @@ async updateRecordingRetentionPeriod(period: string) : Promise<Result<null, stri
 }
 },
 /**
- * Checks if the Mac is a laptop by detecting battery presence
- * 
- * This uses pmset to check for battery information.
- * Returns true if a battery is detected (laptop), false otherwise (desktop)
+ * Stub implementation for non-macOS platforms
+ * Always returns false since laptop detection is macOS-specific
  */
 async isLaptop() : Promise<Result<boolean, string>> {
     try {
@@ -991,13 +989,35 @@ whats_new_last_seen_version?: string; selected_model?: string; onboarding_comple
  * not gated on this — that follows model capability. Migrated from the old
  * `overlay_position` (position `none` → style `None`).
  */
-overlay_style?: OverlayStyle; remote_server_enabled?: boolean; remote_server_port?: number; remote_local_network_enabled?: boolean; remote_access_enabled?: boolean; remote_device_approval_required?: boolean }
+overlay_style?: OverlayStyle; 
+/**
+ * Handy Remote: enable the in-process mobile access server.
+ */
+remote_server_enabled?: boolean; 
+/**
+ * Handy Remote listen port (default 8765).
+ */
+remote_server_port?: number; 
+/**
+ * Allow LAN discovery / binding for mobile clients.
+ */
+remote_local_network_enabled?: boolean; 
+/**
+ * Allow remote (non-LAN) endpoints such as Tailscale in the QR payload.
+ */
+remote_access_enabled?: boolean; 
+/**
+ * Require explicit desktop approval when pairing a new device.
+ */
+remote_device_approval_required?: boolean }
 export type AudioDevice = { index: string; name: string; is_default: boolean }
 export type AutoSubmitKey = "enter" | "ctrl_enter" | "cmd_enter"
 export type AvailableAccelerators = { transcribe: string[]; ort: string[]; gpu_devices: GpuDeviceOption[] }
 export type BindingResponse = { success: boolean; binding: ShortcutBinding | null; error: string | null }
 export type ClipboardHandling = "dont_modify" | "copy_to_clipboard"
 export type CustomSounds = { start: boolean; stop: boolean }
+export type DeviceCredentials = { deviceId: string; accessToken: string; refreshToken: string; serverFingerprint: string }
+export type DeviceInfo = { id: string; name: string; platform: string | null; createdAt: string; lastSeenAt: string | null }
 export type EngineType = 
 /**
  * Any GGML/GGUF model loaded through transcribe-cpp (Whisper, Parakeet,
@@ -1056,10 +1076,15 @@ export type OverlayPosition = "top" | "bottom"
  */
 export type OverlayStyle = "none" | "minimal" | "live"
 export type PaginatedHistory = { entries: HistoryEntry[]; has_more: boolean }
+export type PairingApproveResult = { status: string; sessionId: string; credentials: DeviceCredentials | null }
+export type PairingSessionResponse = { sessionId: string; code: string; expiresAt: string; qr: QrPayload }
 export type PasteMethod = "ctrl_v" | "direct" | "none" | "shift_insert" | "ctrl_shift_v" | "external_script"
 export type PermissionAccess = "allowed" | "denied" | "unknown"
 export type PostProcessProvider = { id: string; label: string; base_url: string; allow_base_url_edit?: boolean; models_endpoint?: string | null; supports_structured_output?: boolean }
+export type QrEndpoints = { local: string | null; mdns: string | null; tailscale: string | null }
+export type QrPayload = { version: number; sessionId: string; secret: string; serverName: string; fingerprint: string; expiresAt: string; endpoints: QrEndpoints }
 export type RecordingRetentionPeriod = "never" | "preserve_limit" | "days_3" | "weeks_2" | "months_3"
+export type RemoteServerStatus = { enabled: boolean; running: boolean; port: number; fingerprint: string | null; server_name: string | null }
 export type SecretMap = Partial<{ [key in string]: string }>
 export type ShortcutBinding = { id: string; name: string; description: string; default_binding: string; current_binding: string }
 export type SoundTheme = "marimba" | "pop" | "custom"
@@ -1163,11 +1188,3 @@ function __makeEvents__<T extends Record<string, any>>(
 		},
 	);
 }
-
-export type RemoteServerStatus = { enabled: boolean; running: boolean; port: number; fingerprint: string | null; server_name: string | null }
-export type QrEndpoints = { local: string | null; mdns: string | null; tailscale: string | null }
-export type QrPayload = { version: number; session_id: string; secret: string; server_name: string; fingerprint: string; expires_at: string; endpoints: QrEndpoints }
-export type PairingSessionResponse = { session_id: string; code: string; expires_at: string; qr: QrPayload }
-export type DeviceCredentials = { device_id: string; access_token: string; refresh_token: string; server_fingerprint: string }
-export type PairingApproveResult = { status: string; session_id: string; credentials: DeviceCredentials | null }
-export type DeviceInfo = { id: string; name: string; platform: string | null; created_at: string; last_seen_at: string | null }

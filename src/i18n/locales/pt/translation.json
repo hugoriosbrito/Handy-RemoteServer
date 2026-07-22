@@ -16,7 +16,7 @@
     "history": "Histórico",
     "debug": "Depuração",
     "about": "Sobre",
-    "mobileAccess": "Acesso móvel"
+    "mobileAccess": "Sessão remota"
   },
   "onboarding": {
     "subtitle": "Para começar, escolha um modelo de transcrição",
@@ -574,6 +574,7 @@
       "title": "Acesso móvel",
       "enable": {
         "label": "Ativar acesso móvel",
+        "shortLabel": "Ativo",
         "description": "Inicia o servidor Handy Remote para celulares na sua rede."
       },
       "localNetwork": {
@@ -597,10 +598,14 @@
         "name": "Nome do computador"
       },
       "pairing": {
-        "title": "Conectar celular",
-        "description": "Cria uma sessão temporária de QR. Escaneie com o Handy Remote no celular.",
+        "title": "Parear celular",
+        "description": "Abra o Handy Remote no celular e escaneie este QR Code. Confirme o mesmo código de verificação nos dois aparelhos.",
         "connect": "Conectar novo celular",
+        "refreshQr": "Atualizar QR",
         "code": "Código de verificação",
+        "waitingServer": "Iniciando servidor remoto…",
+        "enableFirst": "Ative a sessão remota para exibir o QR Code.",
+        "confirmHint": "Confira se este código é o mesmo do celular antes de autorizar.",
         "claimedToast": "Celular aguardando aprovação",
         "pending": "{{device}} está aguardando aprovação",
         "authorize": "Autorizar",
@@ -609,10 +614,20 @@
         "rejected": "Pareamento cancelado"
       },
       "devices": {
-        "title": "Dispositivos autorizados",
-        "empty": "Nenhum celular conectado ainda.",
-        "revoke": "Revogar",
-        "revoked": "Acesso do dispositivo revogado"
+        "title": "Sessões ativas",
+        "subtitle": "Celulares autorizados neste computador.",
+        "empty": "Nenhum celular conectado ainda. Escaneie o QR Code acima para parear.",
+        "revoke": "Encerrar",
+        "revoked": "Sessão encerrada",
+        "unknownPlatform": "Dispositivo desconhecido",
+        "lastSeen": "Visto {{time}}"
+      },
+      "sessionTitle": "Sessão remota",
+      "sessionSubtitle": "Mostre o QR Code do Handy Remote e gerencie os celulares conectados.",
+      "advanced": {
+        "title": "Opções de rede",
+        "show": "Mostrar opções de rede",
+        "hide": "Ocultar opções de rede"
       }
     }
   },

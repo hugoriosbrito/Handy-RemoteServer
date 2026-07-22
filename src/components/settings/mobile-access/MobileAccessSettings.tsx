@@ -1,39 +1,24 @@
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { listen } from "@tauri-apps/api/event";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
+import {
+  MonitorSmartphone,
+  RefreshCw,
+  Smartphone,
+  Wifi,
+  WifiOff,
+} from "lucide-react";
 import { SettingsGroup } from "../../ui/SettingsGroup";
 import { ToggleSwitch } from "../../ui/ToggleSwitch";
 import { Button } from "../../ui/Button";
 import { useSettings } from "../../../hooks/useSettings";
-import { commands } from "@/bindings";
-
-type PairingSession = {
-  session_id: string;
-  code: string;
-  expires_at: string;
-  qr: {
-    version: number;
-    session_id: string;
-    secret: string;
-    server_name: string;
-    fingerprint: string;
-    expires_at: string;
-    endpoints: {
-      local: string | null;
-      mdns: string | null;
-      tailscale: string | null;
-    };
-  };
-};
-
-type RemoteDevice = {
-  id: string;
-  name: string;
-  platform: string | null;
-  created_at: string;
-  last_seen_at: string | null;
-};
+import {
+  commands,
+  type DeviceInfo,
+  type PairingSessionResponse,
+} from "@/bindings";
 
 type ClaimedEvent = {
   sessionId: string;
@@ -42,8 +27,33 @@ type ClaimedEvent = {
   platform?: string;
 };
 
+function formatCode(code: string): string {
+  if (code.length === 6) {
+    return `${code.slice(0, 3)} ${code.slice(3)}`;
+  }
+  return code;
+}
+
+function formatRelativeTime(epochSecs: string | null, locale: string): string {
+  if (!epochSecs) return "—";
+  const ts = Number(epochSecs) * 1000;
+  if (!Number.isFinite(ts)) return "—";
+  const diffSec = Math.round((Date.now() - ts) / 1000);
+  try {
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
+    if (Math.abs(diffSec) < 60) return rtf.format(-diffSec, "second");
+    if (Math.abs(diffSec) < 3600)
+      return rtf.format(-Math.round(diffSec / 60), "minute");
+    if (Math.abs(diffSec) < 86400)
+      return rtf.format(-Math.round(diffSec / 3600), "hour");
+    return rtf.format(-Math.round(diffSec / 86400), "day");
+  } catch {
+    return new Date(ts).toLocaleString();
+  }
+}
+
 export const MobileAccessSettings: React.FC = () => {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { getSetting, updateSetting, isUpdating } = useSettings();
   const enabled = getSetting("remote_server_enabled") ?? false;
   const port = getSetting("remote_server_port") ?? 8765;
@@ -55,10 +65,11 @@ export const MobileAccessSettings: React.FC = () => {
   const [running, setRunning] = useState(false);
   const [serverName, setServerName] = useState<string | null>(null);
   const [fingerprint, setFingerprint] = useState<string | null>(null);
-  const [pairing, setPairing] = useState<PairingSession | null>(null);
+  const [pairing, setPairing] = useState<PairingSessionResponse | null>(null);
   const [pendingClaim, setPendingClaim] = useState<ClaimedEvent | null>(null);
-  const [devices, setDevices] = useState<RemoteDevice[]>([]);
+  const [devices, setDevices] = useState<DeviceInfo[]>([]);
   const [busy, setBusy] = useState(false);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const refreshStatus = useCallback(async () => {
     try {
@@ -84,21 +95,7 @@ export const MobileAccessSettings: React.FC = () => {
     }
   }, []);
 
-  useEffect(() => {
-    refreshStatus();
-    refreshDevices();
-    const unlisten = listen<ClaimedEvent>("remote-pairing-claimed", (event) => {
-      setPendingClaim(event.payload);
-      toast.message(t("settings.mobileAccess.pairing.claimedToast"), {
-        description: event.payload.deviceName,
-      });
-    });
-    return () => {
-      unlisten.then((fn) => fn());
-    };
-  }, [refreshStatus, refreshDevices, t]);
-
-  const handleCreatePairing = async () => {
+  const createPairing = useCallback(async () => {
     setBusy(true);
     try {
       const result = await commands.createRemotePairingSession();
@@ -113,7 +110,47 @@ export const MobileAccessSettings: React.FC = () => {
     } finally {
       setBusy(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    refreshStatus();
+    refreshDevices();
+    const unlisten = listen<ClaimedEvent>("remote-pairing-claimed", (event) => {
+      setPendingClaim(event.payload);
+      toast.message(t("settings.mobileAccess.pairing.claimedToast"), {
+        description: event.payload.deviceName,
+      });
+    });
+    const interval = window.setInterval(() => {
+      refreshStatus();
+      refreshDevices();
+    }, 8000);
+    return () => {
+      unlisten.then((fn) => fn());
+      window.clearInterval(interval);
+    };
+  }, [refreshStatus, refreshDevices, t]);
+
+  // Auto-create / refresh QR when the remote server becomes available.
+  useEffect(() => {
+    if (enabled && running && !pairing && !busy) {
+      void createPairing();
+    }
+    if ((!enabled || !running) && pairing) {
+      setPairing(null);
+      setPendingClaim(null);
+    }
+  }, [enabled, running, pairing, busy, createPairing]);
+
+  const qrPayload = useMemo(() => {
+    if (!pairing) return "";
+    return JSON.stringify(pairing.qr);
+  }, [pairing]);
+
+  const endpointHint =
+    pairing?.qr.endpoints.local ||
+    pairing?.qr.endpoints.mdns ||
+    `localhost:${port}`;
 
   const handleApprove = async (approve: boolean) => {
     if (!pendingClaim) return;
@@ -132,6 +169,9 @@ export const MobileAccessSettings: React.FC = () => {
         setPendingClaim(null);
         setPairing(null);
         await refreshDevices();
+        if (approve && enabled && running) {
+          await createPairing();
+        }
       } else {
         toast.error(String(result.error));
       }
@@ -150,112 +190,143 @@ export const MobileAccessSettings: React.FC = () => {
     }
   };
 
+  const handleEnable = async (value: boolean) => {
+    await updateSetting("remote_server_enabled", value);
+    // Give the backend a moment to start/stop before refreshing UI state.
+    window.setTimeout(() => {
+      void refreshStatus();
+    }, 250);
+  };
+
   return (
     <div className="max-w-3xl w-full mx-auto space-y-6">
-      <SettingsGroup title={t("settings.mobileAccess.title")}>
-        <ToggleSwitch
-          checked={enabled}
-          onChange={(v) => updateSetting("remote_server_enabled", v)}
-          isUpdating={isUpdating("remote_server_enabled")}
-          label={t("settings.mobileAccess.enable.label")}
-          description={t("settings.mobileAccess.enable.description")}
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-        <ToggleSwitch
-          checked={localNetwork}
-          onChange={(v) => updateSetting("remote_local_network_enabled", v)}
-          isUpdating={isUpdating("remote_local_network_enabled")}
-          disabled={!enabled}
-          label={t("settings.mobileAccess.localNetwork.label")}
-          description={t("settings.mobileAccess.localNetwork.description")}
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-        <ToggleSwitch
-          checked={remoteAccess}
-          onChange={(v) => updateSetting("remote_access_enabled", v)}
-          isUpdating={isUpdating("remote_access_enabled")}
-          disabled={!enabled}
-          label={t("settings.mobileAccess.remoteAccess.label")}
-          description={t("settings.mobileAccess.remoteAccess.description")}
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-        <ToggleSwitch
-          checked={approvalRequired}
-          onChange={(v) =>
-            updateSetting("remote_device_approval_required", v)
-          }
-          isUpdating={isUpdating("remote_device_approval_required")}
-          disabled={!enabled}
-          label={t("settings.mobileAccess.approval.label")}
-          description={t("settings.mobileAccess.approval.description")}
-          descriptionMode="tooltip"
-          grouped={true}
-        />
-      </SettingsGroup>
+      <div className="px-1 space-y-1">
+        <h1 className="text-xl font-semibold text-text">
+          {t("settings.mobileAccess.sessionTitle")}
+        </h1>
+        <p className="text-sm text-mid-gray">
+          {t("settings.mobileAccess.sessionSubtitle")}
+        </p>
+      </div>
 
-      <SettingsGroup title={t("settings.mobileAccess.status.title")}>
-        <div className="px-4 py-3 text-sm space-y-1">
-          <p>
-            {t("settings.mobileAccess.status.running")}:{" "}
-            <span className={running ? "text-green-600" : "text-mid-gray"}>
-              {running
-                ? t("settings.mobileAccess.status.online")
-                : t("settings.mobileAccess.status.offline")}
-            </span>
+      <div
+        className={`rounded-xl border px-4 py-3 flex items-center gap-3 ${
+          running
+            ? "border-emerald-500/30 bg-emerald-500/10"
+            : "border-mid-gray/20 bg-mid-gray/5"
+        }`}
+      >
+        {running ? (
+          <Wifi className="text-emerald-600 shrink-0" size={20} />
+        ) : (
+          <WifiOff className="text-mid-gray shrink-0" size={20} />
+        )}
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">
+            {running
+              ? t("settings.mobileAccess.status.online")
+              : t("settings.mobileAccess.status.offline")}
+            {serverName ? ` · ${serverName}` : ""}
           </p>
-          <p className="text-mid-gray">
+          <p className="text-xs text-mid-gray truncate">
             {t("settings.mobileAccess.status.port")}: {port}
+            {endpointHint ? ` · ${endpointHint}` : ""}
           </p>
-          {serverName && (
-            <p className="text-mid-gray">
-              {t("settings.mobileAccess.status.name")}: {serverName}
-            </p>
-          )}
-          {fingerprint && (
-            <p className="text-xs text-mid-gray break-all font-mono">
-              {fingerprint}
-            </p>
-          )}
         </div>
-      </SettingsGroup>
+        <label
+          className={`inline-flex items-center gap-2 shrink-0 ${
+            isUpdating("remote_server_enabled")
+              ? "opacity-60 cursor-not-allowed"
+              : "cursor-pointer"
+          }`}
+          title={t("settings.mobileAccess.enable.description")}
+        >
+          <span className="text-xs font-medium text-mid-gray">
+            {t("settings.mobileAccess.enable.shortLabel")}
+          </span>
+          <input
+            type="checkbox"
+            className="sr-only peer"
+            checked={enabled}
+            disabled={isUpdating("remote_server_enabled")}
+            onChange={(e) => void handleEnable(e.target.checked)}
+          />
+          <div className="relative w-11 h-6 bg-mid-gray/20 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-logo-primary rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-background-ui" />
+        </label>
+      </div>
 
       <SettingsGroup title={t("settings.mobileAccess.pairing.title")}>
-        <div className="px-4 py-3 space-y-3">
+        <div className="px-4 py-5 space-y-5">
           <p className="text-sm text-mid-gray">
             {t("settings.mobileAccess.pairing.description")}
           </p>
-          <Button
-            variant="primary"
-            disabled={!enabled || !running || busy}
-            onClick={handleCreatePairing}
-          >
-            {t("settings.mobileAccess.pairing.connect")}
-          </Button>
-          {pairing && (
-            <div className="rounded-lg border border-mid-gray/20 bg-logo-primary/10 p-4 space-y-2">
-              <p className="text-sm font-medium">
-                {t("settings.mobileAccess.pairing.code")}
-              </p>
-              <p className="text-3xl font-bold tracking-widest">
-                {pairing.code.slice(0, 3)} {pairing.code.slice(3)}
-              </p>
-              <p className="text-xs text-mid-gray break-all">
-                {JSON.stringify(pairing.qr)}
-              </p>
+
+          <div className="flex flex-col md:flex-row gap-6 items-center md:items-start">
+            <div className="rounded-2xl border border-mid-gray/20 bg-white p-4 shadow-sm">
+              {pairing && running ? (
+                <QRCodeSVG
+                  value={qrPayload}
+                  size={200}
+                  level="M"
+                  bgColor="#ffffff"
+                  fgColor="#0f0f0f"
+                  includeMargin={false}
+                />
+              ) : (
+                <div className="w-[200px] h-[200px] flex flex-col items-center justify-center gap-2 text-mid-gray bg-mid-gray/5 rounded-lg">
+                  <MonitorSmartphone size={36} />
+                  <p className="text-xs text-center px-3">
+                    {enabled
+                      ? t("settings.mobileAccess.pairing.waitingServer")
+                      : t("settings.mobileAccess.pairing.enableFirst")}
+                  </p>
+                </div>
+              )}
             </div>
-          )}
+
+            <div className="flex-1 w-full space-y-4">
+              <div className="rounded-xl bg-logo-primary/15 border border-logo-primary/30 px-4 py-3">
+                <p className="text-xs uppercase tracking-wide text-mid-gray mb-1">
+                  {t("settings.mobileAccess.pairing.code")}
+                </p>
+                <p className="text-3xl font-bold tracking-[0.2em] text-text">
+                  {pairing && running ? formatCode(pairing.code) : "••• •••"}
+                </p>
+              </div>
+
+              {fingerprint && (
+                <p className="text-[11px] font-mono text-mid-gray break-all">
+                  {fingerprint}
+                </p>
+              )}
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="primary"
+                  disabled={!enabled || !running || busy}
+                  onClick={() => void createPairing()}
+                >
+                  <span className="inline-flex items-center gap-2">
+                    <RefreshCw size={14} />
+                    {t("settings.mobileAccess.pairing.refreshQr")}
+                  </span>
+                </Button>
+              </div>
+            </div>
+          </div>
+
           {pendingClaim && (
-            <div className="rounded-lg border border-mid-gray/20 p-4 space-y-3">
+            <div className="rounded-xl border border-background-ui/40 bg-logo-primary/10 p-4 space-y-3">
               <p className="text-sm font-medium">
                 {t("settings.mobileAccess.pairing.pending", {
                   device: pendingClaim.deviceName || "Mobile",
                 })}
               </p>
               <p className="text-2xl font-bold tracking-widest">
-                {pendingClaim.code.slice(0, 3)} {pendingClaim.code.slice(3)}
+                {formatCode(pendingClaim.code)}
+              </p>
+              <p className="text-xs text-mid-gray">
+                {t("settings.mobileAccess.pairing.confirmHint")}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -278,23 +349,40 @@ export const MobileAccessSettings: React.FC = () => {
         </div>
       </SettingsGroup>
 
-      <SettingsGroup title={t("settings.mobileAccess.devices.title")}>
+      <SettingsGroup
+        title={t("settings.mobileAccess.devices.title")}
+        description={t("settings.mobileAccess.devices.subtitle")}
+      >
         <div className="px-4 py-3 space-y-2">
           {devices.length === 0 ? (
-            <p className="text-sm text-mid-gray">
-              {t("settings.mobileAccess.devices.empty")}
-            </p>
+            <div className="flex items-start gap-3 py-2 text-sm text-mid-gray">
+              <Smartphone size={18} className="mt-0.5 shrink-0" />
+              <p>{t("settings.mobileAccess.devices.empty")}</p>
+            </div>
           ) : (
             devices.map((device) => (
               <div
                 key={device.id}
-                className="flex items-center justify-between gap-3 rounded-lg border border-mid-gray/20 px-3 py-2"
+                className="flex items-center justify-between gap-3 rounded-lg border border-mid-gray/20 px-3 py-3"
               >
-                <div>
-                  <p className="text-sm font-medium">{device.name}</p>
-                  <p className="text-xs text-mid-gray">
-                    {device.platform || "unknown"} · {device.id}
-                  </p>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="size-10 rounded-lg bg-logo-primary/25 flex items-center justify-center shrink-0">
+                    <Smartphone size={18} className="text-text" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{device.name}</p>
+                    <p className="text-xs text-mid-gray truncate">
+                      {device.platform ||
+                        t("settings.mobileAccess.devices.unknownPlatform")}{" "}
+                      ·{" "}
+                      {t("settings.mobileAccess.devices.lastSeen", {
+                        time: formatRelativeTime(
+                          device.lastSeenAt,
+                          i18n.language,
+                        ),
+                      })}
+                    </p>
+                  </div>
                 </div>
                 <Button
                   variant="danger-ghost"
@@ -308,6 +396,55 @@ export const MobileAccessSettings: React.FC = () => {
           )}
         </div>
       </SettingsGroup>
+
+      <div className="px-1">
+        <button
+          type="button"
+          className="text-sm text-mid-gray hover:text-text transition-colors cursor-pointer"
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          {showAdvanced
+            ? t("settings.mobileAccess.advanced.hide")
+            : t("settings.mobileAccess.advanced.show")}
+        </button>
+      </div>
+
+      {showAdvanced && (
+        <SettingsGroup title={t("settings.mobileAccess.advanced.title")}>
+          <ToggleSwitch
+            checked={localNetwork}
+            onChange={(v) => updateSetting("remote_local_network_enabled", v)}
+            isUpdating={isUpdating("remote_local_network_enabled")}
+            disabled={!enabled}
+            label={t("settings.mobileAccess.localNetwork.label")}
+            description={t("settings.mobileAccess.localNetwork.description")}
+            descriptionMode="tooltip"
+            grouped={true}
+          />
+          <ToggleSwitch
+            checked={remoteAccess}
+            onChange={(v) => updateSetting("remote_access_enabled", v)}
+            isUpdating={isUpdating("remote_access_enabled")}
+            disabled={!enabled}
+            label={t("settings.mobileAccess.remoteAccess.label")}
+            description={t("settings.mobileAccess.remoteAccess.description")}
+            descriptionMode="tooltip"
+            grouped={true}
+          />
+          <ToggleSwitch
+            checked={approvalRequired}
+            onChange={(v) =>
+              updateSetting("remote_device_approval_required", v)
+            }
+            isUpdating={isUpdating("remote_device_approval_required")}
+            disabled={!enabled}
+            label={t("settings.mobileAccess.approval.label")}
+            description={t("settings.mobileAccess.approval.description")}
+            descriptionMode="tooltip"
+            grouped={true}
+          />
+        </SettingsGroup>
+      )}
     </div>
   );
 };

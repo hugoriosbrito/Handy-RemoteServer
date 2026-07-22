@@ -1297,6 +1297,10 @@
     url = "https://registry.npmjs.org/@types/prop-types/-/prop-types-15.7.15.tgz";
     hash = "sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==";
   };
+  "@types/qrcode@1.5.6" = fetchurl {
+    url = "https://registry.npmjs.org/@types/qrcode/-/qrcode-1.5.6.tgz";
+    hash = "sha512-te7NQcV2BOvdj2b1hCAHzAoMNuj65kNBMz0KBaxM6c3VGBOhU0dURQKOtH8CFNI/dsKkwlv32p26qYQTWoB5bw==";
+  };
   "@types/react-dom@18.3.7" = fetchurl {
     url = "https://registry.npmjs.org/@types/react-dom/-/react-dom-18.3.7.tgz";
     hash = "sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==";
@@ -3293,6 +3297,10 @@
   "qrcode-terminal@0.11.0" = fetchurl {
     url = "https://registry.npmjs.org/qrcode-terminal/-/qrcode-terminal-0.11.0.tgz";
     hash = "sha512-Uu7ii+FQy4Qf82G4xu7ShHhjhGahEpCWc3x8UavY3CTcWV+ufmmCtwkr7ZKsX42jdL0kr1B5FKUeqJvAn51jzQ==";
+  };
+  "qrcode.react@4.2.0" = fetchurl {
+    url = "https://registry.npmjs.org/qrcode.react/-/qrcode.react-4.2.0.tgz";
+    hash = "sha512-QpgqWi8rD9DsS9EP3z7BT+5lY5SFhsqGjpgW5DY/i3mK4M9DTBNz3ErMi8BWYEfI3L0d8GIbGmcdFAS1uIRGjA==";
   };
   "query-string@7.1.3" = fetchurl {
     url = "https://registry.npmjs.org/query-string/-/query-string-7.1.3.tgz";
