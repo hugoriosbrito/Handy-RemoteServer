@@ -28,12 +28,14 @@ export {
   PairingClaimResponseSchema,
   PairingSessionSchema,
   PairingSessionStatusSchema,
+  PairingStatusResponseSchema,
   type PairingApproveRequest,
   type PairingApproveResponse,
   type PairingClaimRequest,
   type PairingClaimResponse,
   type PairingSession,
   type PairingSessionStatus,
+  type PairingStatusResponse,
 } from "./pairing.js";
 
 export {
@@ -45,7 +47,12 @@ export {
   type PostProcessingProvider,
 } from "./post-processing.js";
 
-export { QrPairingPayloadSchema, type QrPairingPayload } from "./qr.js";
+export {
+  QrEndpointsSchema,
+  QrPairingPayloadSchema,
+  type QrEndpoints,
+  type QrPairingPayload,
+} from "./qr.js";
 
 export {
   TranscriptionCreateRequestSchema,

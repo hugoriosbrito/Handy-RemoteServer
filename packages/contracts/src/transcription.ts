@@ -18,12 +18,13 @@ export const TranscriptionStatusSchema = z.enum([
 export type TranscriptionStatus = z.infer<typeof TranscriptionStatusSchema>;
 
 export const TranscriptionCreateResponseSchema = z.object({
-  id: z.string().uuid(),
-  status: TranscriptionStatusSchema,
+  id: z.string(),
   rawText: z.string(),
   finalText: z.string(),
   postProcessed: z.boolean(),
   promptName: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  status: TranscriptionStatusSchema.optional(),
   error: z.string().optional(),
 });
 export type TranscriptionCreateResponse = z.infer<

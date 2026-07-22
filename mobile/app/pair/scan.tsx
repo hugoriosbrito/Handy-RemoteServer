@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -7,21 +7,42 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Ionicons } from '@expo/vector-icons';
 import { Button, ScreenHeader } from '@/components/ui';
 import { colors, spacing, radius, typography } from '@/theme/tokens';
+import { api } from '@/api/client';
+import { useConnectionStore } from '@/stores/connectionStore';
 
 export default function ScanScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
+  const setPendingFromQr = useConnectionStore((s) => s.setPendingFromQr);
 
-  const handleBarCodeScanned = () => {
+  const handleBarCodeScanned = ({ data }: { data: string }) => {
     if (scanned) return;
     setScanned(true);
-    setTimeout(() => router.push('/pair/confirm'), 400);
+    try {
+      const qr = api.parseQrPayload(data);
+      setPendingFromQr(qr);
+      router.push('/pair/confirm');
+    } catch {
+      setScanned(false);
+      Alert.alert(
+        t('pair.scanTitle'),
+        t('pair.invalidQr', {
+          defaultValue: 'QR Code inválido. Escaneie o código exibido no Handy.',
+        }),
+      );
+    }
   };
 
   const handleEnterCode = () => {
-    router.push('/pair/confirm');
+    Alert.alert(
+      t('pair.enterCode'),
+      t('pair.codeRequiresQr', {
+        defaultValue:
+          'O código de 6 dígitos é para verificação no computador. Escaneie o QR Code para iniciar o pareamento.',
+      }),
+    );
   };
 
   if (!permission) {
@@ -34,9 +55,14 @@ export default function ScanScreen() {
         <View style={styles.permissionBox}>
           <ScreenHeader
             title={t('pair.scanTitle')}
-            subtitle="Permissão de câmera necessária para escanear o QR Code."
+            subtitle={t('pair.cameraPermission', {
+              defaultValue: 'Permissão de câmera necessária para escanear o QR Code.',
+            })}
           />
-          <Button title="Permitir câmera" onPress={requestPermission} />
+          <Button
+            title={t('pair.allowCamera', { defaultValue: 'Permitir câmera' })}
+            onPress={requestPermission}
+          />
         </View>
       </SafeAreaView>
     );

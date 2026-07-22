@@ -1,6 +1,13 @@
+import { Platform } from 'react-native';
 import { z } from 'zod';
 
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'https://api.handy.remote';
+const DEFAULT_API_URL =
+  Platform.OS === 'android'
+    ? 'http://10.0.2.2:8765'
+    : 'http://127.0.0.1:8765';
+
+export const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? DEFAULT_API_URL;
 
 export class ApiError extends Error {
   constructor(
@@ -13,35 +20,92 @@ export class ApiError extends Error {
   }
 }
 
-export const PairRequestSchema = z.object({
-  code: z.string().min(6).max(6),
-  deviceName: z.string(),
+export const QrPayloadSchema = z.object({
+  version: z.literal(1),
+  sessionId: z.string().min(1),
+  secret: z.string().min(1),
+  serverName: z.string().min(1),
+  fingerprint: z.string().min(1),
+  expiresAt: z.string().min(1),
+  endpoints: z
+    .object({
+      local: z.string().nullable().optional(),
+      mdns: z.string().nullable().optional(),
+      tailscale: z.string().nullable().optional(),
+    })
+    .optional(),
 });
 
-export const PairResponseSchema = z.object({
-  token: z.string(),
-  computerId: z.string(),
-  computerName: z.string(),
+export type QrPayload = z.infer<typeof QrPayloadSchema>;
+
+export const PairingClaimResponseSchema = z.object({
+  sessionId: z.string(),
+  code: z.string(),
+  serverName: z.string(),
+  status: z.string(),
 });
 
-export const TranscriptionSchema = z.object({
+export const DeviceCredentialsSchema = z.object({
+  deviceId: z.string(),
+  accessToken: z.string(),
+  refreshToken: z.string(),
+  serverFingerprint: z.string(),
+});
+
+export const PairingStatusSchema = z.object({
+  sessionId: z.string(),
+  status: z.string(),
+  code: z.string().optional(),
+  deviceName: z.string().nullable().optional(),
+  credentials: DeviceCredentialsSchema.nullable().optional(),
+});
+
+export const HistoryEntrySchema = z.object({
   id: z.string(),
-  text: z.string(),
-  createdAt: z.string(),
-  durationMs: z.number(),
-  computerName: z.string().optional(),
+  source: z.string(),
+  rawText: z.string(),
+  finalText: z.string(),
+  postProcessed: z.boolean(),
+  promptName: z.string().nullable().optional(),
+  audioAvailable: z.boolean(),
+  timestamp: z.number().optional(),
 });
 
-export const HistoryResponseSchema = z.object({
-  items: z.array(TranscriptionSchema),
+export const HealthSchema = z.object({
+  status: z.string(),
+  version: z.string(),
+  uptimeSeconds: z.number().optional(),
 });
 
-export type PairRequest = z.infer<typeof PairRequestSchema>;
-export type PairResponse = z.infer<typeof PairResponseSchema>;
-export type Transcription = z.infer<typeof TranscriptionSchema>;
+export const ServerInfoSchema = z.object({
+  name: z.string(),
+  version: z.string(),
+  fingerprint: z.string(),
+  platform: z.string().optional(),
+  port: z.number().optional(),
+});
+
+export type PairingClaimResponse = z.infer<typeof PairingClaimResponseSchema>;
+export type DeviceCredentials = z.infer<typeof DeviceCredentialsSchema>;
+export type PairingStatus = z.infer<typeof PairingStatusSchema>;
+export type HistoryEntry = z.infer<typeof HistoryEntrySchema>;
+
+/** UI-friendly transcription shape used by history/result screens. */
+export type Transcription = {
+  id: string;
+  text: string;
+  createdAt: string;
+  durationMs: number;
+  computerName?: string;
+};
 
 interface RequestOptions extends RequestInit {
   token?: string | null;
+  baseUrl?: string;
+}
+
+function resolveBaseUrl(override?: string): string {
+  return (override ?? API_BASE_URL).replace(/\/$/, '');
 }
 
 async function request<T>(
@@ -49,8 +113,8 @@ async function request<T>(
   schema: z.ZodType<T>,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { token, headers, ...rest } = options;
-  const url = `${API_BASE_URL}${path}`;
+  const { token, headers, baseUrl, ...rest } = options;
+  const url = `${resolveBaseUrl(baseUrl)}${path}`;
 
   const response = await fetch(url, {
     ...rest,
@@ -74,55 +138,84 @@ async function request<T>(
   return schema.parse(body);
 }
 
+function endpointToBaseUrl(endpoint: string | null | undefined): string | null {
+  if (!endpoint) return null;
+  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
+    return endpoint.replace(/\/$/, '');
+  }
+  return `http://${endpoint}`.replace(/\/$/, '');
+}
+
+/** Prefer LAN IP from QR; on Android emulator always use the host alias. */
+export function baseUrlFromQr(qr: QrPayload): string {
+  // With `adb reverse tcp:8765`, 10.0.2.2 and 127.0.0.1 both reach the host.
+  // Prefer the stable emulator alias so QR LAN IPs (container/host) still work.
+  if (Platform.OS === 'android') {
+    const local = endpointToBaseUrl(qr.endpoints?.local ?? null);
+    if (local) {
+      try {
+        const parsed = new URL(local);
+        return `http://10.0.2.2:${parsed.port || '8765'}`;
+      } catch {
+        return API_BASE_URL;
+      }
+    }
+    return API_BASE_URL;
+  }
+
+  const local = endpointToBaseUrl(qr.endpoints?.local ?? null);
+  return local ?? API_BASE_URL;
+}
+
 export const api = {
-  pair: (data: PairRequest) =>
-    request('/v1/pair', PairResponseSchema, {
+  health: (baseUrl?: string) =>
+    request('/v1/health', HealthSchema, { baseUrl }),
+
+  getServerInfo: (baseUrl?: string) =>
+    request('/v1/server', ServerInfoSchema, { baseUrl }),
+
+  claimPairing: (
+    data: {
+      sessionId: string;
+      secret: string;
+      deviceName: string;
+      platform?: string;
+    },
+    baseUrl?: string,
+  ) =>
+    request('/v1/pairing/claim', PairingClaimResponseSchema, {
       method: 'POST',
       body: JSON.stringify(data),
+      baseUrl,
     }),
 
-  getHistory: (token: string) =>
-    request('/v1/history', HistoryResponseSchema, { token }),
+  getPairingStatus: (sessionId: string, baseUrl?: string) =>
+    request(
+      `/v1/pairing/sessions/${encodeURIComponent(sessionId)}`,
+      PairingStatusSchema,
+      { baseUrl },
+    ),
 
-  getTranscription: (token: string, id: string) =>
-    request(`/v1/transcriptions/${id}`, TranscriptionSchema, { token }),
-
-  /** Stub — returns mock data when API is unreachable */
-  async pairMock(data: PairRequest): Promise<PairResponse> {
-    await new Promise((r) => setTimeout(r, 800));
+  getHistory: async (token: string, baseUrl?: string): Promise<{ items: Transcription[] }> => {
+    const entries = await request('/v1/history', z.array(HistoryEntrySchema), {
+      token,
+      baseUrl,
+    });
     return {
-      token: 'mock-token-' + Date.now(),
-      computerId: 'comp-1',
-      computerName: data.deviceName || 'MacBook Pro',
+      items: entries.map((e) => ({
+        id: e.id,
+        text: e.finalText || e.rawText,
+        createdAt: e.timestamp
+          ? new Date(e.timestamp * 1000).toISOString()
+          : new Date().toISOString(),
+        durationMs: 0,
+        computerName: e.source,
+      })),
     };
   },
 
-  async getHistoryMock(): Promise<{ items: Transcription[] }> {
-    await new Promise((r) => setTimeout(r, 300));
-    return {
-      items: [
-        {
-          id: '1',
-          text: 'Olá, esta é uma transcrição de exemplo gravada pelo celular.',
-          createdAt: new Date().toISOString(),
-          durationMs: 12500,
-          computerName: 'MacBook Pro',
-        },
-        {
-          id: '2',
-          text: 'Reunião de equipe sobre o lançamento do produto na próxima semana.',
-          createdAt: new Date(Date.now() - 86400000).toISOString(),
-          durationMs: 45200,
-          computerName: 'Desktop Linux',
-        },
-        {
-          id: '3',
-          text: 'Notas rápidas sobre a apresentação de hoje.',
-          createdAt: new Date(Date.now() - 172800000).toISOString(),
-          durationMs: 8300,
-          computerName: 'MacBook Pro',
-        },
-      ],
-    };
+  parseQrPayload: (raw: string): QrPayload => {
+    const parsed = JSON.parse(raw) as unknown;
+    return QrPayloadSchema.parse(parsed);
   },
 };

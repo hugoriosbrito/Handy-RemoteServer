@@ -1,12 +1,20 @@
 import { z } from "zod";
 
+export const QrEndpointsSchema = z.object({
+  local: z.string().nullable().optional(),
+  mdns: z.string().nullable().optional(),
+  tailscale: z.string().nullable().optional(),
+});
+export type QrEndpoints = z.infer<typeof QrEndpointsSchema>;
+
+/** Payload embedded in the desktop QR code (JSON string). */
 export const QrPairingPayloadSchema = z.object({
-  v: z.literal(1),
-  type: z.literal("handy-remote-pair"),
-  url: z.string().url(),
-  sessionId: z.string().uuid(),
-  pairingCode: z.string().min(6).max(12),
+  version: z.literal(1),
+  sessionId: z.string().min(1),
+  secret: z.string().min(1),
+  serverName: z.string().min(1),
   fingerprint: z.string().min(1),
-  serverName: z.string().optional(),
+  expiresAt: z.string().min(1),
+  endpoints: QrEndpointsSchema,
 });
 export type QrPairingPayload = z.infer<typeof QrPairingPayloadSchema>;

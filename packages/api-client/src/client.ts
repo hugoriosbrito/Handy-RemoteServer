@@ -1,12 +1,14 @@
 import {
+  DeviceCredentialsSchema,
   HealthResponseSchema,
-  HistoryListResponseSchema,
   HistoryEntrySchema,
+  HistoryListResponseSchema,
   PairingApproveRequestSchema,
   PairingApproveResponseSchema,
   PairingClaimRequestSchema,
   PairingClaimResponseSchema,
   PairingSessionSchema,
+  PairingStatusResponseSchema,
   PostProcessingInfoSchema,
   ServerInfoSchema,
   TranscriptionCreateRequestSchema,
@@ -20,6 +22,7 @@ import {
   type PairingClaimRequest,
   type PairingClaimResponse,
   type PairingSession,
+  type PairingStatusResponse,
   type PostProcessingInfo,
   type ServerInfo,
   type TranscriptionCreateRequest,
@@ -55,15 +58,15 @@ export class RemoteApiClient {
   }
 
   async health(): Promise<HealthResponse> {
-    return this.request("GET", "/health", HealthResponseSchema);
+    return this.request("GET", "/v1/health", HealthResponseSchema);
   }
 
   async getServerInfo(): Promise<ServerInfo> {
-    return this.request("GET", "/api/v1/server", ServerInfoSchema);
+    return this.request("GET", "/v1/server", ServerInfoSchema);
   }
 
   async createPairingSession(): Promise<PairingSession> {
-    return this.request("POST", "/api/v1/pairing/sessions", PairingSessionSchema);
+    return this.request("POST", "/v1/pairing/sessions", PairingSessionSchema);
   }
 
   async claimPairing(
@@ -72,7 +75,7 @@ export class RemoteApiClient {
     const body = PairingClaimRequestSchema.parse(payload);
     return this.request(
       "POST",
-      "/api/v1/pairing/claim",
+      "/v1/pairing/claim",
       PairingClaimResponseSchema,
       { json: body },
     );
@@ -84,9 +87,17 @@ export class RemoteApiClient {
     const body = PairingApproveRequestSchema.parse(payload);
     return this.request(
       "POST",
-      "/api/v1/pairing/approve",
+      "/v1/pairing/approve",
       PairingApproveResponseSchema,
-      { json: body, auth: true },
+      { json: body },
+    );
+  }
+
+  async getPairingStatus(sessionId: string): Promise<PairingStatusResponse> {
+    return this.request(
+      "GET",
+      `/v1/pairing/sessions/${encodeURIComponent(sessionId)}`,
+      PairingStatusResponseSchema,
     );
   }
 
@@ -110,34 +121,22 @@ export class RemoteApiClient {
 
     return this.request(
       "POST",
-      "/api/v1/transcriptions",
+      "/v1/transcriptions",
       TranscriptionCreateResponseSchema,
       { formData, auth: true },
     );
   }
 
-  async listHistory(params?: {
-    limit?: number;
-    offset?: number;
-  }): Promise<HistoryListResponse> {
-    const search = new URLSearchParams();
-    if (params?.limit !== undefined) {
-      search.set("limit", String(params.limit));
-    }
-    if (params?.offset !== undefined) {
-      search.set("offset", String(params.offset));
-    }
-
-    const query = search.toString();
-    const path = query ? `/api/v1/history?${query}` : "/api/v1/history";
-
-    return this.request("GET", path, HistoryListResponseSchema, { auth: true });
+  async listHistory(): Promise<HistoryListResponse> {
+    return this.request("GET", "/v1/history", HistoryListResponseSchema, {
+      auth: true,
+    });
   }
 
   async getHistoryEntry(id: string): Promise<HistoryEntry> {
     return this.request(
       "GET",
-      `/api/v1/history/${encodeURIComponent(id)}`,
+      `/v1/history/${encodeURIComponent(id)}`,
       HistoryEntrySchema,
       { auth: true },
     );
@@ -146,7 +145,7 @@ export class RemoteApiClient {
   async getPostProcessingInfo(): Promise<PostProcessingInfo> {
     return this.request(
       "GET",
-      "/api/v1/post-processing",
+      "/v1/post-processing",
       PostProcessingInfoSchema,
       { auth: true },
     );
@@ -155,10 +154,9 @@ export class RemoteApiClient {
   async refreshCredentials(
     refreshToken: string,
   ): Promise<DeviceCredentials> {
-    const { DeviceCredentialsSchema } = await import("@handy-remote/contracts");
     return this.request(
       "POST",
-      "/api/v1/auth/refresh",
+      "/v1/auth/refresh",
       DeviceCredentialsSchema,
       { json: { refreshToken } },
     );

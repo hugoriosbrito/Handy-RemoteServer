@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.9.4",
   "type": "module",
-  "workspaces": ["mobile", "packages/*"],
+  "workspaces": ["packages/*"],
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",

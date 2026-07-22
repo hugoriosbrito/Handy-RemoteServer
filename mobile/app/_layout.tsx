@@ -1,3 +1,4 @@
+import 'react-native-gesture-handler';
 import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -45,6 +46,7 @@ export default function RootLayout() {
           <Stack.Screen name="index" />
           <Stack.Screen name="pair/scan" />
           <Stack.Screen name="pair/confirm" />
+          <Stack.Screen name="pair/inject" />
           <Stack.Screen name="onboarding/microphone" />
           <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
           <Stack.Screen

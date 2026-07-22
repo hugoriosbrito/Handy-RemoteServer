@@ -1,8 +1,11 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import { baseUrlFromQr, type QrPayload } from '@/api/client';
 
 const TOKEN_KEY = 'handy_auth_token';
+const REFRESH_KEY = 'handy_refresh_token';
 const COMPUTER_KEY = 'handy_computer';
+const BASE_URL_KEY = 'handy_base_url';
 
 export interface Computer {
   id: string;
@@ -11,70 +14,149 @@ export interface Computer {
   isOnline: boolean;
 }
 
+export interface PendingPairing {
+  sessionId: string;
+  secret: string;
+  code: string;
+  serverName: string;
+  fingerprint: string;
+  baseUrl: string;
+}
+
 interface ConnectionState {
   token: string | null;
+  refreshToken: string | null;
+  baseUrl: string | null;
   computer: Computer | null;
   computers: Computer[];
   pairingCode: string;
+  pendingPairing: PendingPairing | null;
   isConnecting: boolean;
   isReconnecting: boolean;
   setPairingCode: (code: string) => void;
+  setPendingPairing: (pairing: PendingPairing | null) => void;
+  setPendingFromQr: (qr: QrPayload, code?: string) => void;
   setConnecting: (v: boolean) => void;
   setReconnecting: (v: boolean) => void;
-  connect: (token: string, computer: Computer) => Promise<void>;
+  connect: (
+    token: string,
+    computer: Computer,
+    opts?: { refreshToken?: string; baseUrl?: string },
+  ) => Promise<void>;
   disconnect: () => Promise<void>;
   loadPersisted: () => Promise<void>;
   addComputer: (computer: Computer) => void;
   removeComputer: (id: string) => void;
 }
 
+async function persist(key: string, value: string | null) {
+  try {
+    if (value === null) {
+      await SecureStore.deleteItemAsync(key);
+    } else {
+      await SecureStore.setItemAsync(key, value);
+    }
+  } catch {
+    // SecureStore is unavailable on some web/dev environments — ignore.
+  }
+}
+
+async function read(key: string): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync(key);
+  } catch {
+    return null;
+  }
+}
+
 export const useConnectionStore = create<ConnectionState>((set, get) => ({
   token: null,
+  refreshToken: null,
+  baseUrl: null,
   computer: null,
-  computers: [
-    {
-      id: 'comp-1',
-      name: 'MacBook Pro',
-      lastSeen: new Date().toISOString(),
-      isOnline: true,
-    },
-    {
-      id: 'comp-2',
-      name: 'Desktop Linux',
-      lastSeen: new Date(Date.now() - 3600000).toISOString(),
-      isOnline: false,
-    },
-  ],
-  pairingCode: '482916',
+  computers: [],
+  pairingCode: '',
+  pendingPairing: null,
   isConnecting: false,
   isReconnecting: false,
 
   setPairingCode: (code) => set({ pairingCode: code }),
+
+  setPendingPairing: (pairing) =>
+    set({
+      pendingPairing: pairing,
+      pairingCode: pairing?.code ?? get().pairingCode,
+    }),
+
+  setPendingFromQr: (qr, code) => {
+    const resolvedBaseUrl = baseUrlFromQr(qr);
+    set({
+      pendingPairing: {
+        sessionId: qr.sessionId,
+        secret: qr.secret,
+        code: code ?? '',
+        serverName: qr.serverName,
+        fingerprint: qr.fingerprint,
+        baseUrl: resolvedBaseUrl,
+      },
+      pairingCode: code ?? get().pairingCode,
+      baseUrl: resolvedBaseUrl,
+    });
+  },
+
   setConnecting: (v) => set({ isConnecting: v }),
   setReconnecting: (v) => set({ isReconnecting: v }),
 
-  connect: async (token, computer) => {
-    await SecureStore.setItemAsync(TOKEN_KEY, token);
-    await SecureStore.setItemAsync(COMPUTER_KEY, JSON.stringify(computer));
-    set({ token, computer });
+  connect: async (token, computer, opts) => {
+    const nextBaseUrl = opts?.baseUrl ?? get().baseUrl;
+    const refreshToken = opts?.refreshToken ?? get().refreshToken;
+    await persist(TOKEN_KEY, token);
+    await persist(COMPUTER_KEY, JSON.stringify(computer));
+    if (refreshToken) await persist(REFRESH_KEY, refreshToken);
+    if (nextBaseUrl) await persist(BASE_URL_KEY, nextBaseUrl);
+    set((s) => ({
+      token,
+      computer,
+      refreshToken: refreshToken ?? null,
+      baseUrl: nextBaseUrl ?? null,
+      computers: s.computers.some((c) => c.id === computer.id)
+        ? s.computers.map((c) => (c.id === computer.id ? computer : c))
+        : [...s.computers, computer],
+      pendingPairing: null,
+    }));
   },
 
   disconnect: async () => {
-    await SecureStore.deleteItemAsync(TOKEN_KEY);
-    await SecureStore.deleteItemAsync(COMPUTER_KEY);
-    set({ token: null, computer: null });
+    await persist(TOKEN_KEY, null);
+    await persist(REFRESH_KEY, null);
+    await persist(COMPUTER_KEY, null);
+    await persist(BASE_URL_KEY, null);
+    set({
+      token: null,
+      refreshToken: null,
+      computer: null,
+      baseUrl: null,
+    });
   },
 
   loadPersisted: async () => {
-    try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
-      const computerJson = await SecureStore.getItemAsync(COMPUTER_KEY);
-      if (token && computerJson) {
+    const token = await read(TOKEN_KEY);
+    const refreshToken = await read(REFRESH_KEY);
+    const computerJson = await read(COMPUTER_KEY);
+    const baseUrl = await read(BASE_URL_KEY);
+    if (token && computerJson) {
+      try {
         const computer = JSON.parse(computerJson) as Computer;
-        set({ token, computer });
+        set({
+          token,
+          refreshToken,
+          computer,
+          baseUrl,
+          computers: [computer],
+        });
+      } catch {
+        // ignore corrupt storage
       }
-    } catch {
-      // ignore
     }
   },
 

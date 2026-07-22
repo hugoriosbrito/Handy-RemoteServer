@@ -15,6 +15,7 @@ import { Input, Card } from '@/components/ui';
 import { colors, spacing, typography } from '@/theme/tokens';
 import { api, Transcription } from '@/api/client';
 import { formatDuration, useRecordingStore } from '@/stores/recordingStore';
+import { useConnectionStore } from '@/stores/connectionStore';
 
 function formatDateLabel(dateStr: string, t: (k: string) => string): string {
   const date = new Date(dateStr);
@@ -62,9 +63,20 @@ export default function HistoryScreen() {
   const router = useRouter();
   const [search, setSearch] = useState('');
 
+  const token = useConnectionStore((s) => s.token);
+  const baseUrl = useConnectionStore((s) => s.baseUrl);
+
   const { data, isLoading } = useQuery({
-    queryKey: ['history'],
-    queryFn: () => api.getHistoryMock(),
+    queryKey: ['history', token, baseUrl],
+    queryFn: async () => {
+      if (!token) return { items: [] as Transcription[] };
+      try {
+        return await api.getHistory(token, baseUrl ?? undefined);
+      } catch {
+        return { items: [] as Transcription[] };
+      }
+    },
+    enabled: Boolean(token),
   });
 
   const items = (data?.items ?? []).filter(

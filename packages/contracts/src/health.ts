@@ -15,10 +15,12 @@ export const ServerInfoSchema = z.object({
   version: z.string(),
   fingerprint: z.string(),
   platform: z.string().optional(),
+  port: z.number().optional(),
   capabilities: z.object({
     transcription: z.boolean(),
     postProcessing: z.boolean(),
     history: z.boolean(),
+    streaming: z.boolean().optional(),
     audioPlayback: z.boolean().optional(),
   }),
 });

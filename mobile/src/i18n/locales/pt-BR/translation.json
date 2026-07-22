@@ -25,7 +25,19 @@
     "confirmSubtitle": "Verifique se este é o computador correto.",
     "pairingCode": "Código de pareamento",
     "authorize": "Autorizar",
-    "cancel": "Cancelar"
+    "cancel": "Cancelar",
+    "invalidQr": "QR Code inválido. Escaneie o código exibido no Handy.",
+    "codeRequiresQr": "O código de 6 dígitos é para verificação no computador. Escaneie o QR Code para iniciar o pareamento.",
+    "cameraPermission": "Permissão de câmera necessária para escanear o QR Code.",
+    "allowCamera": "Permitir câmera",
+    "missingQr": "Escaneie o QR Code do Handy antes de autorizar.",
+    "claiming": "Solicitando autorização…",
+    "waitingApproval": "Aguardando aprovação no computador. Confira o código {{code}}.",
+    "waiting": "Aguardando…",
+    "timeout": "Tempo esgotado. Tente escanear novamente.",
+    "rejected": "Pareamento recusado no computador.",
+    "expired": "Sessão expirada. Gere um novo QR no Handy.",
+    "failed": "Falha ao conectar. Tente novamente."
   },
   "onboarding": {
     "microphoneTitle": "Permitir microfone",

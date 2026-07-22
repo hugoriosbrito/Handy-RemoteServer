@@ -25,7 +25,19 @@
     "confirmSubtitle": "Verify this is the correct computer.",
     "pairingCode": "Pairing code",
     "authorize": "Authorize",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "invalidQr": "Invalid QR code. Scan the code shown in Handy.",
+    "codeRequiresQr": "The 6-digit code is for verification on the computer. Scan the QR code to start pairing.",
+    "cameraPermission": "Camera permission is required to scan the QR code.",
+    "allowCamera": "Allow camera",
+    "missingQr": "Scan the Handy QR code before authorizing.",
+    "claiming": "Requesting authorization…",
+    "waitingApproval": "Waiting for approval on the computer. Check code {{code}}.",
+    "waiting": "Waiting…",
+    "timeout": "Timed out. Try scanning again.",
+    "rejected": "Pairing was rejected on the computer.",
+    "expired": "Session expired. Generate a new QR in Handy.",
+    "failed": "Failed to connect. Try again."
   },
   "onboarding": {
     "microphoneTitle": "Allow microphone",
