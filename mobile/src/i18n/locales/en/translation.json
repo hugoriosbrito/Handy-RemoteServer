@@ -1,0 +1,96 @@
+{
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "back": "Back",
+    "save": "Save",
+    "search": "Search",
+    "copy": "Copy",
+    "share": "Share",
+    "more": "More",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "offline": "Offline"
+  },
+  "welcome": {
+    "title": "Transcribe from your phone",
+    "subtitle": "Record audio on your phone and transcribe on your computer with Handy.",
+    "connectComputer": "Connect computer"
+  },
+  "pair": {
+    "scanTitle": "Scan QR Code",
+    "scanHint": "Point your camera at the QR code shown in Handy on your computer.",
+    "enterCode": "Enter code",
+    "confirmTitle": "Confirm connection",
+    "confirmSubtitle": "Verify this is the correct computer.",
+    "pairingCode": "Pairing code",
+    "authorize": "Authorize",
+    "cancel": "Cancel"
+  },
+  "onboarding": {
+    "microphoneTitle": "Allow microphone",
+    "microphoneSubtitle": "Handy Remote needs the microphone to record and send audio to your computer.",
+    "allow": "Allow",
+    "notNow": "Not now"
+  },
+  "tabs": {
+    "record": "Record",
+    "history": "History",
+    "settings": "Settings"
+  },
+  "record": {
+    "title": "Record",
+    "postProcess": "Post-processing",
+    "postProcessHint": "Apply corrections and formatting after transcription.",
+    "startRecording": "Start recording",
+    "connectedTo": "Connected to {{name}}",
+    "notConnected": "No computer connected"
+  },
+  "recording": {
+    "title": "Recording",
+    "reconnecting": "Reconnecting",
+    "reconnectingHint": "Trying to restore connection to your computer…",
+    "pause": "Pause",
+    "resume": "Resume",
+    "finish": "Finish",
+    "cancel": "Cancel",
+    "livePreview": "Live preview"
+  },
+  "result": {
+    "title": "Transcription",
+    "recordAgain": "Record again",
+    "copied": "Copied!",
+    "duration": "Duration: {{duration}}"
+  },
+  "history": {
+    "title": "History",
+    "searchPlaceholder": "Search transcriptions…",
+    "empty": "No transcriptions yet.",
+    "today": "Today",
+    "yesterday": "Yesterday"
+  },
+  "computers": {
+    "title": "Computers",
+    "add": "Add computer",
+    "lastSeen": "Last seen: {{date}}",
+    "remove": "Remove",
+    "empty": "No paired computers."
+  },
+  "offlineQueue": {
+    "title": "Offline queue",
+    "subtitle": "Recordings waiting to send when connection is restored.",
+    "empty": "No recordings in queue.",
+    "pending": "{{count}} pending",
+    "retry": "Retry"
+  },
+  "settings": {
+    "title": "Settings",
+    "computers": "Computers",
+    "offlineQueue": "Offline queue",
+    "language": "Language",
+    "microphone": "Microphone",
+    "about": "About",
+    "version": "Version {{version}}",
+    "disconnect": "Disconnect"
+  }
+}

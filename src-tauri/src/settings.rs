@@ -464,6 +464,29 @@ pub struct AppSettings {
     /// `overlay_position` (position `none` → style `None`).
     #[serde(default = "default_overlay_style")]
     pub overlay_style: OverlayStyle,
+    /// Handy Remote: enable the in-process mobile access server.
+    #[serde(default)]
+    pub remote_server_enabled: bool,
+    /// Handy Remote listen port (default 8765).
+    #[serde(default = "default_remote_server_port")]
+    pub remote_server_port: u16,
+    /// Allow LAN discovery / binding for mobile clients.
+    #[serde(default = "default_true")]
+    pub remote_local_network_enabled: bool,
+    /// Allow remote (non-LAN) endpoints such as Tailscale in the QR payload.
+    #[serde(default)]
+    pub remote_access_enabled: bool,
+    /// Require explicit desktop approval when pairing a new device.
+    #[serde(default = "default_true")]
+    pub remote_device_approval_required: bool,
+}
+
+fn default_remote_server_port() -> u16 {
+    8765
+}
+
+fn default_true() -> bool {
+    true
 }
 
 fn default_model() -> String {
@@ -894,6 +917,11 @@ pub fn get_default_settings() -> AppSettings {
         extra_recording_buffer_ms: 0,
         vad_enabled: default_vad_enabled(),
         overlay_style: default_overlay_style(),
+        remote_server_enabled: false,
+        remote_server_port: default_remote_server_port(),
+        remote_local_network_enabled: true,
+        remote_access_enabled: false,
+        remote_device_approval_required: true,
     }
 }
 

@@ -15,7 +15,8 @@
     "postProcessing": "Post Process",
     "history": "History",
     "debug": "Debug",
-    "about": "About"
+    "about": "About",
+    "mobileAccess": "Mobile Access"
   },
   "onboarding": {
     "subtitle": "To get started, choose a transcription model",
@@ -567,6 +568,51 @@
           "description": "High-performance tensor library for on-device machine learning inference",
           "details": "Handy's local speech-to-text is built on transcribe.cpp and ggml. Thanks to the amazing work by Georgi Gerganov and contributors."
         }
+      }
+    },
+    "mobileAccess": {
+      "title": "Mobile Access",
+      "enable": {
+        "label": "Enable mobile access",
+        "description": "Start the Handy Remote server so phones can connect on your network."
+      },
+      "localNetwork": {
+        "label": "Allow local network",
+        "description": "Include LAN endpoints in pairing QR codes."
+      },
+      "remoteAccess": {
+        "label": "Allow remote access",
+        "description": "Include Tailscale or other remote endpoints when available."
+      },
+      "approval": {
+        "label": "Require device approval",
+        "description": "New phones must be approved on this computer before they can transcribe."
+      },
+      "status": {
+        "title": "Server status",
+        "running": "Status",
+        "online": "Running",
+        "offline": "Stopped",
+        "port": "Port",
+        "name": "Computer name"
+      },
+      "pairing": {
+        "title": "Connect phone",
+        "description": "Create a temporary QR session. Scan it with Handy Remote on your phone.",
+        "connect": "Connect new phone",
+        "code": "Verification code",
+        "claimedToast": "Phone is waiting for approval",
+        "pending": "{{device}} is waiting for approval",
+        "authorize": "Authorize",
+        "cancel": "Cancel",
+        "approved": "Phone authorized",
+        "rejected": "Pairing cancelled"
+      },
+      "devices": {
+        "title": "Authorized devices",
+        "empty": "No phones connected yet.",
+        "revoke": "Revoke",
+        "revoked": "Device access revoked"
       }
     }
   },

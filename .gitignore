@@ -42,3 +42,6 @@ blob-report/
 
 # Nix build output
 result
+mobile/node_modules
+mobile/.expo
+mobile/dist

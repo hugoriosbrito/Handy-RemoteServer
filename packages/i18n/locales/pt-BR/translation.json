@@ -1,0 +1,88 @@
+{
+  "onboarding": {
+    "title": "Handy Remote",
+    "subtitle": "Controle a transcrição do seu desktop pelo celular",
+    "welcome": "Bem-vindo ao Handy Remote",
+    "description": "Conecte este dispositivo ao Handy no seu computador para gravar e transcrever de qualquer lugar.",
+    "getStarted": "Começar",
+    "skip": "Pular por agora"
+  },
+  "pairing": {
+    "title": "Pareamento",
+    "scanQr": "Escaneie o QR code no Handy desktop",
+    "enterCode": "Ou digite o código de pareamento",
+    "codePlaceholder": "Código de 6 dígitos",
+    "deviceName": "Nome do dispositivo",
+    "deviceNamePlaceholder": "Meu celular",
+    "waitingApproval": "Aguardando aprovação no desktop…",
+    "approved": "Dispositivo pareado com sucesso",
+    "rejected": "Pareamento recusado",
+    "expired": "Sessão de pareamento expirada",
+    "retry": "Tentar novamente",
+    "unpair": "Desparear dispositivo",
+    "serverFingerprint": "Impressão digital do servidor"
+  },
+  "recording": {
+    "title": "Gravação",
+    "start": "Gravar",
+    "stop": "Parar",
+    "processing": "Processando…",
+    "postProcess": "Pós-processar com IA",
+    "selectPrompt": "Selecionar prompt",
+    "noPrompt": "Sem prompt",
+    "success": "Transcrição concluída",
+    "failed": "Falha na transcrição",
+    "micPermission": "Permissão do microfone necessária",
+    "holdToTalk": "Segure para falar",
+    "tapToToggle": "Toque para alternar gravação"
+  },
+  "history": {
+    "title": "Histórico",
+    "empty": "Nenhuma transcrição ainda",
+    "loadMore": "Carregar mais",
+    "rawText": "Texto bruto",
+    "finalText": "Texto final",
+    "postProcessed": "Pós-processado",
+    "audioAvailable": "Áudio disponível",
+    "audioUnavailable": "Áudio indisponível",
+    "sourceDesktop": "Desktop",
+    "sourceRemote": "Remoto",
+    "sourceImport": "Importado"
+  },
+  "settings": {
+    "title": "Configurações",
+    "server": "Servidor",
+    "serverUrl": "URL do servidor",
+    "connectionStatus": "Status da conexão",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "language": "Idioma",
+    "theme": "Tema",
+    "themeLight": "Claro",
+    "themeDark": "Escuro",
+    "themeSystem": "Sistema",
+    "about": "Sobre",
+    "version": "Versão"
+  },
+  "offlineQueue": {
+    "title": "Fila offline",
+    "pending": "{{count}} gravação pendente",
+    "pending_plural": "{{count}} gravações pendentes",
+    "syncing": "Sincronizando…",
+    "syncNow": "Sincronizar agora",
+    "synced": "Tudo sincronizado",
+    "failed": "Falha ao sincronizar",
+    "retryFailed": "Tentar novamente falhas",
+    "empty": "Nenhuma gravação na fila"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "save": "Salvar",
+    "delete": "Excluir",
+    "error": "Erro",
+    "loading": "Carregando…",
+    "retry": "Tentar novamente",
+    "back": "Voltar"
+  }
+}

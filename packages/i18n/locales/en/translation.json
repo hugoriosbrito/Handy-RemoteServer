@@ -1,0 +1,88 @@
+{
+  "onboarding": {
+    "title": "Handy Remote",
+    "subtitle": "Control desktop transcription from your phone",
+    "welcome": "Welcome to Handy Remote",
+    "description": "Connect this device to Handy on your computer to record and transcribe from anywhere.",
+    "getStarted": "Get started",
+    "skip": "Skip for now"
+  },
+  "pairing": {
+    "title": "Pairing",
+    "scanQr": "Scan the QR code in Handy desktop",
+    "enterCode": "Or enter the pairing code",
+    "codePlaceholder": "6-digit code",
+    "deviceName": "Device name",
+    "deviceNamePlaceholder": "My phone",
+    "waitingApproval": "Waiting for approval on desktop…",
+    "approved": "Device paired successfully",
+    "rejected": "Pairing rejected",
+    "expired": "Pairing session expired",
+    "retry": "Try again",
+    "unpair": "Unpair device",
+    "serverFingerprint": "Server fingerprint"
+  },
+  "recording": {
+    "title": "Recording",
+    "start": "Record",
+    "stop": "Stop",
+    "processing": "Processing…",
+    "postProcess": "Post-process with AI",
+    "selectPrompt": "Select prompt",
+    "noPrompt": "No prompt",
+    "success": "Transcription complete",
+    "failed": "Transcription failed",
+    "micPermission": "Microphone permission required",
+    "holdToTalk": "Hold to talk",
+    "tapToToggle": "Tap to toggle recording"
+  },
+  "history": {
+    "title": "History",
+    "empty": "No transcriptions yet",
+    "loadMore": "Load more",
+    "rawText": "Raw text",
+    "finalText": "Final text",
+    "postProcessed": "Post-processed",
+    "audioAvailable": "Audio available",
+    "audioUnavailable": "Audio unavailable",
+    "sourceDesktop": "Desktop",
+    "sourceRemote": "Remote",
+    "sourceImport": "Imported"
+  },
+  "settings": {
+    "title": "Settings",
+    "server": "Server",
+    "serverUrl": "Server URL",
+    "connectionStatus": "Connection status",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "language": "Language",
+    "theme": "Theme",
+    "themeLight": "Light",
+    "themeDark": "Dark",
+    "themeSystem": "System",
+    "about": "About",
+    "version": "Version"
+  },
+  "offlineQueue": {
+    "title": "Offline queue",
+    "pending": "{{count}} pending recording",
+    "pending_plural": "{{count}} pending recordings",
+    "syncing": "Syncing…",
+    "syncNow": "Sync now",
+    "synced": "All synced",
+    "failed": "Sync failed",
+    "retryFailed": "Retry failed",
+    "empty": "No recordings in queue"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "error": "Error",
+    "loading": "Loading…",
+    "retry": "Retry",
+    "back": "Back"
+  }
+}

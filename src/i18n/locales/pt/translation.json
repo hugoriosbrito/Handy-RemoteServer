@@ -15,7 +15,8 @@
     "postProcessing": "Pós-Processamento",
     "history": "Histórico",
     "debug": "Depuração",
-    "about": "Sobre"
+    "about": "Sobre",
+    "mobileAccess": "Acesso móvel"
   },
   "onboarding": {
     "subtitle": "Para começar, escolha um modelo de transcrição",
@@ -567,6 +568,51 @@
       "whatsNewUpdates": {
         "label": "Mostrar novidades",
         "description": "Mostrar notas de versão após atualizações do Handy"
+      }
+    },
+    "mobileAccess": {
+      "title": "Acesso móvel",
+      "enable": {
+        "label": "Ativar acesso móvel",
+        "description": "Inicia o servidor Handy Remote para celulares na sua rede."
+      },
+      "localNetwork": {
+        "label": "Permitir rede local",
+        "description": "Inclui endpoints da rede local no QR de pareamento."
+      },
+      "remoteAccess": {
+        "label": "Permitir acesso remoto",
+        "description": "Inclui Tailscale ou outros endpoints remotos quando disponíveis."
+      },
+      "approval": {
+        "label": "Exigir aprovação de dispositivos",
+        "description": "Novos celulares precisam ser autorizados neste computador."
+      },
+      "status": {
+        "title": "Status do servidor",
+        "running": "Status",
+        "online": "Em execução",
+        "offline": "Parado",
+        "port": "Porta",
+        "name": "Nome do computador"
+      },
+      "pairing": {
+        "title": "Conectar celular",
+        "description": "Cria uma sessão temporária de QR. Escaneie com o Handy Remote no celular.",
+        "connect": "Conectar novo celular",
+        "code": "Código de verificação",
+        "claimedToast": "Celular aguardando aprovação",
+        "pending": "{{device}} está aguardando aprovação",
+        "authorize": "Autorizar",
+        "cancel": "Cancelar",
+        "approved": "Celular autorizado",
+        "rejected": "Pareamento cancelado"
+      },
+      "devices": {
+        "title": "Dispositivos autorizados",
+        "empty": "Nenhum celular conectado ainda.",
+        "revoke": "Revogar",
+        "revoked": "Acesso do dispositivo revogado"
       }
     }
   },

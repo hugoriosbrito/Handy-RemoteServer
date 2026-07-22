@@ -54,7 +54,7 @@ rubato = "0.16.2"
 hound = "3.5.1"
 log = "0.4.25"
 env_filter = "0.1.0"
-tokio = "1.43.0"
+tokio = { version = "1.43.0", features = ["full"] }
 vad-rs = { git = "https://github.com/cjpais/vad-rs", default-features = false }
 enigo = "0.6.1"
 rodio = { git = "https://github.com/cjpais/rodio.git" }
@@ -84,6 +84,10 @@ tauri-plugin-dialog = "2.6"
 hf-hub = { git = "https://github.com/cjpais/hf-hub", branch = "cancellable-downloads", features = [
   "tokio",
 ] }
+# Handy Remote in-process HTTP server
+axum = { version = "0.8", features = ["multipart", "ws"] }
+tower-http = { version = "0.6", features = ["cors", "limit"] }
+uuid = { version = "1", features = ["v4", "serde"] }
 
 [target.'cfg(unix)'.dependencies]
 signal-hook = "0.3"

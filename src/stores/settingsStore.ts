@@ -164,6 +164,16 @@ const settingUpdaters: {
     commands.changeTranscribeGpuDevice(value as number),
   extra_recording_buffer_ms: (value) =>
     commands.changeExtraRecordingBufferSetting(value as number),
+  remote_server_enabled: (value) =>
+    commands.changeRemoteServerEnabledSetting(value as boolean),
+  remote_server_port: (value) =>
+    commands.changeRemoteServerPortSetting(value as number),
+  remote_local_network_enabled: (value) =>
+    commands.changeRemoteLocalNetworkEnabledSetting(value as boolean),
+  remote_access_enabled: (value) =>
+    commands.changeRemoteAccessEnabledSetting(value as boolean),
+  remote_device_approval_required: (value) =>
+    commands.changeRemoteDeviceApprovalRequiredSetting(value as boolean),
 };
 
 export const useSettingsStore = create<SettingsStore>()(

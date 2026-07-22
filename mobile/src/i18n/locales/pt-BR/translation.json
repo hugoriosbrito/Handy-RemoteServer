@@ -1,0 +1,96 @@
+{
+  "common": {
+    "cancel": "Cancelar",
+    "confirm": "Confirmar",
+    "back": "Voltar",
+    "save": "Salvar",
+    "search": "Buscar",
+    "copy": "Copiar",
+    "share": "Compartilhar",
+    "more": "Mais",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "offline": "Offline"
+  },
+  "welcome": {
+    "title": "Transcreva pelo celular",
+    "subtitle": "Grave áudio no celular e transcreva no seu computador com Handy.",
+    "connectComputer": "Conectar computador"
+  },
+  "pair": {
+    "scanTitle": "Escanear QR Code",
+    "scanHint": "Aponte a câmera para o QR Code exibido no Handy no computador.",
+    "enterCode": "Digitar código",
+    "confirmTitle": "Confirmar conexão",
+    "confirmSubtitle": "Verifique se este é o computador correto.",
+    "pairingCode": "Código de pareamento",
+    "authorize": "Autorizar",
+    "cancel": "Cancelar"
+  },
+  "onboarding": {
+    "microphoneTitle": "Permitir microfone",
+    "microphoneSubtitle": "O Handy Remote precisa do microfone para gravar e enviar áudio ao computador.",
+    "allow": "Permitir",
+    "notNow": "Agora não"
+  },
+  "tabs": {
+    "record": "Gravar",
+    "history": "Histórico",
+    "settings": "Ajustes"
+  },
+  "record": {
+    "title": "Gravar",
+    "postProcess": "Pós-processamento",
+    "postProcessHint": "Aplicar correções e formatação após a transcrição.",
+    "startRecording": "Iniciar gravação",
+    "connectedTo": "Conectado a {{name}}",
+    "notConnected": "Nenhum computador conectado"
+  },
+  "recording": {
+    "title": "Gravando",
+    "reconnecting": "Reconectando",
+    "reconnectingHint": "Tentando restabelecer conexão com o computador…",
+    "pause": "Pausar",
+    "resume": "Retomar",
+    "finish": "Finalizar",
+    "cancel": "Cancelar",
+    "livePreview": "Prévia ao vivo"
+  },
+  "result": {
+    "title": "Transcrição",
+    "recordAgain": "Gravar novamente",
+    "copied": "Copiado!",
+    "duration": "Duração: {{duration}}"
+  },
+  "history": {
+    "title": "Histórico",
+    "searchPlaceholder": "Buscar transcrições…",
+    "empty": "Nenhuma transcrição ainda.",
+    "today": "Hoje",
+    "yesterday": "Ontem"
+  },
+  "computers": {
+    "title": "Computadores",
+    "add": "Adicionar computador",
+    "lastSeen": "Visto por último: {{date}}",
+    "remove": "Remover",
+    "empty": "Nenhum computador pareado."
+  },
+  "offlineQueue": {
+    "title": "Fila offline",
+    "subtitle": "Gravações aguardando envio quando a conexão for restabelecida.",
+    "empty": "Nenhuma gravação na fila.",
+    "pending": "{{count}} pendente(s)",
+    "retry": "Tentar novamente"
+  },
+  "settings": {
+    "title": "Ajustes",
+    "computers": "Computadores",
+    "offlineQueue": "Fila offline",
+    "language": "Idioma",
+    "microphone": "Microfone",
+    "about": "Sobre",
+    "version": "Versão {{version}}",
+    "disconnect": "Desconectar"
+  }
+}

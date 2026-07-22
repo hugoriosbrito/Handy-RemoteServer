@@ -13,6 +13,8 @@ mod llm_client;
 mod managers;
 mod overlay;
 pub mod portable;
+mod post_processing;
+mod remote;
 mod settings;
 mod shortcut;
 mod signal_handle;
@@ -181,6 +183,17 @@ fn initialize_core_logic(app_handle: &AppHandle) {
     app_handle.manage(transcription_manager.clone());
     app_handle.manage(history_manager.clone());
     app_handle.manage(tray::CurrentTrayIconState::new());
+
+    // Handy Remote: share the same managers via an in-process Axum server.
+    match remote::init_remote_server(app_handle) {
+        Ok(server) => {
+            app_handle.manage(server);
+            remote::maybe_start_remote_server(app_handle);
+        }
+        Err(err) => {
+            log::error!("Failed to initialize Handy Remote server: {}", err);
+        }
+    }
 
     // Note: Shortcuts are NOT initialized here.
     // The frontend is responsible for calling the `initialize_shortcuts` command
@@ -659,6 +672,16 @@ pub fn run(cli_args: CliArgs) {
             shortcut::handy_keys::stop_handy_keys_recording,
             trigger_update_check,
             show_main_window_command,
+            commands::remote::get_remote_server_status,
+            commands::remote::change_remote_server_enabled_setting,
+            commands::remote::change_remote_server_port_setting,
+            commands::remote::change_remote_local_network_enabled_setting,
+            commands::remote::change_remote_access_enabled_setting,
+            commands::remote::change_remote_device_approval_required_setting,
+            commands::remote::create_remote_pairing_session,
+            commands::remote::approve_remote_pairing_session,
+            commands::remote::list_remote_devices,
+            commands::remote::revoke_remote_device,
             commands::cancel_operation,
             commands::is_portable,
             commands::get_app_dir_path,
