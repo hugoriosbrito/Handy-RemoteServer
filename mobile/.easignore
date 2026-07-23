@@ -1,0 +1,20 @@
+# Dependencies & build outputs
+node_modules/
+.expo/
+dist/
+web-build/
+android/
+ios/
+
+# Large local artifacts (never upload to EAS)
+*.apk
+*.aab
+Expo-Go-*.apk
+
+# Env / secrets
+.env
+.env.*
+
+# Misc
+**/.DS_Store
+*.log

@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
-import { colors, typography, spacing } from '@/theme/tokens';
+import { typography, spacing, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface ScreenHeaderProps {
   title: string;
@@ -7,6 +9,8 @@ interface ScreenHeaderProps {
 }
 
 export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={styles.container}>
       <Text style={styles.title}>{title}</Text>
@@ -15,7 +19,8 @@ export function ScreenHeader({ title, subtitle }: ScreenHeaderProps) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   container: {
     marginBottom: spacing.lg,
   },

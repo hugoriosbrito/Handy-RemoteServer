@@ -47,16 +47,20 @@
     "expired": "Sessão expirada. Gere um novo QR no Handy.",
     "failed": "Falha ao conectar. Tente novamente.",
     "localNetwork": "Rede local",
-    "enterCodeTitle": "Digitar código",
-    "enterCodeHint": "Cole o payload do QR ou o endpoint do Handy.",
-    "manualEndpoint": "Endereço (ex.: 192.168.0.10:8765)"
+    "enterCodeTitle": "Colar payload",
+    "enterCodeHint": "Cole o JSON do QR do Handy (ou o link handy-remote:// com payload=).",
+    "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
+    "paste": "Colar da ?rea de transfer?ncia"
   },
   "onboarding": {
     "microphoneTitle": "Permitir microfone",
     "microphoneSubtitle": "O Handy precisa do microfone para gravar e enviar sua voz ao computador.",
     "privacyNote": "Só fica ativo durante a gravação.",
     "allow": "Permitir",
-    "notNow": "Agora não"
+    "notNow": "Agora não",
+    "deniedTitle": "Microfone bloqueado",
+    "deniedBody": "Voc? negou o acesso ao microfone. Abra as configura??es do sistema para permitir e voltar a gravar.",
+    "openSettings": "Abrir configura??es"
   },
   "tabs": {
     "record": "Gravar",
@@ -74,13 +78,20 @@
     "onlineLocal": "Online · Rede local",
     "lastTranscription": "Última transcrição",
     "modelLabel": "Whisper Turbo",
-    "modelMeta": "Português · Streaming"
+    "modelFallback": "Nenhum modelo",
+    "modelMeta": "Toque para escolher o modelo no PC",
+    "modelStreaming": "Transcrição em tempo real",
+    "modelOffline": "Transcrição ao finalizar"
   },
   "recording": {
     "title": "Gravando",
     "reconnecting": "Reconectando…",
     "audioSaved": "Áudio salvo no celular",
     "tryingComputer": "Tentando {{name}}",
+    "tryingComputerAttempt": "Tentando {{name}} ({{attempt}})",
+    "sendFailedTitle": "Não foi possível enviar",
+    "sendFailed": "Falha ao enviar para {{name}}. O PC parece online — tente de novo.",
+    "uploadFailed": "Falha no envio. Tente novamente.",
     "lastSegment": "Último trecho",
     "finishAndSave": "Finalizar e salvar",
     "reconnectingHint": "Tentando restabelecer conexão com o computador…",
@@ -88,7 +99,16 @@
     "resume": "Retomar",
     "finish": "Finalizar",
     "cancel": "Cancelar",
-    "livePreview": "Prévia ao vivo"
+    "livePreview": "Prévia ao vivo",
+    "backgroundPaused": "Pausado — a gravação não continua em segundo plano. Toque em retomar.",
+    "notifTitle": "Handy está gravando",
+    "notifDesc": "Toque para voltar à gravação",
+    "microphoneDenied": "Microfone bloqueado",
+    "permissionRequired": "Permita o acesso ao microfone nas configura??es do sistema para gravar.",
+    "openSettings": "Abrir configura??es",
+    "cancelConfirmTitle": "Descartar grava??o?",
+    "cancelConfirmBody": "O ?udio capturado at? agora ser? perdido.",
+    "cancelConfirmAction": "Descartar"
   },
   "result": {
     "title": "Transcrição",
@@ -97,7 +117,18 @@
     "duration": "Duração: {{duration}}",
     "meta": "{{duration}} · {{model}} · {{processing}}",
     "audio": "Áudio",
-    "expiresIn": "Apaga em 24 h"
+    "expiresIn": "Apaga em 24 h",
+    "noAudio": "Áudio indisponível",
+    "retranscribe": "Re-transcrever",
+    "reprocess": "Reprocessar (limpeza IA)",
+    "retranscribing": "Re-transcrevendo…",
+    "reprocessing": "Reprocessando…",
+    "actionFailed": "Não foi possível concluir. Tente de novo.",
+    "noServerEntry": "Esta gravação não está mais no PC.",
+    "playbackFailed": "Não foi possível reproduzir o áudio.",
+    "empty": "Sem transcri??o para mostrar.",
+    "processingPP": "p?s-processado",
+    "processingRaw": "bruto"
   },
   "history": {
     "title": "Histórico",
@@ -117,6 +148,16 @@
     "onlineLocal": "Online · Rede local",
     "offlineTailscale": "Offline · Tailscale"
   },
+  "models": {
+    "title": "Modelos",
+    "subtitle": "Escolha o modelo de transcrição usado no computador. Apenas modelos baixados podem ser selecionados.",
+    "translation": "Tradução",
+    "streaming": "Tempo real",
+    "notDownloaded": "Não baixado",
+    "empty": "Nenhum modelo encontrado.",
+    "loadError": "Não foi possível carregar os modelos.",
+    "notDownloadedHint": "Baixe este modelo no computador para poder usá-lo."
+  },
   "offlineQueue": {
     "title": "Fila offline",
     "subtitle": "Gravações aguardando envio quando a conexão for restabelecida.",
@@ -124,7 +165,16 @@
     "pending": "{{count}} pendente(s)",
     "pendingSize": "{{count}} pendentes · {{size}}",
     "computerOffline": "{{name}} está offline",
-    "retry": "Tentar novamente"
+    "retry": "Tentar novamente",
+    "pendingCount": "{{count}} pendente(s)",
+    "deleteItem": "Excluir grava??o",
+    "deleteTitle": "Excluir grava??o?",
+    "deleteBody": "Esta grava??o e seu ?udio ser?o apagados do celular.",
+    "status": {
+      "pending": "Pendente",
+      "uploading": "Enviando",
+      "failed": "Falhou"
+    }
   },
   "settings": {
     "title": "Ajustes",
@@ -137,10 +187,44 @@
     "deleteAudio": "Apagar áudio",
     "deleteAudioValue": "Após 24 horas",
     "biometrics": "Biometria",
+    "biometricsUnavailable": "Nenhuma biometria cadastrada neste aparelho.",
+    "darkMode": "Modo escuro",
     "diagnostics": "Diagnóstico",
     "microphone": "Microfone",
     "about": "Sobre",
     "version": "Versão {{version}}",
-    "disconnect": "Desconectar"
+    "disconnect": "Desconectar",
+    "audioRetention": "Apagar ?udio",
+    "audioRetentionTitle": "Quando apagar o ?udio",
+    "retention1h": "Ap?s 1 hora",
+    "retention24h": "Ap?s 24 horas",
+    "retention7d": "Ap?s 7 dias",
+    "retentionNever": "Nunca",
+    "microphoneHint": "Abrir configura??es do sistema"
+  },
+  "biometricGate": {
+    "title": "Handy Remote bloqueado",
+    "subtitle": "Autentique-se para continuar.",
+    "unlock": "Desbloquear",
+    "prompt": "Autentique-se para abrir o Handy Remote"
+  },
+  "diagnostics": {
+    "title": "Diagn?stico",
+    "subtitle": "Estado da conex?o com o computador pareado.",
+    "computer": "Computador",
+    "status": "Status",
+    "online": "Online",
+    "offline": "Offline",
+    "activeEndpoint": "Endere?o ativo",
+    "endpoints": "Endere?os conhecidos",
+    "queue": "Fila offline",
+    "queueItems": "{{count}} na fila",
+    "version": "Vers?o do app",
+    "testConnection": "Testar conex?o",
+    "testing": "Testando?",
+    "reachable": "Computador acess?vel.",
+    "unreachable": "N?o foi poss?vel alcan?ar o computador.",
+    "none": "?",
+    "notPaired": "Nenhum computador pareado."
   }
 }

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
-import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
+import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useConnectionStore, type Computer } from '@/stores/connectionStore';
 import { api } from '@/api/client';
 
@@ -27,6 +28,8 @@ export default function ComputersScreen() {
   const removeComputer = useConnectionStore((s) => s.removeComputer);
   const addComputer = useConnectionStore((s) => s.addComputer);
   const disconnect = useConnectionStore((s) => s.disconnect);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const query = useQuery({
     queryKey: ['devices', token, baseUrl],
@@ -78,7 +81,13 @@ export default function ComputersScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          accessibilityLabel={t('common.back')}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
 
@@ -146,7 +155,8 @@ export default function ComputersScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.backgroundAlt },
   container: { flex: 1, paddingHorizontal: spacing.lg },
   backBtn: {
@@ -164,7 +174,7 @@ const styles = StyleSheet.create({
   },
   list: { paddingBottom: spacing.md },
   card: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,

@@ -1,11 +1,14 @@
+import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { Linking } from 'react-native';
 import { Audio } from 'expo-av';
 import { Button } from '@/components/ui';
-import { colors, spacing, radius, typography } from '@/theme/tokens';
+import { spacing, radius, typography, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useSettingsStore } from '@/stores/settingsStore';
 
 export default function MicrophoneOnboardingScreen() {
@@ -13,6 +16,9 @@ export default function MicrophoneOnboardingScreen() {
   const router = useRouter();
   const setMicrophoneGranted = useSettingsStore((s) => s.setMicrophoneGranted);
   const setOnboardingComplete = useSettingsStore((s) => s.setOnboardingComplete);
+  const [showDenied, setShowDenied] = useState(false);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const finish = (granted: boolean) => {
     setMicrophoneGranted(granted);
@@ -23,7 +29,11 @@ export default function MicrophoneOnboardingScreen() {
   const requestPermission = async () => {
     try {
       const { status } = await Audio.requestPermissionsAsync();
-      finish(status === 'granted');
+      if (status === 'granted') {
+        finish(true);
+      } else {
+        setShowDenied(true);
+      }
     } catch {
       finish(false);
     }
@@ -32,34 +42,54 @@ export default function MicrophoneOnboardingScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <View style={styles.illustration}>
-          <View style={styles.micCircle}>
-            <Ionicons name="mic" size={56} color={colors.primary} />
-          </View>
-        </View>
-
-        <Text style={styles.title}>{t('onboarding.microphoneTitle')}</Text>
-        <Text style={styles.subtitle}>{t('onboarding.microphoneSubtitle')}</Text>
-
-        <View style={styles.note}>
-          <Ionicons name="lock-closed" size={16} color={colors.midGray} />
-          <Text style={styles.noteText}>{t('onboarding.privacyNote')}</Text>
-        </View>
-
-        <View style={styles.actions}>
-          <Button title={t('onboarding.allow')} onPress={() => void requestPermission()} />
-          <Button
-            title={t('onboarding.notNow')}
-            onPress={() => finish(false)}
-            variant="ghost"
-          />
-        </View>
+        {showDenied ? (
+          <>
+            <View style={styles.illustration}>
+              <View style={styles.micCircle}>
+                <Ionicons name="mic-off" size={56} color={colors.error} />
+              </View>
+            </View>
+            <Text style={styles.title}>{t('onboarding.deniedTitle')}</Text>
+            <Text style={styles.subtitle}>{t('onboarding.deniedBody')}</Text>
+            <View style={styles.actions}>
+              <Button title={t('onboarding.openSettings')} onPress={() => void Linking.openSettings()} />
+              <Button
+                title={t('onboarding.notNow')}
+                onPress={() => finish(false)}
+                variant="ghost"
+              />
+            </View>
+          </>
+        ) : (
+          <>
+            <View style={styles.illustration}>
+              <View style={styles.micCircle}>
+                <Ionicons name="mic" size={56} color={colors.primary} />
+              </View>
+            </View>
+            <Text style={styles.title}>{t('onboarding.microphoneTitle')}</Text>
+            <Text style={styles.subtitle}>{t('onboarding.microphoneSubtitle')}</Text>
+            <View style={styles.note}>
+              <Ionicons name="lock-closed" size={16} color={colors.midGray} />
+              <Text style={styles.noteText}>{t('onboarding.privacyNote')}</Text>
+            </View>
+            <View style={styles.actions}>
+              <Button title={t('onboarding.allow')} onPress={() => void requestPermission()} />
+              <Button
+                title={t('onboarding.notNow')}
+                onPress={() => finish(false)}
+                variant="ghost"
+              />
+            </View>
+          </>
+        )}
       </View>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   container: {
     flex: 1,

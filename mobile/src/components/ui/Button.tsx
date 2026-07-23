@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import {
   TouchableOpacity,
   Text,
@@ -6,7 +7,8 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
-import { colors, radius, typography } from '@/theme/tokens';
+import { radius, typography, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 
@@ -29,6 +31,8 @@ export function Button({
   style,
   textStyle,
 }: ButtonProps) {
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   const isPrimary = variant === 'primary';
   const isGhost = variant === 'ghost' || variant === 'secondary';
   const isDanger = variant === 'danger';
@@ -66,7 +70,8 @@ export function Button({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   base: {
     width: '100%',
     paddingVertical: 16,

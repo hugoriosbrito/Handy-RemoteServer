@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -7,11 +7,14 @@ import {
   TouchableOpacity,
   ActivityIndicator,
 } from 'react-native';
+import { ActionSheet } from '@/components/ui';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQueryClient } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
+import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import {
   useRecordingStore,
   formatDuration,
@@ -19,11 +22,12 @@ import {
 } from '@/stores/recordingStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
-import { api } from '@/api/client';
+import { probeServerHealth, uploadWithRetry } from '@/lib/connection';
 
 export default function OfflineQueueScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const offlineQueue = useRecordingStore((s) => s.offlineQueue);
   const updateQueueItem = useRecordingStore((s) => s.updateQueueItem);
   const removeFromOfflineQueue = useRecordingStore((s) => s.removeFromOfflineQueue);
@@ -33,8 +37,15 @@ export default function OfflineQueueScreen() {
   const computer = useConnectionStore((s) => s.computer);
   const postProcessEnabled = useSettingsStore((s) => s.postProcessEnabled);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const totalBytes = offlineQueue.reduce((sum, q) => sum + (q.sizeBytes ?? 0), 0);
+
+  useEffect(() => {
+    if (baseUrl) void probeServerHealth(baseUrl);
+  }, [baseUrl]);
 
   const retryItem = async (id: string) => {
     const item = offlineQueue.find((q) => q.id === id);
@@ -45,9 +56,10 @@ export default function OfflineQueueScreen() {
     setBusyId(id);
     updateQueueItem(id, { status: 'uploading', error: undefined });
     try {
-      const result = await api.uploadTranscription(token, item.uri, {
+      const result = await uploadWithRetry(token, item.uri, {
         postProcess: postProcessEnabled,
         baseUrl: baseUrl ?? undefined,
+        attempts: 3,
       });
       removeFromOfflineQueue(id);
       setResult({
@@ -57,6 +69,7 @@ export default function OfflineQueueScreen() {
         model: result.model,
         postProcessed: result.postProcessed,
       });
+      void queryClient.invalidateQueries({ queryKey: ['history'] });
       router.replace('/result');
     } catch (e) {
       updateQueueItem(id, {
@@ -71,7 +84,13 @@ export default function OfflineQueueScreen() {
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+        <TouchableOpacity
+          style={styles.backBtn}
+          onPress={() => router.back()}
+          accessibilityLabel={t('common.back')}
+          accessibilityRole="button"
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+        >
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
 
@@ -80,10 +99,14 @@ export default function OfflineQueueScreen() {
 
         {offlineQueue.length > 0 ? (
           <Text style={styles.pending}>
-            {t('offlineQueue.pendingSize', {
-              count: offlineQueue.length,
-              size: formatBytes(totalBytes || offlineQueue.length * 240_000),
-            })}
+            {totalBytes > 0
+              ? t('offlineQueue.pendingSize', {
+                  count: offlineQueue.length,
+                  size: formatBytes(totalBytes),
+                })
+              : t('offlineQueue.pendingCount', {
+                  count: offlineQueue.length,
+                })}
           </Text>
         ) : null}
 
@@ -122,23 +145,27 @@ export default function OfflineQueueScreen() {
                   {busyId === item.id ? (
                     <ActivityIndicator color={colors.primary} />
                   ) : (
-                    <View
-                      style={[
-                        styles.statusBadge,
-                        item.status === 'failed' && styles.statusFailed,
-                      ]}
-                    >
-                      <Text style={styles.statusText}>{item.status}</Text>
-                    </View>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    item.status === 'failed' && styles.statusFailed,
+                  ]}
+                >
+                  <Text style={styles.statusText}>{t(`offlineQueue.status.${item.status}`)}</Text>
+                </View>
                   )}
                 </View>
                 <View style={styles.itemActions}>
-                  <TouchableOpacity onPress={() => void retryItem(item.id)}>
-                    <Text style={styles.retryText}>{t('offlineQueue.retry')}</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity onPress={() => removeFromOfflineQueue(item.id)}>
-                    <Ionicons name="trash-outline" size={20} color={colors.error} />
-                  </TouchableOpacity>
+                <TouchableOpacity onPress={() => void retryItem(item.id)}>
+                  <Text style={styles.retryText}>{t('offlineQueue.retry')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => setItemToDelete(item.id)}
+                  accessibilityLabel={t('offlineQueue.deleteItem')}
+                  accessibilityRole="button"
+                >
+                  <Ionicons name="trash-outline" size={20} color={colors.error} />
+                </TouchableOpacity>
                 </View>
               </View>
             )}
@@ -146,11 +173,30 @@ export default function OfflineQueueScreen() {
           />
         )}
       </View>
+      <ActionSheet
+        visible={itemToDelete !== null}
+        title={t('offlineQueue.deleteTitle')}
+        message={t('offlineQueue.deleteBody')}
+        cancelLabel={t('common.cancel')}
+        onClose={() => setItemToDelete(null)}
+        options={[
+          {
+            label: t('common.delete'),
+            icon: 'trash-outline',
+            destructive: true,
+            onPress: () => {
+              if (itemToDelete) removeFromOfflineQueue(itemToDelete);
+              setItemToDelete(null);
+            },
+          },
+        ]}
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.backgroundAlt },
   container: { flex: 1, paddingHorizontal: spacing.lg },
   backBtn: {
@@ -190,7 +236,7 @@ const styles = StyleSheet.create({
   warnText: { flex: 1, color: colors.warning, fontSize: typography.sizes.sm },
   list: { paddingBottom: spacing.xl, gap: spacing.sm },
   item: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,

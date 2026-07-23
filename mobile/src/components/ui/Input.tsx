@@ -1,5 +1,7 @@
+import { useMemo } from 'react';
 import { TextInput, StyleSheet, View, Text, ViewStyle } from 'react-native';
-import { colors, radius, typography, spacing } from '@/theme/tokens';
+import { radius, typography, spacing, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface InputProps {
   value: string;
@@ -24,6 +26,8 @@ export function Input({
   style,
   autoFocus,
 }: InputProps) {
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <View style={[styles.wrapper, style]}>
       {label && <Text style={styles.label}>{label}</Text>}
@@ -42,7 +46,8 @@ export function Input({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   wrapper: {
     width: '100%',
   },

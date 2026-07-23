@@ -1,14 +1,19 @@
+import { useMemo } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Toggle } from '@/components/ui';
 import { HandyIcon } from '@/components/HandyLogo';
-import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
+import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useSettingsStore } from '@/stores/settingsStore';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useRecordingStore } from '@/stores/recordingStore';
+import { api } from '@/api/client';
+import { probeServerHealth } from '@/lib/connection';
 
 export default function RecordTabScreen() {
   const { t } = useTranslation();
@@ -16,14 +21,30 @@ export default function RecordTabScreen() {
   const postProcessEnabled = useSettingsStore((s) => s.postProcessEnabled);
   const setPostProcess = useSettingsStore((s) => s.setPostProcess);
   const computer = useConnectionStore((s) => s.computer);
+  const token = useConnectionStore((s) => s.token);
+  const baseUrl = useConnectionStore((s) => s.baseUrl);
   const lastTranscription = useRecordingStore((s) => s.lastTranscription);
   const offlineCount = useRecordingStore((s) => s.offlineQueue.length);
+
+  const modelsQuery = useQuery({
+    queryKey: ['models', token, baseUrl],
+    enabled: Boolean(token),
+    queryFn: async () => {
+      if (!token) return { models: [], activeModelId: null };
+      return api.getModels(token, baseUrl ?? undefined);
+    },
+  });
+  const activeModel = modelsQuery.data?.models.find((m) => m.isActive);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleStart = () => {
     if (!computer) {
       router.push('/pair/scan');
       return;
     }
+    // Refresh reachability before opening the recorder (non-blocking).
+    if (baseUrl) void probeServerHealth(baseUrl);
     router.push('/recording');
   };
 
@@ -61,15 +82,41 @@ export default function RecordTabScreen() {
               {computer ? computer.name : t('record.notConnected')}
             </Text>
             <Text style={styles.pcMeta}>
-              {computer ? t('record.onlineLocal') : t('common.disconnected')}
+              {!computer
+                ? t('common.disconnected')
+                : computer.isOnline
+                  ? t('record.onlineLocal')
+                  : t('common.offline')}
             </Text>
           </View>
           <Ionicons name="chevron-forward" size={20} color={colors.midGray} />
         </TouchableOpacity>
 
         <View style={styles.modelCard}>
-          <Text style={styles.modelLabel}>{t('record.modelLabel')}</Text>
-          <Text style={styles.modelMeta}>{t('record.modelMeta')}</Text>
+          <TouchableOpacity
+            style={styles.modelHeader}
+            onPress={() => {
+              if (computer) router.push('/models');
+            }}
+            activeOpacity={computer ? 0.7 : 1}
+          >
+            <View style={styles.modelInfo}>
+              <Text style={styles.modelLabel}>
+                {activeModel ? activeModel.name : t('record.modelFallback')}
+              </Text>
+              <Text style={styles.modelMeta}>
+                {activeModel?.supportsStreaming
+                  ? t('record.modelStreaming')
+                  : activeModel
+                    ? t('record.modelOffline')
+                    : t('record.modelMeta')}
+              </Text>
+            </View>
+            {computer ? (
+              <Ionicons name="chevron-forward" size={20} color={colors.midGray} />
+            ) : null}
+          </TouchableOpacity>
+          <View style={styles.modelDivider} />
           <Toggle
             value={postProcessEnabled}
             onValueChange={setPostProcess}
@@ -108,7 +155,8 @@ export default function RecordTabScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.backgroundAlt },
   container: {
     flex: 1,
@@ -145,7 +193,7 @@ const styles = StyleSheet.create({
   pcCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.md,
@@ -172,13 +220,24 @@ const styles = StyleSheet.create({
     color: colors.midGray,
   },
   modelCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     paddingHorizontal: spacing.md,
     paddingTop: spacing.md,
     paddingBottom: spacing.sm,
     marginBottom: spacing.md,
     ...shadows.card,
+  },
+  modelHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modelInfo: { flex: 1 },
+  modelDivider: {
+    height: 1,
+    backgroundColor: colors.border,
+    marginVertical: spacing.sm,
   },
   modelLabel: {
     fontSize: typography.sizes.md,
@@ -187,7 +246,6 @@ const styles = StyleSheet.create({
   },
   modelMeta: {
     marginTop: 2,
-    marginBottom: spacing.xs,
     fontSize: typography.sizes.sm,
     color: colors.midGray,
   },
@@ -219,7 +277,7 @@ const styles = StyleSheet.create({
     fontWeight: typography.weights.medium,
   },
   lastCard: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.lg,
