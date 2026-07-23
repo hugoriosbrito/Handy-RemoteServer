@@ -4,39 +4,13 @@ import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { Card } from '@/components/ui';
-import { colors, spacing, typography, radius } from '@/theme/tokens';
+import { Toggle } from '@/components/ui';
+import { HandyLogo } from '@/components/HandyLogo';
+import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useRecordingStore } from '@/stores/recordingStore';
 import i18n, { setStoredLanguage } from '@/i18n';
-
-interface SettingsRowProps {
-  icon: keyof typeof Ionicons.glyphMap;
-  label: string;
-  onPress?: () => void;
-  trailing?: unknown;
-}
-
-function SettingsRow({ icon, label, onPress, trailing }: SettingsRowProps) {
-  return (
-    <TouchableOpacity
-      style={styles.row}
-      onPress={onPress}
-      disabled={!onPress}
-      activeOpacity={onPress ? 0.7 : 1}
-    >
-      <View style={styles.rowLeft}>
-        <View style={styles.iconWrap}>
-          <Ionicons name={icon} size={20} color={colors.primary} />
-        </View>
-        <Text style={styles.rowLabel}>{label}</Text>
-      </View>
-      {(trailing ?? (onPress ? (
-        <Ionicons name="chevron-forward" size={20} color={colors.midGray} />
-      ) : null)) as never}
-    </TouchableOpacity>
-  );
-}
 
 export default function SettingsScreen() {
   const { t } = useTranslation();
@@ -45,7 +19,11 @@ export default function SettingsScreen() {
   const computer = useConnectionStore((s) => s.computer);
   const language = useSettingsStore((s) => s.language);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
-  const offlineCount = 1;
+  const backgroundRecord = useSettingsStore((s) => s.backgroundRecord);
+  const setBackgroundRecord = useSettingsStore((s) => s.setBackgroundRecord);
+  const biometrics = useSettingsStore((s) => s.biometrics);
+  const setBiometrics = useSettingsStore((s) => s.setBiometrics);
+  const offlineCount = useRecordingStore((s) => s.offlineQueue.length);
 
   const toggleLanguage = async () => {
     const next = language === 'pt-BR' ? 'en' : 'pt-BR';
@@ -62,150 +40,161 @@ export default function SettingsScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.container}>
+        <View style={styles.brandRow}>
+          <HandyLogo size={48} />
+        </View>
         <Text style={styles.title}>{t('settings.title')}</Text>
 
-        {computer && (
-          <Card variant="soft" style={styles.connectedCard}>
-            <View style={styles.connectedRow}>
-              <Ionicons name="checkmark-circle" size={20} color={colors.success} />
-              <Text style={styles.connectedText}>
-                {t('record.connectedTo', { name: computer.name })}
-              </Text>
-            </View>
-          </Card>
-        )}
+        <Text style={styles.sectionLabel}>{t('settings.onThisPhone')}</Text>
 
-        <Card style={styles.section}>
-          <SettingsRow
-            icon="desktop-outline"
-            label={t('settings.computers')}
-            onPress={() => router.push('/computers')}
-          />
+        <View style={styles.section}>
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/computers')}>
+            <Text style={styles.rowLabel}>{t('settings.computers')}</Text>
+            <View style={styles.rowRight}>
+              <Text style={styles.rowValue}>{computer?.name ?? '—'}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.divider} />
-          <SettingsRow
-            icon="cloud-upload-outline"
-            label={t('settings.offlineQueue')}
-            onPress={() => router.push('/offline-queue')}
-            trailing={
-              offlineCount > 0 ? (
+          <TouchableOpacity style={styles.row} onPress={() => router.push('/offline-queue')}>
+            <Text style={styles.rowLabel}>{t('settings.offlineQueue')}</Text>
+            <View style={styles.rowRight}>
+              {offlineCount > 0 ? (
                 <View style={styles.badge}>
                   <Text style={styles.badgeText}>{offlineCount}</Text>
                 </View>
-              ) : (
-                <Ionicons name="chevron-forward" size={20} color={colors.midGray} />
-              )
-            }
-          />
+              ) : null}
+              <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.divider} />
-          <SettingsRow
-            icon="language-outline"
-            label={t('settings.language')}
-            onPress={toggleLanguage}
-            trailing={
-              <Text style={styles.langValue}>
-                {language === 'pt-BR' ? 'Português' : 'English'}
-              </Text>
-            }
-          />
+          <TouchableOpacity style={styles.row} onPress={() => void toggleLanguage()}>
+            <Text style={styles.rowLabel}>{t('settings.language')}</Text>
+            <Text style={styles.rowValue}>
+              {language === 'pt-BR' ? t('settings.languageValue') : 'English'}
+            </Text>
+          </TouchableOpacity>
           <View style={styles.divider} />
-          <SettingsRow
-            icon="mic-outline"
-            label={t('settings.microphone')}
+          <View style={styles.toggleRow}>
+            <Toggle
+              value={backgroundRecord}
+              onValueChange={setBackgroundRecord}
+              label={t('settings.backgroundRecord')}
+            />
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t('settings.deleteAudio')}</Text>
+            <Text style={styles.rowValue}>{t('settings.deleteAudioValue')}</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.toggleRow}>
+            <Toggle
+              value={biometrics}
+              onValueChange={setBiometrics}
+              label={t('settings.biometrics')}
+            />
+          </View>
+          <View style={styles.divider} />
+          <TouchableOpacity
+            style={styles.row}
             onPress={() => router.push('/onboarding/microphone')}
-          />
-        </Card>
-
-        <Card style={styles.section}>
-          <SettingsRow icon="information-circle-outline" label={t('settings.about')} />
+          >
+            <Text style={styles.rowLabel}>{t('settings.microphone')}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
+          </TouchableOpacity>
           <View style={styles.divider} />
-          <SettingsRow
-            icon="code-slash-outline"
-            label={t('settings.version', {
-              version: Constants.expoConfig?.version ?? '0.1.0',
-            })}
-          />
-        </Card>
+          <TouchableOpacity
+            style={styles.row}
+            onPress={() => router.push('/recording-reconnect')}
+          >
+            <Text style={styles.rowLabel}>{t('settings.diagnostics')}</Text>
+            <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
+          </TouchableOpacity>
+        </View>
 
-        {computer && (
-          <TouchableOpacity style={styles.disconnectBtn} onPress={handleDisconnect}>
+        <View style={styles.section}>
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>{t('settings.about')}</Text>
+            <Text style={styles.rowValue}>Handy Remote</Text>
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.row}>
+            <Text style={styles.rowLabel}>
+              {t('settings.version', {
+                version: Constants.expoConfig?.version ?? '0.1.0',
+              })}
+            </Text>
+          </View>
+        </View>
+
+        {computer ? (
+          <TouchableOpacity style={styles.disconnectBtn} onPress={() => void handleDisconnect()}>
             <Text style={styles.disconnectText}>{t('settings.disconnect')}</Text>
           </TouchableOpacity>
-        )}
-
-        <TouchableOpacity
-          style={styles.devLink}
-          onPress={() => router.push('/recording-reconnect')}
-        >
-          <Text style={styles.devLinkText}>Dev: Reconnect screen</Text>
-        </TouchableOpacity>
+        ) : null}
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.backgroundAlt,
-  },
-  scroll: {
-    flex: 1,
-  },
+  safe: { flex: 1, backgroundColor: colors.backgroundAlt },
+  scroll: { flex: 1 },
   container: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.md,
     paddingBottom: spacing.xxl,
   },
+  brandRow: { marginBottom: spacing.sm },
   title: {
     fontSize: typography.sizes.xxl,
     fontWeight: typography.weights.bold,
     color: colors.text,
-    marginBottom: spacing.md,
+    marginBottom: spacing.lg,
   },
-  connectedCard: {
-    marginBottom: spacing.md,
-  },
-  connectedRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  connectedText: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
+  sectionLabel: {
+    fontSize: typography.sizes.sm,
+    color: colors.midGray,
+    fontWeight: typography.weights.medium,
+    marginBottom: spacing.sm,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
   },
   section: {
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
     marginBottom: spacing.md,
     paddingVertical: spacing.xs,
+    ...shadows.card,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingVertical: spacing.md,
-    paddingHorizontal: spacing.sm,
+    paddingHorizontal: spacing.md,
   },
-  rowLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.md,
-  },
-  iconWrap: {
-    width: 36,
-    height: 36,
-    borderRadius: radius.sm,
-    backgroundColor: colors.codeBg,
-    alignItems: 'center',
-    justifyContent: 'center',
+  toggleRow: {
+    paddingHorizontal: spacing.md,
   },
   rowLabel: {
     fontSize: typography.sizes.md,
     color: colors.text,
   },
+  rowRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  rowValue: {
+    fontSize: typography.sizes.sm,
+    color: colors.midGray,
+  },
   divider: {
     height: 1,
     backgroundColor: colors.border,
-    marginLeft: 52,
+    marginLeft: spacing.md,
   },
   badge: {
     backgroundColor: colors.primary,
@@ -221,10 +210,6 @@ const styles = StyleSheet.create({
     fontSize: typography.sizes.xs,
     fontWeight: typography.weights.bold,
   },
-  langValue: {
-    fontSize: typography.sizes.sm,
-    color: colors.midGray,
-  },
   disconnectBtn: {
     alignItems: 'center',
     paddingVertical: spacing.lg,
@@ -233,13 +218,5 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: typography.sizes.md,
     fontWeight: typography.weights.semibold,
-  },
-  devLink: {
-    alignItems: 'center',
-    paddingTop: spacing.md,
-  },
-  devLinkText: {
-    fontSize: typography.sizes.xs,
-    color: colors.midGray,
   },
 });

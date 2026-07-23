@@ -19,6 +19,10 @@ export default function WelcomeScreen() {
       router.replace('/(tabs)');
       return;
     }
+    if (token) {
+      router.replace('/onboarding/microphone');
+      return;
+    }
     router.push('/pair/scan');
   };
 
@@ -26,7 +30,7 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.hero}>
-          <HandyLogo size={100} />
+          <HandyLogo size={110} />
           <Text style={styles.title}>{t('welcome.title')}</Text>
           <Text style={styles.subtitle}>{t('welcome.subtitle')}</Text>
         </View>
@@ -52,6 +56,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing.md,
+    paddingHorizontal: spacing.sm,
   },
   title: {
     fontSize: typography.sizes.title,
@@ -62,7 +67,7 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: typography.sizes.md,
-    color: colors.midGray,
+    color: colors.textSecondary,
     textAlign: 'center',
     lineHeight: 24,
     paddingHorizontal: spacing.md,

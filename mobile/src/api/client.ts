@@ -214,6 +214,79 @@ export const api = {
     };
   },
 
+  uploadTranscription: async (
+    token: string,
+    uri: string,
+    opts?: { postProcess?: boolean; baseUrl?: string; filename?: string },
+  ) => {
+    const form = new FormData();
+    const filename = opts?.filename ?? 'recording.m4a';
+    form.append('file', {
+      uri,
+      name: filename,
+      type: filename.endsWith('.wav') ? 'audio/wav' : 'audio/m4a',
+    } as unknown as Blob);
+    if (opts?.postProcess) {
+      form.append('postProcess', 'true');
+    }
+
+    const url = `${resolveBaseUrl(opts?.baseUrl)}/v1/transcriptions`;
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: form,
+    });
+
+    const body = await response.json().catch(() => null);
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        (body as { message?: string })?.message ?? response.statusText,
+        body,
+      );
+    }
+
+    return z
+      .object({
+        id: z.string(),
+        rawText: z.string(),
+        finalText: z.string(),
+        postProcessed: z.boolean(),
+        promptName: z.string().nullable().optional(),
+        model: z.string().nullable().optional(),
+      })
+      .parse(body);
+  },
+
+  listDevices: (token: string, baseUrl?: string) =>
+    request(
+      '/v1/devices',
+      z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          platform: z.string().nullable().optional(),
+          createdAt: z.string().optional(),
+          lastSeenAt: z.string().nullable().optional(),
+        }),
+      ),
+      { token, baseUrl },
+    ),
+
+  revokeDevice: (token: string, id: string, baseUrl?: string) =>
+    request(
+      `/v1/devices/${encodeURIComponent(id)}`,
+      z
+        .object({
+          revoked: z.boolean().optional(),
+          id: z.string().optional(),
+        })
+        .passthrough(),
+      { method: 'DELETE', token, baseUrl },
+    ),
+
   parseQrPayload: (raw: string): QrPayload => {
     const parsed = JSON.parse(raw) as unknown;
     return QrPayloadSchema.parse(parsed);

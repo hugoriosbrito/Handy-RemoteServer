@@ -1,68 +1,144 @@
-import { View, Text, StyleSheet, FlatList, TouchableOpacity } from 'react-native';
+import { useCallback } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TouchableOpacity,
+  RefreshControl,
+} from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
+import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Button, DeviceCard } from '@/components/ui';
-import { colors, spacing, typography } from '@/theme/tokens';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { Button } from '@/components/ui';
+import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
+import { useConnectionStore, type Computer } from '@/stores/connectionStore';
+import { api } from '@/api/client';
 
 export default function ComputersScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   const computers = useConnectionStore((s) => s.computers);
+  const computer = useConnectionStore((s) => s.computer);
+  const token = useConnectionStore((s) => s.token);
+  const baseUrl = useConnectionStore((s) => s.baseUrl);
   const removeComputer = useConnectionStore((s) => s.removeComputer);
+  const addComputer = useConnectionStore((s) => s.addComputer);
+  const disconnect = useConnectionStore((s) => s.disconnect);
 
-  const formatLastSeen = (iso: string) => {
-    return new Date(iso).toLocaleString('pt-BR', {
+  const query = useQuery({
+    queryKey: ['devices', token, baseUrl],
+    enabled: Boolean(token),
+    queryFn: async () => {
+      if (!token) return [] as Computer[];
+      const devices = await api.listDevices(token, baseUrl ?? undefined);
+      return devices.map(
+        (d): Computer => ({
+          id: d.id,
+          name: d.name,
+          lastSeen: d.lastSeenAt
+            ? new Date(Number(d.lastSeenAt) * 1000 || Date.parse(d.lastSeenAt)).toISOString()
+            : new Date().toISOString(),
+          isOnline: true,
+        }),
+      );
+    },
+  });
+
+  const list = query.data?.length ? query.data : computers;
+
+  const onRefresh = useCallback(() => {
+    void query.refetch();
+  }, [query]);
+
+  const handleRemove = async (id: string) => {
+    if (token) {
+      try {
+        await api.revokeDevice(token, id, baseUrl ?? undefined);
+      } catch {
+        // still remove locally
+      }
+    }
+    removeComputer(id);
+    if (computer?.id === id) {
+      await disconnect();
+    }
+  };
+
+  const formatLastSeen = (iso: string) =>
+    new Date(iso).toLocaleString(undefined, {
       day: '2-digit',
       month: 'short',
       hour: '2-digit',
       minute: '2-digit',
     });
-  };
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-          <Ionicons name="arrow-back" size={24} color={colors.text} />
+          <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
 
         <Text style={styles.title}>{t('computers.title')}</Text>
 
-        {computers.length === 0 ? (
+        {list.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{t('computers.empty')}</Text>
           </View>
         ) : (
           <FlatList
-            data={computers}
+            data={list}
             keyExtractor={(item) => item.id}
-            renderItem={({ item }) => (
-              <View>
-                <DeviceCard
-                  name={item.name}
-                  subtitle={t('computers.lastSeen', {
-                    date: formatLastSeen(item.lastSeen),
-                  })}
-                  isOnline={item.isOnline}
-                />
-                <TouchableOpacity
-                  onPress={() => removeComputer(item.id)}
-                  style={styles.removeBtn}
-                >
-                  <Text style={styles.removeText}>{t('computers.remove')}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            refreshControl={
+              <RefreshControl refreshing={query.isFetching} onRefresh={onRefresh} />
+            }
+            renderItem={({ item }) => {
+              const isActive = computer?.id === item.id;
+              return (
+                <View style={styles.card}>
+                  <View style={styles.cardRow}>
+                    <View style={styles.icon}>
+                      <Ionicons name="desktop-outline" size={24} color={colors.primary} />
+                    </View>
+                    <View style={styles.info}>
+                      <Text style={styles.name}>{item.name}</Text>
+                      <Text style={styles.meta}>
+                        {item.isOnline
+                          ? t('computers.onlineLocal')
+                          : t('computers.offlineTailscale')}
+                      </Text>
+                      <Text style={styles.seen}>
+                        {t('computers.lastSeen', { date: formatLastSeen(item.lastSeen) })}
+                      </Text>
+                    </View>
+                    <Ionicons
+                      name={isActive ? 'star' : 'star-outline'}
+                      size={22}
+                      color={isActive ? colors.primary : colors.midGray}
+                    />
+                  </View>
+                  <TouchableOpacity
+                    onPress={() => void handleRemove(item.id)}
+                    style={styles.removeBtn}
+                  >
+                    <Text style={styles.removeText}>{t('computers.remove')}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
             contentContainerStyle={styles.list}
           />
         )}
 
         <Button
           title={t('computers.add')}
-          onPress={() => router.push('/pair/scan')}
+          onPress={() => {
+            if (computer) addComputer(computer);
+            router.push('/pair/scan');
+          }}
           style={styles.addBtn}
         />
       </View>
@@ -71,14 +147,8 @@ export default function ComputersScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: {
-    flex: 1,
-    backgroundColor: colors.backgroundAlt,
-  },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-  },
+  safe: { flex: 1, backgroundColor: colors.backgroundAlt },
+  container: { flex: 1, paddingHorizontal: spacing.lg },
   backBtn: {
     marginTop: spacing.sm,
     marginBottom: spacing.md,
@@ -92,28 +162,43 @@ const styles = StyleSheet.create({
     color: colors.text,
     marginBottom: spacing.lg,
   },
-  list: {
-    paddingBottom: spacing.md,
+  list: { paddingBottom: spacing.md },
+  card: {
+    backgroundColor: colors.white,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+    ...shadows.card,
   },
-  removeBtn: {
-    alignSelf: 'flex-end',
-    marginBottom: spacing.md,
-    marginTop: -spacing.sm,
-  },
-  removeText: {
-    color: colors.error,
-    fontSize: typography.sizes.sm,
-  },
-  empty: {
-    flex: 1,
+  cardRow: { flexDirection: 'row', alignItems: 'center' },
+  icon: {
+    width: 48,
+    height: 48,
+    borderRadius: radius.md,
+    backgroundColor: colors.codeBg,
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: spacing.md,
   },
-  emptyText: {
-    color: colors.midGray,
+  info: { flex: 1 },
+  name: {
     fontSize: typography.sizes.md,
+    fontWeight: typography.weights.semibold,
+    color: colors.text,
   },
-  addBtn: {
-    marginBottom: spacing.xl,
+  meta: {
+    marginTop: 2,
+    fontSize: typography.sizes.sm,
+    color: colors.success,
   },
+  seen: {
+    marginTop: 2,
+    fontSize: typography.sizes.xs,
+    color: colors.midGray,
+  },
+  removeBtn: { alignSelf: 'flex-end', marginTop: spacing.sm },
+  removeText: { color: colors.error, fontSize: typography.sizes.sm },
+  empty: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  emptyText: { color: colors.midGray, fontSize: typography.sizes.md },
+  addBtn: { marginBottom: spacing.xl },
 });

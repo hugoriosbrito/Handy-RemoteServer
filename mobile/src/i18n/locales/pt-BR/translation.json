@@ -10,19 +10,27 @@
     "more": "Mais",
     "connected": "Conectado",
     "disconnected": "Desconectado",
-    "offline": "Offline"
+    "offline": "Offline",
+    "online": "Online",
+    "discard": "Descartar",
+    "retry": "Tentar novamente",
+    "delete": "Excluir",
+    "loading": "Carregando…",
+    "all": "Todos"
   },
   "welcome": {
     "title": "Transcreva pelo celular",
-    "subtitle": "Grave áudio no celular e transcreva no seu computador com Handy.",
+    "subtitle": "Use o Handy do seu computador para transformar voz em texto, onde estiver.",
     "connectComputer": "Conectar computador"
   },
   "pair": {
     "scanTitle": "Escanear QR Code",
-    "scanHint": "Aponte a câmera para o QR Code exibido no Handy no computador.",
+    "scanHint": "Abra Acesso móvel no Handy e aponte a câmera.",
+    "scanPoint": "Aponte para o QR do Handy",
     "enterCode": "Digitar código",
     "confirmTitle": "Confirmar conexão",
     "confirmSubtitle": "Verifique se este é o computador correto.",
+    "codeHint": "Confira se o mesmo código aparece no computador.",
     "pairingCode": "Código de pareamento",
     "authorize": "Autorizar",
     "cancel": "Cancelar",
@@ -37,11 +45,16 @@
     "timeout": "Tempo esgotado. Tente escanear novamente.",
     "rejected": "Pareamento recusado no computador.",
     "expired": "Sessão expirada. Gere um novo QR no Handy.",
-    "failed": "Falha ao conectar. Tente novamente."
+    "failed": "Falha ao conectar. Tente novamente.",
+    "localNetwork": "Rede local",
+    "enterCodeTitle": "Digitar código",
+    "enterCodeHint": "Cole o payload do QR ou o endpoint do Handy.",
+    "manualEndpoint": "Endereço (ex.: 192.168.0.10:8765)"
   },
   "onboarding": {
     "microphoneTitle": "Permitir microfone",
-    "microphoneSubtitle": "O Handy Remote precisa do microfone para gravar e enviar áudio ao computador.",
+    "microphoneSubtitle": "O Handy precisa do microfone para gravar e enviar sua voz ao computador.",
+    "privacyNote": "Só fica ativo durante a gravação.",
     "allow": "Permitir",
     "notNow": "Agora não"
   },
@@ -52,15 +65,24 @@
   },
   "record": {
     "title": "Gravar",
+    "tapToRecord": "Toque para gravar",
     "postProcess": "Pós-processamento",
     "postProcessHint": "Aplicar correções e formatação após a transcrição.",
     "startRecording": "Iniciar gravação",
     "connectedTo": "Conectado a {{name}}",
-    "notConnected": "Nenhum computador conectado"
+    "notConnected": "Nenhum computador conectado",
+    "onlineLocal": "Online · Rede local",
+    "lastTranscription": "Última transcrição",
+    "modelLabel": "Whisper Turbo",
+    "modelMeta": "Português · Streaming"
   },
   "recording": {
     "title": "Gravando",
-    "reconnecting": "Reconectando",
+    "reconnecting": "Reconectando…",
+    "audioSaved": "Áudio salvo no celular",
+    "tryingComputer": "Tentando {{name}}",
+    "lastSegment": "Último trecho",
+    "finishAndSave": "Finalizar e salvar",
     "reconnectingHint": "Tentando restabelecer conexão com o computador…",
     "pause": "Pausar",
     "resume": "Retomar",
@@ -72,34 +94,50 @@
     "title": "Transcrição",
     "recordAgain": "Gravar novamente",
     "copied": "Copiado!",
-    "duration": "Duração: {{duration}}"
+    "duration": "Duração: {{duration}}",
+    "meta": "{{duration}} · {{model}} · {{processing}}",
+    "audio": "Áudio",
+    "expiresIn": "Apaga em 24 h"
   },
   "history": {
     "title": "Histórico",
-    "searchPlaceholder": "Buscar transcrições…",
+    "searchPlaceholder": "Buscar",
     "empty": "Nenhuma transcrição ainda.",
     "today": "Hoje",
-    "yesterday": "Ontem"
+    "yesterday": "Ontem",
+    "phone": "Celular",
+    "computer": "Computador"
   },
   "computers": {
     "title": "Computadores",
-    "add": "Adicionar computador",
+    "add": "Conectar computador",
     "lastSeen": "Visto por último: {{date}}",
     "remove": "Remover",
-    "empty": "Nenhum computador pareado."
+    "empty": "Nenhum computador pareado.",
+    "onlineLocal": "Online · Rede local",
+    "offlineTailscale": "Offline · Tailscale"
   },
   "offlineQueue": {
     "title": "Fila offline",
     "subtitle": "Gravações aguardando envio quando a conexão for restabelecida.",
     "empty": "Nenhuma gravação na fila.",
     "pending": "{{count}} pendente(s)",
+    "pendingSize": "{{count}} pendentes · {{size}}",
+    "computerOffline": "{{name}} está offline",
     "retry": "Tentar novamente"
   },
   "settings": {
     "title": "Ajustes",
+    "onThisPhone": "Neste celular",
     "computers": "Computadores",
     "offlineQueue": "Fila offline",
     "language": "Idioma",
+    "languageValue": "Português (Brasil)",
+    "backgroundRecord": "Gravar em segundo plano",
+    "deleteAudio": "Apagar áudio",
+    "deleteAudioValue": "Após 24 horas",
+    "biometrics": "Biometria",
+    "diagnostics": "Diagnóstico",
     "microphone": "Microfone",
     "about": "Sobre",
     "version": "Versão {{version}}",
