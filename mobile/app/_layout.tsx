@@ -7,6 +7,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import '@/i18n';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
+import { useRecordingStore } from '@/stores/recordingStore';
 import i18n from '@/i18n';
 
 const queryClient = new QueryClient();
@@ -14,12 +15,14 @@ const queryClient = new QueryClient();
 function AppBootstrap() {
   const loadPersisted = useConnectionStore((s) => s.loadPersisted);
   const loadSettings = useSettingsStore((s) => s.loadSettings);
+  const loadQueue = useRecordingStore((s) => s.loadQueue);
   const language = useSettingsStore((s) => s.language);
 
   useEffect(() => {
-    loadPersisted();
-    loadSettings();
-  }, [loadPersisted, loadSettings]);
+    void loadPersisted();
+    void loadSettings();
+    void loadQueue();
+  }, [loadPersisted, loadSettings, loadQueue]);
 
   useEffect(() => {
     if (language) {

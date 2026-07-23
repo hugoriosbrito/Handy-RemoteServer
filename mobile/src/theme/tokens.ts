@@ -1,20 +1,26 @@
 export const colors = {
   primary: '#da5893',
+  primarySoft: '#FDF2F7',
+  primaryMuted: '#F8D5E6',
   backgroundUi: '#da5893',
   logoPrimary: '#faa2ca',
   logoStroke: '#382731',
   text: '#0f0f0f',
-  textSecondary: '#808080',
+  textSecondary: '#6B6B6B',
   background: '#FFFFFF',
-  backgroundAlt: '#fbfbfb',
+  backgroundAlt: '#FAFAFA',
   midGray: '#808080',
   success: '#2F9E6A',
   warning: '#E08A3A',
+  warningSoft: '#FFF3E8',
   codeBg: '#FDF2F7',
   softPink: '#FDF2F7',
   white: '#FFFFFF',
   border: '#E8E8E8',
+  borderStrong: '#E0E0E0',
   error: '#D64545',
+  recording: '#E53935',
+  overlay: '#1A1A1A',
 } as const;
 
 export const spacing = {
@@ -56,9 +62,9 @@ export const typography = {
 export const shadows = {
   card: {
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06,
-    shadowRadius: 8,
+    shadowRadius: 6,
     elevation: 2,
   },
 } as const;

@@ -8,6 +8,8 @@ export interface AppSettings {
   microphoneGranted: boolean;
   language: 'pt-BR' | 'en';
   hasCompletedOnboarding: boolean;
+  backgroundRecord: boolean;
+  biometrics: boolean;
 }
 
 interface SettingsState extends AppSettings {
@@ -16,6 +18,8 @@ interface SettingsState extends AppSettings {
   setMicrophoneGranted: (v: boolean) => void;
   setLanguage: (lang: 'pt-BR' | 'en') => void;
   setOnboardingComplete: (v: boolean) => void;
+  setBackgroundRecord: (v: boolean) => void;
+  setBiometrics: (v: boolean) => void;
   loadSettings: () => Promise<void>;
   persist: () => Promise<void>;
 }
@@ -25,6 +29,8 @@ const defaults: AppSettings = {
   microphoneGranted: false,
   language: 'pt-BR',
   hasCompletedOnboarding: false,
+  backgroundRecord: false,
+  biometrics: false,
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -33,22 +39,32 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
 
   setPostProcess: (v) => {
     set({ postProcessEnabled: v });
-    get().persist();
+    void get().persist();
   },
 
   setMicrophoneGranted: (v) => {
     set({ microphoneGranted: v });
-    get().persist();
+    void get().persist();
   },
 
   setLanguage: (lang) => {
     set({ language: lang });
-    get().persist();
+    void get().persist();
   },
 
   setOnboardingComplete: (v) => {
     set({ hasCompletedOnboarding: v });
-    get().persist();
+    void get().persist();
+  },
+
+  setBackgroundRecord: (v) => {
+    set({ backgroundRecord: v });
+    void get().persist();
+  },
+
+  setBiometrics: (v) => {
+    set({ biometrics: v });
+    void get().persist();
   },
 
   loadSettings: async () => {
@@ -66,12 +82,25 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
   },
 
   persist: async () => {
-    const { postProcessEnabled, microphoneGranted, language, hasCompletedOnboarding } =
-      get();
+    const {
+      postProcessEnabled,
+      microphoneGranted,
+      language,
+      hasCompletedOnboarding,
+      backgroundRecord,
+      biometrics,
+    } = get();
     try {
       await SecureStore.setItemAsync(
         SETTINGS_KEY,
-        JSON.stringify({ postProcessEnabled, microphoneGranted, language, hasCompletedOnboarding }),
+        JSON.stringify({
+          postProcessEnabled,
+          microphoneGranted,
+          language,
+          hasCompletedOnboarding,
+          backgroundRecord,
+          biometrics,
+        }),
       );
     } catch {
       // ignore
