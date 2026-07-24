@@ -1,8 +1,11 @@
 name: "Main Branch Build"
 
-# Runs the full cross-platform build on every push to main so breakage is
+# Runs an unsigned cross-platform build on every push to main so breakage is
 # caught before a manual release is triggered. Artifacts are kept for 30 days
 # so any commit on main has a downloadable, testable build.
+#
+# Signing is intentionally disabled here: this fork does not ship Apple /
+# Azure signing secrets. Signed builds belong in release.yml when secrets exist.
 
 on:
   push:
@@ -20,27 +23,21 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-26"
-            args: "--target aarch64-apple-darwin"
-            target: "aarch64-apple-darwin"
-          - platform: "macos-latest"
-            args: "--target x86_64-apple-darwin"
-            target: "x86_64-apple-darwin"
+          # Signing is neutralized via a tauri `-c` config override so unsigned
+          # builds succeed without release secrets:
+          #   createUpdaterArtifacts=false  -> no minisign updater key needed
+          #   windows.signCommand=null      -> skip trusted-signing-cli
+          - platform: "windows-latest"
+            args: '-c {"bundle":{"createUpdaterArtifacts":false,"windows":{"signCommand":null}}}'
+            target: "x86_64-pc-windows-msvc"
           - platform: "ubuntu-22.04"
-            args: "--bundles deb"
+            args: '--bundles deb -c {"bundle":{"createUpdaterArtifacts":false}}'
             target: "x86_64-unknown-linux-gnu"
           - platform: "ubuntu-24.04"
-            args: "--bundles appimage,rpm"
+            args: '--bundles appimage,rpm -c {"bundle":{"createUpdaterArtifacts":false}}'
             target: "x86_64-unknown-linux-gnu"
-          - platform: "ubuntu-24.04-arm"
-            args: "--bundles appimage,deb,rpm"
-            target: "aarch64-unknown-linux-gnu"
-          - platform: "windows-latest"
-            args: ""
-            target: "x86_64-pc-windows-msvc"
-          - platform: "windows-11-arm"
-            args: "--target aarch64-pc-windows-msvc"
-            target: "aarch64-pc-windows-msvc"
+          # macOS omitted: tauri.conf.json pins macOS.signingIdentity = "-", so
+          # the bundler always codesigns and needs Apple secrets this fork lacks.
 
     uses: ./.github/workflows/build.yml
     with:
@@ -48,5 +45,5 @@ jobs:
       target: ${{ matrix.target }}
       build-args: ${{ matrix.args }}
       upload-artifacts: true
-      sign-binaries: true
+      sign-binaries: false
     secrets: inherit

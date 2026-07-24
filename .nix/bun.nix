@@ -301,10 +301,10 @@
     url = "https://registry.npmjs.org/@floating-ui/utils/-/utils-0.2.10.tgz";
     hash = "sha512-aGTxbpbg8/b5JfU1HXSrbH3wXZuLPJcNEcZQFMxLs3oSzgtVu6nFPkbbGGUvBcUjKV2YyB9Wxxabo+HEH9tcRQ==";
   };
-  "@handy-remote/api-client" = copyPathToStore ./packages/api-client;
-  "@handy-remote/contracts" = copyPathToStore ./packages/contracts;
-  "@handy-remote/design-tokens" = copyPathToStore ./packages/design-tokens;
-  "@handy-remote/i18n" = copyPathToStore ./packages/i18n;
+  "@handy-remote/api-client" = copyPathToStore ../packages/api-client;
+  "@handy-remote/contracts" = copyPathToStore ../packages/contracts;
+  "@handy-remote/design-tokens" = copyPathToStore ../packages/design-tokens;
+  "@handy-remote/i18n" = copyPathToStore ../packages/i18n;
   "@humanfs/core@0.19.1" = fetchurl {
     url = "https://registry.npmjs.org/@humanfs/core/-/core-0.19.1.tgz";
     hash = "sha512-5DyQ4+1JEUzejeK1JGICcideyfUbGixgS9jNgex5nqkW+cY7WZhxBigmieN5Qnw9ZosSNVC9KQKyb+GUaGyKUA==";

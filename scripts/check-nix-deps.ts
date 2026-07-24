@@ -77,6 +77,21 @@ if (result.exitCode !== 0) {
   process.exit(0);
 }
 
+
+// bun2nix emits workspace copyPathToStore paths relative to .nix/, but our
+// packages/ live at the repo root. Rewrite them before committing/checking.
+let nixContents = readFileSync(nixFile, "utf-8");
+const rewritten = nixContents.replaceAll(
+  "copyPathToStore ./packages/",
+  "copyPathToStore ../packages/",
+);
+if (rewritten !== nixContents) {
+  writeFileSync(nixFile, rewritten);
+  console.log(
+    "[check-nix-deps] Rewrote workspace package paths in .nix/bun.nix to ../packages/",
+  );
+}
+
 writeFileSync(hashFile, currentHash + "\n");
 console.log(`[check-nix-deps] Updated ${nixFile}`);
 console.log(
