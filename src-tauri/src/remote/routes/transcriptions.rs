@@ -1,7 +1,9 @@
 use crate::audio_toolkit::wav_duration_ms;
 use crate::post_processing::process_transcription_output;
+use crate::remote::cache::BoundedCache;
 use crate::remote::dto::TranscriptionResponse;
 use crate::remote::routes::health::json_error;
+use crate::remote::routes::require_auth;
 use crate::remote::state::RemoteServerState;
 use crate::settings::get_settings;
 use axum::extract::{Multipart, Path, State};
@@ -10,25 +12,13 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use log::{error, info};
 use once_cell::sync::Lazy;
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
-static TRANSCRIPTION_CACHE: Lazy<Mutex<HashMap<String, TranscriptionResponse>>> =
-    Lazy::new(|| Mutex::new(HashMap::new()));
-
-fn require_auth(
-    state: &RemoteServerState,
-    headers: &HeaderMap,
-) -> Result<crate::remote::auth::AuthorizedDevice, (StatusCode, Json<crate::remote::dto::ApiError>)>
-{
-    let bearer = headers
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok());
-    state
-        .auth
-        .authorize(bearer)
-        .map_err(|e| json_error(StatusCode::UNAUTHORIZED, "unauthorized", e))
-}
+/// Freshly produced responses, kept only until history can answer for them.
+/// Bounded so a long-running desktop session cannot accumulate every
+/// transcription ever sent from a paired device.
+static TRANSCRIPTION_CACHE: Lazy<BoundedCache<TranscriptionResponse>> =
+    Lazy::new(BoundedCache::new);
 
 pub async fn create_transcription(
     State(state): State<Arc<RemoteServerState>>,
@@ -202,10 +192,7 @@ pub async fn create_transcription(
         duration_ms: ((samples.len() as u64) * 1000) / 16_000,
     };
 
-    TRANSCRIPTION_CACHE
-        .lock()
-        .unwrap()
-        .insert(response.id.clone(), response.clone());
+    TRANSCRIPTION_CACHE.insert(response.id.clone(), response.clone());
 
     Ok(Json(response))
 }
@@ -335,10 +322,7 @@ pub async fn retranscribe(
         duration_ms: wav_duration_ms(&path).unwrap_or(0),
     };
 
-    TRANSCRIPTION_CACHE
-        .lock()
-        .unwrap()
-        .insert(response.id.clone(), response.clone());
+    TRANSCRIPTION_CACHE.insert(response.id.clone(), response.clone());
 
     Ok(Json(response))
 }
@@ -386,10 +370,7 @@ pub async fn reprocess(
             .unwrap_or(0),
     };
 
-    TRANSCRIPTION_CACHE
-        .lock()
-        .unwrap()
-        .insert(response.id.clone(), response.clone());
+    TRANSCRIPTION_CACHE.insert(response.id.clone(), response.clone());
 
     Ok(Json(response))
 }
@@ -400,7 +381,7 @@ pub async fn get_transcription(
     Path(id): Path<String>,
 ) -> Result<Json<TranscriptionResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
     let _ = require_auth(&state, &headers)?;
-    if let Some(cached) = TRANSCRIPTION_CACHE.lock().unwrap().get(&id).cloned() {
+    if let Some(cached) = TRANSCRIPTION_CACHE.get(&id) {
         return Ok(Json(cached));
     }
 
