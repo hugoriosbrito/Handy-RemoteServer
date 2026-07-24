@@ -9,20 +9,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use std::sync::Arc;
 
-fn require_auth(
-    state: &RemoteServerState,
-    headers: &HeaderMap,
-) -> Result<crate::remote::auth::AuthorizedDevice, (StatusCode, Json<crate::remote::dto::ApiError>)>
-{
-    let bearer = headers
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok());
-    state
-        .auth
-        .authorize(bearer)
-        .map_err(|e| json_error(StatusCode::UNAUTHORIZED, "unauthorized", e))
-}
-
+use crate::remote::routes::require_auth;
 /// Safe post-processing metadata — never includes API keys.
 pub async fn get_info(
     State(state): State<Arc<RemoteServerState>>,

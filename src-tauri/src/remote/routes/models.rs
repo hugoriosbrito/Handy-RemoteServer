@@ -7,20 +7,7 @@ use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use std::sync::Arc;
 
-fn require_auth(
-    state: &RemoteServerState,
-    headers: &HeaderMap,
-) -> Result<crate::remote::auth::AuthorizedDevice, (StatusCode, Json<crate::remote::dto::ApiError>)>
-{
-    let bearer = headers
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok());
-    state
-        .auth
-        .authorize(bearer)
-        .map_err(|e| json_error(StatusCode::UNAUTHORIZED, "unauthorized", e))
-}
-
+use crate::remote::routes::require_auth;
 /// List the desktop's models so the phone can show which are downloaded and pick
 /// the active one. Only downloaded models can be selected for transcription.
 pub async fn list_models(

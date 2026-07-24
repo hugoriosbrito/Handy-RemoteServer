@@ -8,20 +8,7 @@ use axum::Json;
 use serde_json::{json, Value};
 use std::sync::Arc;
 
-fn require_auth(
-    state: &RemoteServerState,
-    headers: &HeaderMap,
-) -> Result<crate::remote::auth::AuthorizedDevice, (StatusCode, Json<crate::remote::dto::ApiError>)>
-{
-    let bearer = headers
-        .get(axum::http::header::AUTHORIZATION)
-        .and_then(|v| v.to_str().ok());
-    state
-        .auth
-        .authorize(bearer)
-        .map_err(|e| json_error(StatusCode::UNAUTHORIZED, "unauthorized", e))
-}
-
+use crate::remote::routes::require_auth;
 pub async fn list_devices(
     State(state): State<Arc<RemoteServerState>>,
     headers: HeaderMap,
