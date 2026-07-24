@@ -45,6 +45,7 @@ export default function ResultScreen() {
   const lastModel = useRecordingStore((s) => s.lastModel);
   const lastPostProcessed = useRecordingStore((s) => s.lastPostProcessed);
   const lastId = useRecordingStore((s) => s.lastId);
+  const lastDurationMs = useRecordingStore((s) => s.lastDurationMs);
   const updateResult = useRecordingStore((s) => s.updateResult);
   const token = useConnectionStore((s) => s.token);
   const baseUrl = useConnectionStore((s) => s.baseUrl);
@@ -52,7 +53,7 @@ export default function ResultScreen() {
   const [copied, setCopied] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [positionMs, setPositionMs] = useState(0);
-  const [durationMs, setDurationMs] = useState(0);
+  const [durationMs, setDurationMs] = useState(lastDurationMs || 0);
   const [loadingAudio, setLoadingAudio] = useState(false);
   const [moreOpen, setMoreOpen] = useState(false);
   const [busy, setBusy] = useState<null | 'retranscribe' | 'reprocess'>(null);
@@ -235,7 +236,9 @@ export default function ResultScreen() {
             nestedScrollEnabled
             showsVerticalScrollIndicator
           >
-            <Text style={styles.transcription}>{text || '—'}</Text>
+            <Text style={styles.transcription}>
+              {text.trim() ? text : t('result.empty')}
+            </Text>
           </ScrollView>
           {busy ? (
             <View style={styles.busyOverlay}>

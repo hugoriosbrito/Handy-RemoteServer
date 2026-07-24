@@ -50,22 +50,25 @@ export async function reconnectBestEndpoint(): Promise<string | null> {
 /** Upload with retries — transient LAN blips shouldn't dump the user to "offline". */
 export async function uploadWithRetry(
   token: string,
-  uri: string,
+  uriOrUris: string | string[],
   opts: {
     postProcess?: boolean;
     baseUrl?: string;
     filename?: string;
     attempts?: number;
+    /** Live preview only — never write history / durable audio. */
+    preview?: boolean;
   } = {},
 ) {
   const attempts = opts.attempts ?? 3;
   let lastError: unknown;
   for (let i = 0; i < attempts; i++) {
     try {
-      const result = await api.uploadTranscription(token, uri, {
+      const result = await api.uploadTranscription(token, uriOrUris, {
         postProcess: opts.postProcess,
         baseUrl: opts.baseUrl,
         filename: opts.filename,
+        preview: opts.preview,
       });
       useConnectionStore.getState().setComputerOnline(true);
       return result;

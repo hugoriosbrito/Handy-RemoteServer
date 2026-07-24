@@ -1,4 +1,4 @@
-import { Platform } from 'react-native';
+import { PermissionsAndroid, Platform } from 'react-native';
 import BackgroundService from 'react-native-background-actions';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -28,6 +28,22 @@ export async function startBackgroundRecording(
   if (Platform.OS !== 'android') return true;
   try {
     if (BackgroundService.isRunning()) return true;
+    // Android 13+ requires an explicit runtime grant before a foreground-service
+    // notification can appear. Without it, start() fails silently / is blocked.
+    if (typeof PermissionsAndroid?.PERMISSIONS?.POST_NOTIFICATIONS === 'string') {
+      const current = await PermissionsAndroid.check(
+        PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+      );
+      if (!current) {
+        const asked = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+        );
+        if (asked !== PermissionsAndroid.RESULTS.GRANTED) {
+          console.warn('[backgroundRecording] POST_NOTIFICATIONS denied');
+          return false;
+        }
+      }
+    }
     await BackgroundService.start(keepAliveTask, {
       taskName: 'HandyRecording',
       taskTitle: title,
@@ -38,7 +54,8 @@ export async function startBackgroundRecording(
       foregroundServiceType: ['microphone'],
     });
     return true;
-  } catch {
+  } catch (e) {
+    console.warn('[backgroundRecording] failed to start FGS', e);
     return false;
   }
 }
