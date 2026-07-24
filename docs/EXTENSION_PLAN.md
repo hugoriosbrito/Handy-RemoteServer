@@ -56,6 +56,9 @@ extraction lost no coverage. `post_processing/service.rs` still has no tests of 
 - **`tokio`**: back to the specific features actually used, instead of `features = ["full"]`.
 - **Repo hygiene**: local fork artifacts ignored; dead re-exports left by the extraction removed.
 - **`FORK.md`**: intentional divergences documented.
+- **`AuthStore` is testable and tested.** Persistence sits behind a `DeviceStorage`
+  trait (`InMemoryStorage` for tests, `TauriStorage` for production), so the token
+  logic no longer drags an `AppHandle` into the test binary.
 
 ## 4. Open items, ordered by risk
 
@@ -76,20 +79,25 @@ the asset protocol served stale audio when switching history rows. It is recorde
 
 ### P2 — quality and code standards
 
-3. **`AuthStore` is still untested.** The remote module now carries unit tests for the
-   pairing state machine, the transcription cache, the QR endpoint builder and the
-   credential primitives (`hash_token`, `random_token`, `six_digit_code`), taking the
-   backend suite from 140 to 154 tests. `AuthStore` itself is blocked: it owns an
-   `AppHandle`, and any test that merely instantiates it makes the test binary abort at
-   load time on Windows with `STATUS_ENTRYPOINT_NOT_FOUND` (exit `0xc0000139`), before a
-   single test runs — bisected down to one test constructing `AuthStore::default()`.
-   Covering issue/refresh/rotation/revocation therefore requires decoupling the store
-   from `AppHandle` first: extract the persistence side behind a small trait, so the
-   token logic can be tested against an in-memory backend.
+3. **Remote module test coverage — resolved.** The module now carries unit tests for the
+   pairing state machine, the transcription cache, the QR endpoint builder, the
+   credential primitives (`hash_token`, `random_token`, `six_digit_code`) and the full
+   `AuthStore` lifecycle: issue, authorize, refresh rotation, refresh replay rejection,
+   revocation and cross-restart persistence. The backend suite went from 140 to **161**
+   tests.
+
+   Historical note: `AuthStore` used to own an `AppHandle`, and any test that merely
+   instantiated it made the test binary abort at load time on Windows with
+   `STATUS_ENTRYPOINT_NOT_FOUND` (exit `0xc0000139`), before a single test ran. The fix
+   was to put persistence behind the `DeviceStorage` trait, which also let a fake backend
+   prove that paired devices and revocations survive a restart.
+
+   `post_processing/service.rs` still has no tests of its own (covered indirectly through
+   the re-export in `actions.rs`).
 4. **i18n debt**: all 24 locales carry `sidebar.mobileAccess` and the `settings.mobileAccess`
    block; only `pt` is translated — the others still hold English text. No keys are
    missing, so this is translation debt, not a bug.
-5. **`docs/assets/`**: still untracked; decide whether it should be versioned.
+5. **`docs/assets/`** — resolved: the documentation screenshots are versioned.
 
 ## 5. Rules for keeping the fork an extension
 
@@ -111,7 +119,7 @@ the asset protocol served stale audio when switching history rows. It is recorde
 
 - `cargo fmt --check`, `cargo clippy`, `cargo test --lib` (backend).
 - `bun run lint`, `bun run build`, `npx tsc --noEmit` in `mobile/`.
-- New unit tests: `AuthStore` (issue/refresh/rotate/revoke), pairing
+- Unit tests in place: `AuthStore` (issue/refresh/rotate/revoke/persistence), pairing
   (claim → approve → TTL expiry), transcription cache (cap/TTL).
 - Manual E2E still pending: pairing → upload → transcription → history, restarting the
   desktop mid-flow to validate credential persistence.
@@ -129,6 +137,7 @@ the asset protocol served stale audio when switching history rows. It is recorde
 
 1. Decide the fate of the `actions.rs` extraction (upstream PR or thin wrapper).
 2. Resolve `ws.rs`: commit as WIP behind a flag, or remove it.
-3. Add unit tests for the remote module.
-4. Work down the i18n debt and decide on `docs/assets/`.
+3. Run the manual E2E pass (pairing → upload → transcription → history, with a desktop
+   restart mid-flow).
+4. Work down the i18n debt.
 5. Rebase on upstream and re-check every row of the `FORK.md` table.

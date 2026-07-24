@@ -28,14 +28,75 @@ pub struct AuthorizedDevice {
     pub revoked: bool,
 }
 
+/// Where the paired-device list is kept between runs.
+///
+/// Extracted so the token logic can be exercised without an `AppHandle`: a
+/// test that merely constructed an `AppHandle`-owning store aborted the whole
+/// test binary at load time on Windows (`STATUS_ENTRYPOINT_NOT_FOUND`).
+pub trait DeviceStorage: Send + Sync {
+    fn load(&self) -> Vec<AuthorizedDevice>;
+    fn save(&self, devices: &[AuthorizedDevice]);
+}
+
+/// Non-persistent backend. Devices live only as long as the process.
 #[derive(Debug, Default)]
+pub struct InMemoryStorage;
+
+impl DeviceStorage for InMemoryStorage {
+    fn load(&self) -> Vec<AuthorizedDevice> {
+        Vec::new()
+    }
+
+    fn save(&self, _devices: &[AuthorizedDevice]) {}
+}
+
+/// Production backend, writing to the Tauri store on disk.
+pub struct TauriStorage {
+    app: AppHandle,
+}
+
+impl TauriStorage {
+    pub fn new(app: AppHandle) -> Self {
+        Self { app }
+    }
+}
+
+impl DeviceStorage for TauriStorage {
+    fn load(&self) -> Vec<AuthorizedDevice> {
+        load_devices(&self.app)
+    }
+
+    fn save(&self, devices: &[AuthorizedDevice]) {
+        save_devices(&self.app, devices);
+    }
+}
+
 pub struct AuthStore {
     devices: Mutex<HashMap<String, AuthorizedDevice>>,
     access_index: Mutex<HashMap<String, String>>,
     refresh_index: Mutex<HashMap<String, String>>,
-    /// Present once the store is bound to the running app; without it the
-    /// store stays in-memory only (used by unit tests).
-    app: Mutex<Option<AppHandle>>,
+    storage: Box<dyn DeviceStorage>,
+}
+
+impl std::fmt::Debug for AuthStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("AuthStore")
+            .field(
+                "devices",
+                &self
+                    .devices
+                    .lock()
+                    .map(|d| d.len())
+                    .unwrap_or_else(|e| e.into_inner().len()),
+            )
+            .finish_non_exhaustive()
+    }
+}
+
+impl Default for AuthStore {
+    fn default() -> Self {
+        Self::with_storage(Box::new(InMemoryStorage))
+    }
 }
 
 impl AuthStore {
@@ -43,8 +104,19 @@ impl AuthStore {
     /// previous run keep working after Handy restarts instead of silently
     /// returning 401 to a phone that still shows "connected".
     pub fn with_app(app: AppHandle) -> Self {
-        let store = Self::default();
-        let devices = load_devices(&app);
+        Self::with_storage(Box::new(TauriStorage::new(app)))
+    }
+
+    /// Build a store over any persistence backend, restoring whatever devices
+    /// it already holds.
+    pub fn with_storage(storage: Box<dyn DeviceStorage>) -> Self {
+        let devices = storage.load();
+        let store = Self {
+            devices: Mutex::new(HashMap::new()),
+            access_index: Mutex::new(HashMap::new()),
+            refresh_index: Mutex::new(HashMap::new()),
+            storage,
+        };
         {
             let mut map = store.devices.lock().unwrap_or_else(|e| e.into_inner());
             let mut access = store.access_index.lock().unwrap_or_else(|e| e.into_inner());
@@ -62,15 +134,10 @@ impl AuthStore {
             }
             debug!("Remote auth: restored {} paired device(s)", map.len());
         }
-        *store.app.lock().unwrap_or_else(|e| e.into_inner()) = Some(app);
         store
     }
 
     fn persist(&self) {
-        let app = match self.app.lock().unwrap_or_else(|e| e.into_inner()).clone() {
-            Some(app) => app,
-            None => return,
-        };
         let devices: Vec<AuthorizedDevice> = self
             .devices
             .lock()
@@ -78,7 +145,7 @@ impl AuthStore {
             .values()
             .cloned()
             .collect();
-        save_devices(&app, &devices);
+        self.storage.save(&devices);
     }
 
     pub fn issue_device(
@@ -340,12 +407,34 @@ pub fn six_digit_code() -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::sync::Arc;
 
-    // NOTE: `AuthStore` itself is not exercised here. It owns an `AppHandle`,
-    // and any test that instantiates it makes the test binary fail to load on
-    // Windows with STATUS_ENTRYPOINT_NOT_FOUND, before a single test runs.
-    // See docs/EXTENSION_PLAN.md; the credential primitives below are covered
-    // directly instead.
+    const FINGERPRINT: &str = "fp_test";
+
+    fn store() -> AuthStore {
+        AuthStore::with_storage(Box::new(InMemoryStorage))
+    }
+
+    fn bearer(token: &str) -> String {
+        format!("Bearer {token}")
+    }
+
+    /// Persistence backend that keeps devices in memory, so a "restart" can be
+    /// simulated by building a second `AuthStore` over the same backend.
+    #[derive(Default, Clone)]
+    struct FakeStorage {
+        devices: Arc<Mutex<Vec<AuthorizedDevice>>>,
+    }
+
+    impl DeviceStorage for FakeStorage {
+        fn load(&self) -> Vec<AuthorizedDevice> {
+            self.devices.lock().unwrap().clone()
+        }
+
+        fn save(&self, devices: &[AuthorizedDevice]) {
+            *self.devices.lock().unwrap() = devices.to_vec();
+        }
+    }
 
     #[test]
     fn hash_token_is_stable_and_distinct_per_token() {
@@ -389,5 +478,111 @@ mod tests {
     fn now_secs_is_a_plausible_unix_timestamp() {
         // Sanity guard against a clock helper that silently returns 0.
         assert!(now_secs() > 1_700_000_000);
+    }
+
+    #[test]
+    fn issued_token_authorizes_and_is_stored_only_as_a_hash() {
+        let store = store();
+        let creds = store.issue_device("Phone".into(), Some("android".into()), FINGERPRINT);
+
+        let device = store
+            .authorize(Some(&bearer(&creds.access_token)))
+            .expect("freshly issued token must authorize");
+
+        assert_eq!(device.id, creds.device_id);
+        assert_eq!(creds.server_fingerprint, FINGERPRINT);
+        // The raw token must never be recoverable from what we keep on disk.
+        assert_eq!(device.access_token_hash, hash_token(&creds.access_token));
+        assert_ne!(device.access_token_hash, creds.access_token);
+        assert_ne!(device.refresh_token_hash, creds.refresh_token);
+    }
+
+    #[test]
+    fn authorize_rejects_malformed_or_unknown_tokens() {
+        let store = store();
+        let creds = store.issue_device("Phone".into(), None, FINGERPRINT);
+
+        assert!(store.authorize(None).is_err());
+        // Right token, missing scheme.
+        assert!(store.authorize(Some(&creds.access_token)).is_err());
+        assert!(store.authorize(Some("Bearer at_nope")).is_err());
+        // A refresh token must not double as an access token.
+        assert!(store
+            .authorize(Some(&bearer(&creds.refresh_token)))
+            .is_err());
+    }
+
+    #[test]
+    fn refresh_rotates_both_tokens_and_invalidates_the_old_pair() {
+        let store = store();
+        let first = store.issue_device("Phone".into(), None, FINGERPRINT);
+        let second = store
+            .refresh(&first.refresh_token, FINGERPRINT)
+            .expect("valid refresh token must rotate");
+
+        assert_eq!(second.device_id, first.device_id);
+        assert_ne!(second.access_token, first.access_token);
+        assert_ne!(second.refresh_token, first.refresh_token);
+
+        // Old access token is dead; the new one works.
+        assert!(store.authorize(Some(&bearer(&first.access_token))).is_err());
+        assert!(store.authorize(Some(&bearer(&second.access_token))).is_ok());
+        // And the consumed refresh token cannot be replayed.
+        assert!(store.refresh(&first.refresh_token, FINGERPRINT).is_err());
+    }
+
+    #[test]
+    fn refresh_rejects_an_unknown_token() {
+        let store = store();
+        store.issue_device("Phone".into(), None, FINGERPRINT);
+        assert!(store.refresh("rt_nope", FINGERPRINT).is_err());
+    }
+
+    #[test]
+    fn revoking_a_device_kills_both_its_tokens() {
+        let store = store();
+        let creds = store.issue_device("Phone".into(), None, FINGERPRINT);
+
+        assert!(store.revoke(&creds.device_id));
+        assert!(store.authorize(Some(&bearer(&creds.access_token))).is_err());
+        assert!(store.refresh(&creds.refresh_token, FINGERPRINT).is_err());
+        // Revoking twice is not an error, but revoking a stranger is a no-op.
+        assert!(!store.revoke("device_unknown"));
+    }
+
+    #[test]
+    fn list_devices_hides_revoked_ones() {
+        let store = store();
+        let kept = store.issue_device("Keep".into(), None, FINGERPRINT);
+        let dropped = store.issue_device("Drop".into(), None, FINGERPRINT);
+
+        assert_eq!(store.list_devices().len(), 2);
+        store.revoke(&dropped.device_id);
+
+        let remaining = store.list_devices();
+        assert_eq!(remaining.len(), 1);
+        assert_eq!(remaining[0].id, kept.device_id);
+    }
+
+    #[test]
+    fn paired_devices_survive_a_restart() {
+        let backend = FakeStorage::default();
+        let creds = {
+            let store = AuthStore::with_storage(Box::new(backend.clone()));
+            store.issue_device("Phone".into(), None, FINGERPRINT)
+        };
+
+        // Same persisted state, brand new store: the phone must stay paired.
+        let restarted = AuthStore::with_storage(Box::new(backend.clone()));
+        let device = restarted
+            .authorize(Some(&bearer(&creds.access_token)))
+            .expect("token issued before the restart must still authorize");
+        assert_eq!(device.id, creds.device_id);
+
+        // A revocation made after the restart is persisted too.
+        restarted.revoke(&creds.device_id);
+        let again = AuthStore::with_storage(Box::new(backend));
+        assert!(again.authorize(Some(&bearer(&creds.access_token))).is_err());
+        assert!(again.list_devices().is_empty());
     }
 }
