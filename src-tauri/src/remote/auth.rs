@@ -46,9 +46,12 @@ impl AuthStore {
         let store = Self::default();
         let devices = load_devices(&app);
         {
-            let mut map = store.devices.lock().unwrap();
-            let mut access = store.access_index.lock().unwrap();
-            let mut refresh = store.refresh_index.lock().unwrap();
+            let mut map = store.devices.lock().unwrap_or_else(|e| e.into_inner());
+            let mut access = store.access_index.lock().unwrap_or_else(|e| e.into_inner());
+            let mut refresh = store
+                .refresh_index
+                .lock()
+                .unwrap_or_else(|e| e.into_inner());
             for device in devices {
                 if device.revoked {
                     continue;
@@ -59,17 +62,22 @@ impl AuthStore {
             }
             debug!("Remote auth: restored {} paired device(s)", map.len());
         }
-        *store.app.lock().unwrap() = Some(app);
+        *store.app.lock().unwrap_or_else(|e| e.into_inner()) = Some(app);
         store
     }
 
     fn persist(&self) {
-        let app = match self.app.lock().unwrap().clone() {
+        let app = match self.app.lock().unwrap_or_else(|e| e.into_inner()).clone() {
             Some(app) => app,
             None => return,
         };
-        let devices: Vec<AuthorizedDevice> =
-            self.devices.lock().unwrap().values().cloned().collect();
+        let devices: Vec<AuthorizedDevice> = self
+            .devices
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .values()
+            .cloned()
+            .collect();
         save_devices(&app, &devices);
     }
 
@@ -96,15 +104,15 @@ impl AuthStore {
 
         self.access_index
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(device.access_token_hash.clone(), device_id.clone());
         self.refresh_index
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(device.refresh_token_hash.clone(), device_id.clone());
         self.devices
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(device_id.clone(), device);
         self.persist();
 
@@ -127,7 +135,7 @@ impl AuthStore {
         let device_id = self
             .refresh_index
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .get(&hash)
             .cloned()
             .ok_or_else(|| "invalid refresh token".to_string())?;
@@ -135,7 +143,7 @@ impl AuthStore {
         let access_token = format!("at_{}", random_token());
         let new_refresh_token = format!("rt_{}", random_token());
         let (old_access_hash, old_refresh_hash) = {
-            let mut devices = self.devices.lock().unwrap();
+            let mut devices = self.devices.lock().unwrap_or_else(|e| e.into_inner());
             let device = devices
                 .get_mut(&device_id)
                 .ok_or_else(|| "device not found".to_string())?;
@@ -153,12 +161,12 @@ impl AuthStore {
         };
 
         {
-            let mut access = self.access_index.lock().unwrap();
+            let mut access = self.access_index.lock().unwrap_or_else(|e| e.into_inner());
             access.remove(&old_access_hash);
             access.insert(hash_token(&access_token), device_id.clone());
         }
         {
-            let mut refresh = self.refresh_index.lock().unwrap();
+            let mut refresh = self.refresh_index.lock().unwrap_or_else(|e| e.into_inner());
             refresh.remove(&old_refresh_hash);
             refresh.insert(hash_token(&new_refresh_token), device_id.clone());
         }
@@ -180,11 +188,11 @@ impl AuthStore {
         let device_id = self
             .access_index
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .get(&hash)
             .cloned()
             .ok_or_else(|| "invalid token".to_string())?;
-        let mut devices = self.devices.lock().unwrap();
+        let mut devices = self.devices.lock().unwrap_or_else(|e| e.into_inner());
         let device = devices
             .get_mut(&device_id)
             .ok_or_else(|| "device not found".to_string())?;
@@ -198,7 +206,7 @@ impl AuthStore {
     pub fn list_devices(&self) -> Vec<AuthorizedDevice> {
         self.devices
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .values()
             .filter(|d| !d.revoked)
             .cloned()
@@ -207,7 +215,7 @@ impl AuthStore {
 
     pub fn revoke(&self, device_id: &str) -> bool {
         let revoked = {
-            let mut devices = self.devices.lock().unwrap();
+            let mut devices = self.devices.lock().unwrap_or_else(|e| e.into_inner());
             match devices.get_mut(device_id) {
                 Some(device) => {
                     device.revoked = true;
@@ -219,11 +227,11 @@ impl AuthStore {
         if revoked {
             self.access_index
                 .lock()
-                .unwrap()
+                .unwrap_or_else(|e| e.into_inner())
                 .retain(|_, id| id != device_id);
             self.refresh_index
                 .lock()
-                .unwrap()
+                .unwrap_or_else(|e| e.into_inner())
                 .retain(|_, id| id != device_id);
             self.persist();
         }

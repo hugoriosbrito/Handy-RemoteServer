@@ -59,7 +59,7 @@ impl PairingStore {
         };
         self.sessions
             .lock()
-            .unwrap()
+            .unwrap_or_else(|e| e.into_inner())
             .insert(session_id.clone(), session.clone());
 
         let qr = QrPayload {
@@ -81,7 +81,7 @@ impl PairingStore {
         device_name: String,
         platform: Option<String>,
     ) -> Result<PairingSession, String> {
-        let mut sessions = self.sessions.lock().unwrap();
+        let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         let session = sessions
             .get_mut(session_id)
             .ok_or_else(|| "session not found".to_string())?;
@@ -110,7 +110,7 @@ impl PairingStore {
         approve: bool,
         credentials: Option<crate::remote::dto::DeviceCredentials>,
     ) -> Result<PairingSession, String> {
-        let mut sessions = self.sessions.lock().unwrap();
+        let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
         let session = sessions
             .get_mut(session_id)
             .ok_or_else(|| "session not found".to_string())?;
@@ -133,6 +133,10 @@ impl PairingStore {
     }
 
     pub fn get(&self, session_id: &str) -> Option<PairingSession> {
-        self.sessions.lock().unwrap().get(session_id).cloned()
+        self.sessions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .get(session_id)
+            .cloned()
     }
 }
