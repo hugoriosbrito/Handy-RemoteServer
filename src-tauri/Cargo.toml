@@ -54,7 +54,19 @@ rubato = "0.16.2"
 hound = "3.5.1"
 log = "0.4.25"
 env_filter = "0.1.0"
-tokio = { version = "1.43.0", features = ["full"] }
+# Only the runtime pieces Handy Remote actually uses. `full` pulled in process
+# spawning, signals and the io-uring style extras, which lengthen build times
+# and widen the surface for no benefit.
+tokio = { version = "1.43.0", features = [
+  "rt-multi-thread",
+  "macros",
+  "net",
+  "fs",
+  "io-util",
+  "sync",
+  "time",
+  "signal",
+] }
 vad-rs = { git = "https://github.com/cjpais/vad-rs", default-features = false }
 enigo = "0.6.1"
 rodio = { git = "https://github.com/cjpais/rodio.git" }

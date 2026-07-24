@@ -50,3 +50,8 @@ result
 mobile/node_modules
 mobile/.expo
 mobile/dist
+
+# Local release staging and recorded demo media: fork-only working artifacts,
+# not source.
+.tmp-release/
+videos/
