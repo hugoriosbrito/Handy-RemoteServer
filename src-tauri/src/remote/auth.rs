@@ -336,3 +336,58 @@ pub fn six_digit_code() -> String {
     let n = (Uuid::new_v4().as_u128() % 900_000) + 100_000;
     format!("{:06}", n)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // NOTE: `AuthStore` itself is not exercised here. It owns an `AppHandle`,
+    // and any test that instantiates it makes the test binary fail to load on
+    // Windows with STATUS_ENTRYPOINT_NOT_FOUND, before a single test runs.
+    // See docs/EXTENSION_PLAN.md; the credential primitives below are covered
+    // directly instead.
+
+    #[test]
+    fn hash_token_is_stable_and_distinct_per_token() {
+        assert_eq!(hash_token("abc"), hash_token("abc"));
+        assert_ne!(hash_token("abc"), hash_token("abd"));
+        assert_eq!(hash_token("abc").len(), 64);
+    }
+
+    #[test]
+    fn hashing_is_one_way_enough_to_not_leak_the_token() {
+        let token = format!("at_{}", random_token());
+        let hash = hash_token(&token);
+        assert!(!hash.contains(&token));
+        assert!(hash.chars().all(|c| c.is_ascii_hexdigit()));
+    }
+
+    #[test]
+    fn generated_tokens_are_unique_and_url_safe() {
+        let token = random_token();
+        assert_eq!(token.len(), 32);
+        assert!(!token.contains('-'));
+        assert!(token.chars().all(|c| c.is_ascii_alphanumeric()));
+        assert_ne!(token, random_token());
+    }
+
+    #[test]
+    fn device_ids_are_unique() {
+        assert_ne!(uuid_simple(), uuid_simple());
+    }
+
+    #[test]
+    fn pairing_codes_are_always_six_digits() {
+        for _ in 0..200 {
+            let code = six_digit_code();
+            assert_eq!(code.len(), 6, "code {code} is not six characters");
+            assert!(code.chars().all(|c| c.is_ascii_digit()));
+        }
+    }
+
+    #[test]
+    fn now_secs_is_a_plausible_unix_timestamp() {
+        // Sanity guard against a clock helper that silently returns 0.
+        assert!(now_secs() > 1_700_000_000);
+    }
+}

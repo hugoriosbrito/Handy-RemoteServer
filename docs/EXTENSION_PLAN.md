@@ -76,9 +76,16 @@ the asset protocol served stale audio when switching history rows. It is recorde
 
 ### P2 — quality and code standards
 
-3. **No tests in the remote module**: `src-tauri/src/remote/**` has no `#[test]` at all,
-   against 140 in the rest of the backend. Minimum: unit tests for `AuthStore` (issue,
-   refresh, rotation, revocation) and for the pairing state machine.
+3. **`AuthStore` is still untested.** The remote module now carries unit tests for the
+   pairing state machine, the transcription cache, the QR endpoint builder and the
+   credential primitives (`hash_token`, `random_token`, `six_digit_code`), taking the
+   backend suite from 140 to 154 tests. `AuthStore` itself is blocked: it owns an
+   `AppHandle`, and any test that merely instantiates it makes the test binary abort at
+   load time on Windows with `STATUS_ENTRYPOINT_NOT_FOUND` (exit `0xc0000139`), before a
+   single test runs — bisected down to one test constructing `AuthStore::default()`.
+   Covering issue/refresh/rotation/revocation therefore requires decoupling the store
+   from `AppHandle` first: extract the persistence side behind a small trait, so the
+   token logic can be tested against an in-memory backend.
 4. **i18n debt**: all 24 locales carry `sidebar.mobileAccess` and the `settings.mobileAccess`
    block; only `pt` is translated — the others still hold English text. No keys are
    missing, so this is translation debt, not a bug.
