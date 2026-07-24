@@ -271,7 +271,14 @@ pub async fn get_transcription_audio(
         )
     })?;
 
-    Ok(([(header::CONTENT_TYPE, "audio/wav")], bytes).into_response())
+    Ok((
+        [
+            (header::CONTENT_TYPE, "audio/wav"),
+            (header::CACHE_CONTROL, "private, no-store"),
+        ],
+        bytes,
+    )
+        .into_response())
 }
 
 /// Re-run speech-to-text on the audio the PC already stored for this entry.

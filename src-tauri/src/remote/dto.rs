@@ -173,12 +173,28 @@ pub struct ModelSummary {
     pub supports_translation: bool,
     pub supports_streaming: bool,
     pub is_recommended: bool,
+    pub accuracy_score: f32,
+    pub speed_score: f32,
+    pub supported_languages: Vec<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SelectModelRequest {
     pub model_id: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectPromptRequest {
+    pub prompt_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ClientSettingsResponse {
+    pub sound_theme: String,
+    pub audio_feedback: bool,
 }
 
 #[derive(Debug, Clone, Serialize)]

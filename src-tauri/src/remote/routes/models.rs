@@ -52,6 +52,9 @@ pub async fn list_models(
             supports_translation: m.supports_translation,
             supports_streaming: m.supports_streaming,
             is_recommended: m.is_recommended,
+            accuracy_score: m.accuracy_score,
+            speed_score: m.speed_score,
+            supported_languages: m.supported_languages,
         })
         .collect();
 

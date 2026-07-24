@@ -299,7 +299,13 @@ impl ShortcutAction for TranscribeAction {
                 } else {
                     // Save WAV concurrently with transcription
                     let sample_count = samples.len();
-                    let file_name = format!("handy-{}.wav", chrono::Utc::now().timestamp());
+                    // Include millis + a short uuid so two recordings in the same
+                    // second (or overlapping remote uploads) never collide on disk.
+                    let file_name = format!(
+                        "handy-{}-{}.wav",
+                        chrono::Utc::now().timestamp_millis(),
+                        crate::remote::auth::uuid_simple()
+                    );
                     let wav_path = hm.recordings_dir().join(&file_name);
                     let wav_path_for_verify = wav_path.clone();
                     let samples_for_wav = samples.clone();

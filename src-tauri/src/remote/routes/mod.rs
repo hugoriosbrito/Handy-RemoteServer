@@ -51,6 +51,11 @@ pub fn router(state: Arc<RemoteServerState>) -> Router {
         .route("/v1/models", get(models::list_models))
         .route("/v1/models/select", post(models::select_model))
         .route("/v1/post-processing", get(post_processing::get_info))
+        .route(
+            "/v1/post-processing/select-prompt",
+            post(post_processing::select_prompt),
+        )
+        .route("/v1/settings", get(post_processing::client_settings))
         .route("/v1/history", get(history::list_history))
         .route(
             "/v1/history/{id}",

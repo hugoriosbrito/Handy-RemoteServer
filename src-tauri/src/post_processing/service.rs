@@ -350,7 +350,22 @@ pub async fn process_transcription_output(
     transcription: &str,
     post_process: bool,
 ) -> ProcessedTranscription {
-    let settings = get_settings(app);
+    process_transcription_output_with_prompt(app, transcription, post_process, None).await
+}
+
+pub async fn process_transcription_output_with_prompt(
+    app: &AppHandle,
+    transcription: &str,
+    post_process: bool,
+    prompt_id_override: Option<&str>,
+) -> ProcessedTranscription {
+    let mut settings = get_settings(app);
+    if let Some(prompt_id) = prompt_id_override {
+        let trimmed = prompt_id.trim();
+        if !trimmed.is_empty() {
+            settings.post_process_selected_prompt_id = Some(trimmed.to_string());
+        }
+    }
     let mut final_text = transcription.to_string();
     let mut post_processed_text: Option<String> = None;
     let mut post_process_prompt: Option<String> = None;
