@@ -3,6 +3,9 @@ import tsParser from "@typescript-eslint/parser";
 
 export default [
   {
+    ignores: ["src/remote-session-preview/**"],
+  },
+  {
     files: ["src/**/*.{ts,tsx}"],
     languageOptions: {
       parser: tsParser,
