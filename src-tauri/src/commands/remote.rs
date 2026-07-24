@@ -1,5 +1,5 @@
 use crate::remote::dto::{DeviceInfo, PairingSessionResponse};
-use crate::remote::server::RemoteServer;
+use crate::remote::{RemoteServer, RemoteServerState};
 use crate::settings::{get_settings, write_settings};
 use serde::Serialize;
 use specta::Type;
@@ -190,10 +190,7 @@ pub fn approve_remote_pairing_session(
     })
 }
 
-fn session_preview_name(
-    state: &crate::remote::state::RemoteServerState,
-    session_id: &str,
-) -> String {
+fn session_preview_name(state: &RemoteServerState, session_id: &str) -> String {
     state
         .pairing
         .get(session_id)
@@ -201,10 +198,7 @@ fn session_preview_name(
         .unwrap_or_else(|| "Mobile".to_string())
 }
 
-fn session_preview_platform(
-    state: &crate::remote::state::RemoteServerState,
-    session_id: &str,
-) -> Option<String> {
+fn session_preview_platform(state: &RemoteServerState, session_id: &str) -> Option<String> {
     state
         .pairing
         .get(session_id)
