@@ -23,6 +23,12 @@ import {
 import { useTheme } from "@/theme/ThemeProvider";
 import { api, Transcription } from "@/api/client";
 import { formatDuration, useRecordingStore } from "@/stores/recordingStore";
+
+function formatClock(dateStr: string): string {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "--:--";
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
 import { useConnectionStore } from "@/stores/connectionStore";
 
 function isPhoneSource(name?: string | null): boolean {
@@ -120,6 +126,9 @@ export default function HistoryScreen() {
       lastTranscription: item.text,
       lastDurationMs: item.durationMs,
       lastAudioUri: null,
+      lastId: item.id,
+      lastModel: null,
+      lastPostProcessed: false,
     });
     router.push("/result");
   };
@@ -195,7 +204,10 @@ export default function HistoryScreen() {
               >
                 <View style={styles.itemHeader}>
                   <Text style={styles.itemDuration}>
-                    {formatDuration(item.durationMs)}
+                    {formatClock(item.createdAt)}
+                    {item.durationMs > 0
+                      ? " · " + formatDuration(item.durationMs)
+                      : ""}
                   </Text>
                   <Ionicons
                     name={

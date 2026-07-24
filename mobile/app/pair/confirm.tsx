@@ -16,7 +16,9 @@ import { HandyLogo } from "@/components/HandyLogo";
 import { spacing, typography, radius, type ThemeColors } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useConnectionStore } from "@/stores/connectionStore";
+import { Audio } from "expo-av";
 import { api } from "@/api/client";
+import { useSettingsStore } from "@/stores/settingsStore";
 
 const POLL_MS = 1500;
 const POLL_TIMEOUT_MS = 120_000;
@@ -67,6 +69,17 @@ export default function ConfirmPairScreen() {
       { refreshToken, baseUrl },
     );
     setConnecting(false);
+    try {
+      const { status } = await Audio.getPermissionsAsync();
+      if (status === "granted") {
+        useSettingsStore.getState().setMicrophoneGranted(true);
+        useSettingsStore.getState().setOnboardingComplete(true);
+        router.replace("/(tabs)");
+        return;
+      }
+    } catch {
+      // fall through to onboarding
+    }
     router.replace("/onboarding/microphone");
   };
 

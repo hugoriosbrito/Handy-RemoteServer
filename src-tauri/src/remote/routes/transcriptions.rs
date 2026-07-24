@@ -1,3 +1,4 @@
+use crate::audio_toolkit::wav_duration_ms;
 use crate::post_processing::process_transcription_output;
 use crate::remote::dto::TranscriptionResponse;
 use crate::remote::routes::health::json_error;
@@ -152,6 +153,7 @@ pub async fn create_transcription(
             post_processed: false,
             prompt_name: None,
             model: Some(settings.selected_model.clone()),
+        duration_ms: ((samples.len() as u64) * 1000) / 16_000,
         }));
     }
 
@@ -197,6 +199,7 @@ pub async fn create_transcription(
         post_processed: should_post && processed.post_processed_text.is_some(),
         prompt_name,
         model: Some(settings.selected_model.clone()),
+        duration_ms: ((samples.len() as u64) * 1000) / 16_000,
     };
 
     TRANSCRIPTION_CACHE
@@ -329,6 +332,7 @@ pub async fn retranscribe(
         post_processed: should_post && processed.post_processed_text.is_some(),
         prompt_name: selected_prompt_name(&settings),
         model: Some(settings.selected_model.clone()),
+        duration_ms: ((samples.len() as u64) * 1000) / 16_000,
     };
 
     TRANSCRIPTION_CACHE
@@ -378,6 +382,10 @@ pub async fn reprocess(
         post_processed: processed.post_processed_text.is_some(),
         prompt_name: selected_prompt_name(&settings),
         model: Some(settings.selected_model.clone()),
+        duration_ms: wav_duration_ms(
+            &state.history.recordings_dir().join(&updated.file_name),
+        )
+        .unwrap_or(0),
     };
 
     TRANSCRIPTION_CACHE
@@ -425,5 +433,9 @@ pub async fn get_transcription(
         post_processed: entry.post_processed_text.is_some(),
         prompt_name: entry.post_process_prompt,
         model: None,
+        duration_ms: wav_duration_ms(
+            &state.history.recordings_dir().join(&entry.file_name),
+        )
+        .unwrap_or(0),
     }))
 }

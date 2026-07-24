@@ -339,7 +339,7 @@ export default function ModelsScreen() {
             style={styles.modalCard}
             onPress={(e) => e.stopPropagation()}
           >
-            <Text style={styles.modalTitle}>{t("models.filterLanguage")}</Text>
+            <Text style={styles.modalTitle}>{t("models.filterLanguages")}</Text>
             <ScrollView style={{ maxHeight: 360 }}>
               <TouchableOpacity
                 style={styles.modalItem}

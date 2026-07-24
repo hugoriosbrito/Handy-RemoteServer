@@ -66,6 +66,7 @@ export const HistoryEntrySchema = z.object({
   promptName: z.string().nullable().optional(),
   audioAvailable: z.boolean(),
   timestamp: z.number().optional(),
+  durationMs: z.number().optional(),
 });
 
 export const ModelSummarySchema = z.object({
@@ -152,6 +153,7 @@ export const TranscriptionResponseSchema = z.object({
   postProcessed: z.boolean(),
   promptName: z.string().nullable().optional(),
   model: z.string().nullable().optional(),
+  durationMs: z.number().optional(),
 });
 
 export type TranscriptionResponse = z.infer<typeof TranscriptionResponseSchema>;
@@ -378,7 +380,7 @@ export const api = {
         createdAt: e.timestamp
           ? new Date(e.timestamp * 1000).toISOString()
           : new Date().toISOString(),
-        durationMs: 0,
+        durationMs: e.durationMs ?? 0,
         computerName: e.source,
       })),
     };

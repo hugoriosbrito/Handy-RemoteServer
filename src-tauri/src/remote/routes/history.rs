@@ -1,3 +1,4 @@
+use crate::audio_toolkit::wav_duration_ms;
 use crate::remote::dto::HistoryEntryDto;
 use crate::remote::routes::health::json_error;
 use crate::remote::state::RemoteServerState;
@@ -21,6 +22,37 @@ fn require_auth(
         .map_err(|e| json_error(StatusCode::UNAUTHORIZED, "unauthorized", e))
 }
 
+fn entry_to_dto(
+    state: &RemoteServerState,
+    e: crate::managers::history::HistoryEntry,
+) -> HistoryEntryDto {
+    let duration_ms = if e.file_name.is_empty() {
+        0
+    } else {
+        let path = state.history.recordings_dir().join(&e.file_name);
+        wav_duration_ms(&path).unwrap_or(0)
+    };
+
+    HistoryEntryDto {
+        id: e.id.to_string(),
+        source: if e.file_name.contains("handy-remote") {
+            "mobile".to_string()
+        } else {
+            "desktop".to_string()
+        },
+        raw_text: e.transcription_text.clone(),
+        final_text: e
+            .post_processed_text
+            .clone()
+            .unwrap_or_else(|| e.transcription_text.clone()),
+        post_processed: e.post_processed_text.is_some(),
+        prompt_name: e.post_process_prompt,
+        audio_available: !e.file_name.is_empty(),
+        timestamp: e.timestamp,
+        duration_ms,
+    }
+}
+
 pub async fn list_history(
     State(state): State<Arc<RemoteServerState>>,
     headers: HeaderMap,
@@ -35,23 +67,7 @@ pub async fn list_history(
     Ok(Json(
         page.entries
             .into_iter()
-            .map(|e| HistoryEntryDto {
-                id: e.id.to_string(),
-                source: if e.file_name.contains("handy-remote") {
-                    "mobile".to_string()
-                } else {
-                    "desktop".to_string()
-                },
-                raw_text: e.transcription_text.clone(),
-                final_text: e
-                    .post_processed_text
-                    .clone()
-                    .unwrap_or_else(|| e.transcription_text.clone()),
-                post_processed: e.post_processed_text.is_some(),
-                prompt_name: e.post_process_prompt,
-                audio_available: !e.file_name.is_empty(),
-                timestamp: e.timestamp,
-            })
+            .map(|e| entry_to_dto(&state, e))
             .collect(),
     ))
 }
@@ -72,23 +88,7 @@ pub async fn get_history(
         .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?
         .ok_or_else(|| json_error(StatusCode::NOT_FOUND, "not_found", "entry not found"))?;
 
-    Ok(Json(HistoryEntryDto {
-        id: e.id.to_string(),
-        source: if e.file_name.contains("handy-remote") {
-            "mobile".to_string()
-        } else {
-            "desktop".to_string()
-        },
-        raw_text: e.transcription_text.clone(),
-        final_text: e
-            .post_processed_text
-            .clone()
-            .unwrap_or_else(|| e.transcription_text.clone()),
-        post_processed: e.post_processed_text.is_some(),
-        prompt_name: e.post_process_prompt,
-        audio_available: !e.file_name.is_empty(),
-        timestamp: e.timestamp,
-    }))
+    Ok(Json(entry_to_dto(&state, e)))
 }
 
 pub async fn delete_history(

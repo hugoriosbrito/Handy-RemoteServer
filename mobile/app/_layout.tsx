@@ -3,6 +3,8 @@ import { useEffect, useRef } from "react";
 import { AppState, type AppStateStatus } from "react-native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import * as SystemUI from "expo-system-ui";
+import * as SplashScreen from "expo-splash-screen";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import "@/i18n";
@@ -24,6 +26,8 @@ const queryClient = new QueryClient({
 });
 
 const HEALTH_POLL_MS = 20_000;
+
+void SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 function AppBootstrap() {
   const loadPersisted = useConnectionStore((s) => s.loadPersisted);
@@ -102,6 +106,17 @@ function AppBootstrap() {
 
 function ThemedApp() {
   const { colors, scheme } = useThemeInfo();
+  const settingsLoaded = useSettingsStore((s) => s.loaded);
+
+  useEffect(() => {
+    void SystemUI.setBackgroundColorAsync(colors.background).catch(() => undefined);
+  }, [colors.background]);
+
+  useEffect(() => {
+    if (!settingsLoaded) return;
+    void SplashScreen.hideAsync().catch(() => undefined);
+  }, [settingsLoaded]);
+
   return (
     <>
       <StatusBar style={scheme === "dark" ? "light" : "dark"} />

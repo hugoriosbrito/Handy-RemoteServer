@@ -77,14 +77,10 @@ export default function RecordingScreen() {
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
   const pausedAccumRef = useRef(0);
   const liveTextRef = useRef("");
-  const rotatingRef = useRef(false);
   const finishingRef = useRef(false);
-  /** Local URIs of completed streaming chunks, kept for the final concatenated upload. */
-  const chunkUrisRef = useRef<string[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [liveText, setLiveText] = useState("");
   const [meter, setMeter] = useState(0);
@@ -100,12 +96,7 @@ export default function RecordingScreen() {
     }
   };
 
-  const clearChunkTimer = () => {
-    if (chunkTimerRef.current) {
-      clearInterval(chunkTimerRef.current);
-      chunkTimerRef.current = null;
-    }
-  };
+  ;
 
   const startTimer = () => {
     clearTimer();
@@ -151,75 +142,11 @@ export default function RecordingScreen() {
 
   // Remember this URI for the final concatenated upload. Preview uploads never
   // create a durable history entry — they only feed live text.
-  const uploadPreviewChunk = async (uri: string) => {
-    rememberChunkUri(uri);
-    if (!token) return;
-    try {
-      const result = await uploadWithRetry(token, uri, {
-        preview: true,
-        baseUrl: baseUrl ?? undefined,
-        filename: "chunk.m4a",
-        attempts: 2,
-      });
-      appendLiveText(result.finalText || result.rawText);
-    } catch {
-      // Keep recording; failed chunks are skipped rather than aborting the session.
-    }
-  };
+  ;
 
-  const rememberChunkUri = (uri: string | null | undefined) => {
-    if (!uri) return;
-    chunkUrisRef.current.push(uri);
-  };
+  ;
 
-  const clearChunkFiles = async (uris: string[]) => {
-    await Promise.all(
-      uris.map((uri) =>
-        FileSystem.deleteAsync(uri, { idempotent: true }).catch(
-          () => undefined,
-        ),
-      ),
-    );
-  };
-
-  const rotateChunk = async () => {
-    if (
-      !streamingEnabled ||
-      rotatingRef.current ||
-      finishingRef.current ||
-      useRecordingStore.getState().status !== "recording"
-    ) {
-      return;
-    }
-    const current = recordingRef.current;
-    if (!current) return;
-
-    rotatingRef.current = true;
-    try {
-      await current.stopAndUnloadAsync();
-      const uri = current.getURI();
-      recordingRef.current = null;
-
-      const next = await prepareAndStartRecording();
-      recordingRef.current = next;
-      bindMetering(next);
-
-      if (uri) {
-        void uploadPreviewChunk(uri);
-      }
-    } catch {
-      // If rotation fails, try to keep a recording instance alive.
-      if (!recordingRef.current) {
-        try {
-          recordingRef.current = await prepareAndStartRecording();
-        } catch {
-          // ignore
-        }
-      }
-    } finally {
-      rotatingRef.current = false;
-    }
-  };
+  ;
 
   useEffect(() => {
     let cancelled = false;
@@ -232,7 +159,10 @@ export default function RecordingScreen() {
       // Soft health check — don't block recording start.
       if (baseUrl) void probeServerHealth(baseUrl);
       try {
-        const { status: micStatus } = await Audio.requestPermissionsAsync();
+        let { status: micStatus } = await Audio.getPermissionsAsync();
+        if (micStatus !== "granted") {
+          ({ status: micStatus } = await Audio.requestPermissionsAsync());
+        }
         setMeter(0);
         setMicDenied(false);
         if (micStatus !== "granted") {
@@ -258,7 +188,6 @@ export default function RecordingScreen() {
         recordingRef.current = recording;
         startTimeRef.current = Date.now();
         pausedAccumRef.current = 0;
-        chunkUrisRef.current = [];
         startTimer();
         // Keep capturing with the screen off / app backgrounded (Android needs a
         // foreground service + notification permission; iOS uses UIBackgroundModes).
@@ -280,7 +209,6 @@ export default function RecordingScreen() {
     return () => {
       cancelled = true;
       clearTimer();
-      clearChunkTimer();
       void stopBackgroundRecording();
       const rec = recordingRef.current;
       recordingRef.current = null;
@@ -291,15 +219,6 @@ export default function RecordingScreen() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    clearChunkTimer();
-    if (!streamingEnabled || status !== "recording") return;
-    chunkTimerRef.current = setInterval(() => {
-      void rotateChunk();
-    }, STREAM_CHUNK_MS);
-    return clearChunkTimer;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [streamingEnabled, status]);
 
   // Android can't capture microphone audio without a foreground service, and JS
   // chunk timers are frozen while backgrounded — so anything spoken with the app
@@ -312,29 +231,15 @@ export default function RecordingScreen() {
     const rec = recordingRef.current;
     if (!rec) return;
     clearTimer();
-    clearChunkTimer();
     pausedAccumRef.current =
       useRecordingStore.getState().elapsedMs || pausedAccumRef.current;
     setStatus("paused");
     setError(t("recording.backgroundPaused"));
     try {
-      if (streamingEnabled && !rotatingRef.current) {
-        rotatingRef.current = true;
-        try {
-          await rec.stopAndUnloadAsync();
-          const uri = rec.getURI();
-          recordingRef.current = null;
-          if (uri) {
-            void uploadPreviewChunk(uri);
-          }
-        } finally {
-          rotatingRef.current = false;
-        }
-      } else {
-        await rec.pauseAsync();
-      }
+      // Keep the continuous file intact — pause instead of stop/rotate.
+      await rec.pauseAsync();
     } catch {
-      // Couldn't cleanly pause/stop (recording likely interrupted). Drop the
+      // Couldn't cleanly pause (recording likely interrupted). Drop the
       // handle so resume recreates a fresh recorder instead of failing.
       recordingRef.current = null;
     }
@@ -360,7 +265,6 @@ export default function RecordingScreen() {
     if (status === "recording") {
       const rec = recordingRef.current;
       if (!rec) return;
-      clearChunkTimer();
       await rec.pauseAsync();
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       pausedAccumRef.current = elapsedMs;
@@ -393,17 +297,11 @@ export default function RecordingScreen() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     clearTimer();
-    clearChunkTimer();
     setStatus("processing");
     void playFeedbackSound("stop");
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     void deactivateKeepAwake("recording");
     void stopBackgroundRecording();
-
-    // Wait briefly if a chunk rotation is mid-flight.
-    for (let i = 0; i < 20 && rotatingRef.current; i++) {
-      await new Promise((r) => setTimeout(r, 50));
-    }
 
     try {
       const rec = recordingRef.current;
@@ -450,16 +348,11 @@ export default function RecordingScreen() {
         return;
       }
 
-      // Final upload is the canonical transcription: every completed preview
-      // chunk plus the trailing fragment, concatenated server-side into one
-      // history entry with playable audio.
-      if (uri) rememberChunkUri(uri);
-      const parts = [...chunkUrisRef.current];
-      chunkUrisRef.current = [];
+      // Final upload is one continuous recording — never a stitch of preview chunks.
 
       try {
-        if (parts.length > 0) {
-          const result = await uploadWithRetry(token, parts, {
+        if (uri) {
+          const result = await uploadWithRetry(token, uri, {
             postProcess: postProcessEnabled,
             baseUrl: baseUrl ?? undefined,
             filename: "recording.m4a",
@@ -474,12 +367,11 @@ export default function RecordingScreen() {
           setResult({
             text: finalText,
             durationMs,
-            audioUri: uri ?? parts[parts.length - 1] ?? null,
+            audioUri: uri,
             model: result.model ?? activeModel?.name,
             postProcessed: result.postProcessed,
             id: result.id && result.id !== "preview" ? result.id : null,
           });
-          void clearChunkFiles(parts);
         } else if (liveTextRef.current) {
           setResult({
             text: liveTextRef.current,
@@ -495,7 +387,6 @@ export default function RecordingScreen() {
       } catch {
         // Prefer showing whatever live text we already have instead of a false "offline".
         if (liveTextRef.current) {
-          void clearChunkFiles(parts);
           setResult({
             text: liveTextRef.current,
             durationMs,
@@ -508,8 +399,6 @@ export default function RecordingScreen() {
           return;
         }
         if (uri) {
-          // Keep the queued fragment; drop only the other preview chunks.
-          void clearChunkFiles(parts.filter((part) => part !== uri));
           addToOfflineQueue({
             id: `q-${Date.now()}`,
             createdAt: new Date().toISOString(),
@@ -520,7 +409,6 @@ export default function RecordingScreen() {
           router.replace("/recording-reconnect");
           return;
         }
-        void clearChunkFiles(parts);
         setError(t("recording.uploadFailed"));
         setStatus("idle");
         finishingRef.current = false;
@@ -539,7 +427,6 @@ export default function RecordingScreen() {
   const handleCancelConfirmed = async () => {
     setCancelConfirmOpen(false);
     clearTimer();
-    clearChunkTimer();
     finishingRef.current = true;
     const rec = recordingRef.current;
     recordingRef.current = null;
@@ -550,9 +437,6 @@ export default function RecordingScreen() {
         // ignore
       }
     }
-    const discarded = [...chunkUrisRef.current];
-    chunkUrisRef.current = [];
-    void clearChunkFiles(discarded);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     void deactivateKeepAwake("recording");
     void stopBackgroundRecording();
@@ -567,9 +451,7 @@ export default function RecordingScreen() {
           <View style={styles.livePill}>
             <View style={styles.liveDot} />
             <Text style={styles.liveLabel}>
-              {streamingEnabled
-                ? t("recording.livePreview")
-                : t("recording.title")}
+              {t("recording.title")}
             </Text>
           </View>
           {computer ? (

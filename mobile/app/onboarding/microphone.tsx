@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -19,6 +19,7 @@ export default function MicrophoneOnboardingScreen() {
     (s) => s.setOnboardingComplete,
   );
   const [showDenied, setShowDenied] = useState(false);
+  const [checking, setChecking] = useState(true);
   const colors = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -27,6 +28,27 @@ export default function MicrophoneOnboardingScreen() {
     setOnboardingComplete(true);
     router.replace("/(tabs)");
   };
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { status } = await Audio.getPermissionsAsync();
+        if (cancelled) return;
+        if (status === "granted") {
+          finish(true);
+          return;
+        }
+      } catch {
+        // Fall through to the request UI.
+      }
+      if (!cancelled) setChecking(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const requestPermission = async () => {
     try {
@@ -40,6 +62,10 @@ export default function MicrophoneOnboardingScreen() {
       finish(false);
     }
   };
+
+  if (checking) {
+    return <SafeAreaView style={styles.safe} />;
+  }
 
   return (
     <SafeAreaView style={styles.safe}>

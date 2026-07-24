@@ -61,6 +61,15 @@ pub fn decode_audio_to_samples(bytes: Vec<u8>) -> Result<Vec<f32>> {
     Ok(out)
 }
 
+/// Duration of a mono/stereo WAV file in milliseconds.
+pub fn wav_duration_ms<P: AsRef<Path>>(file_path: P) -> Result<u64> {
+    let reader = WavReader::open(file_path.as_ref())?;
+    let sample_rate = reader.spec().sample_rate.max(1) as u64;
+    let channels = reader.spec().channels.max(1) as u64;
+    let frames = reader.len() as u64 / channels;
+    Ok(frames.saturating_mul(1000) / sample_rate)
+}
+
 /// Verify a WAV file by reading it back and checking the sample count.
 pub fn verify_wav_file<P: AsRef<Path>>(file_path: P, expected_samples: usize) -> Result<()> {
     let reader = WavReader::open(file_path.as_ref())?;

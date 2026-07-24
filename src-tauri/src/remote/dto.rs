@@ -119,6 +119,7 @@ pub struct TranscriptionResponse {
     pub post_processed: bool,
     pub prompt_name: Option<String>,
     pub model: Option<String>,
+    pub duration_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]
@@ -132,6 +133,7 @@ pub struct HistoryEntryDto {
     pub prompt_name: Option<String>,
     pub audio_available: bool,
     pub timestamp: i64,
+    pub duration_ms: u64,
 }
 
 #[derive(Debug, Clone, Serialize)]

@@ -10,10 +10,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   scheme: "handy-remote",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
+  backgroundColor: "#0F0F11",
   splash: {
     image: "./assets/splash-icon.png",
     resizeMode: "contain",
-    backgroundColor: "#da5893",
+    backgroundColor: "#0F0F11",
   },
   ios: {
     supportsTablet: true,
@@ -36,7 +37,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   android: {
     adaptiveIcon: {
       foregroundImage: "./assets/adaptive-icon.png",
-      backgroundColor: "#da5893",
+      backgroundColor: "#0F0F11",
     },
     package: "com.handy.remote",
     permissions: [
