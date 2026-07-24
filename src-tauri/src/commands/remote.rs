@@ -72,10 +72,7 @@ pub async fn change_remote_server_port_setting(app: AppHandle, port: u16) -> Res
 
     if let Some(server) = app.try_state::<RemoteServer>() {
         if was_enabled {
-            server.stop();
-            // brief yield so bind can release
-            tokio::time::sleep(std::time::Duration::from_millis(150)).await;
-            server.start().await?;
+            server.restart().await?;
         }
     }
     Ok(())
@@ -83,13 +80,23 @@ pub async fn change_remote_server_port_setting(app: AppHandle, port: u16) -> Res
 
 #[tauri::command]
 #[specta::specta]
-pub fn change_remote_local_network_enabled_setting(
+pub async fn change_remote_local_network_enabled_setting(
     app: AppHandle,
     enabled: bool,
 ) -> Result<(), String> {
     let mut settings = get_settings(&app);
+    let was_enabled = settings.remote_server_enabled;
     settings.remote_local_network_enabled = enabled;
     write_settings(&app, settings);
+
+    // This toggle decides whether we bind to 0.0.0.0 or loopback, so it only
+    // takes effect once the listener is recreated.
+    if let Some(server) = app.try_state::<RemoteServer>() {
+        if was_enabled {
+            let server = server.inner().clone();
+            server.restart().await?;
+        }
+    }
     Ok(())
 }
 
@@ -129,18 +136,8 @@ pub fn create_remote_pairing_session(app: AppHandle) -> Result<PairingSessionRes
         // Use configured port; bind_port is async mutex — read settings as source of truth.
         get_settings(&app).remote_server_port
     };
-    let local_ip = {
-        let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok();
-        socket.and_then(|s| {
-            s.connect("8.8.8.8:80").ok()?;
-            s.local_addr().ok().map(|a| a.ip().to_string())
-        })
-    };
-    let endpoints = crate::remote::dto::QrEndpoints {
-        local: local_ip.map(|ip| format!("{}:{}", ip, port)),
-        mdns: Some(format!("handy-remote.local:{}", port)),
-        tailscale: None,
-    };
+    // Shared with the HTTP pairing route so both paths honour the same toggles.
+    let endpoints = crate::remote::build_pairing_endpoints(&get_settings(&app), port);
     let (session, qr) =
         state
             .pairing

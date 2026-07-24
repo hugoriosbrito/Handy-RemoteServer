@@ -2,7 +2,7 @@ use crate::remote::routes;
 use crate::remote::state::RemoteServerState;
 use crate::settings::get_settings;
 use log::{error, info};
-use std::net::SocketAddr;
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 use tokio::sync::oneshot;
@@ -35,13 +35,17 @@ impl RemoteServer {
         *self.state.bind_port.lock().await = port;
 
         let app = routes::router(self.state.clone());
-        let addr = SocketAddr::from(([0, 0, 0, 0], port));
+        // The "allow local network" toggle has to change the actual bind address,
+        // otherwise turning it off still leaves the server reachable from the LAN.
+        // With it off we only listen on loopback, which keeps tunnel-based access
+        // (Tailscale and friends) working while closing the LAN surface.
+        let addr = SocketAddr::new(bind_ip(&settings), port);
         let listener = tokio::net::TcpListener::bind(addr)
             .await
             .map_err(|e| format!("failed to bind remote server on {}: {}", addr, e))?;
 
         let (tx, rx) = oneshot::channel::<()>();
-        *self.shutdown_tx.lock().unwrap() = Some(tx);
+        *self.shutdown_tx.lock().unwrap_or_else(|e| e.into_inner()) = Some(tx);
         self.state.set_running(true);
 
         let state = self.state.clone();
@@ -61,10 +65,39 @@ impl RemoteServer {
     }
 
     pub fn stop(&self) {
-        if let Some(tx) = self.shutdown_tx.lock().unwrap().take() {
+        if let Some(tx) = self
+            .shutdown_tx
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .take()
+        {
             let _ = tx.send(());
         }
         self.state.set_running(false);
+    }
+
+    /// Restart the listener so bind-affecting settings take effect immediately.
+    ///
+    /// Waits for the previous socket to be released instead of sleeping a fixed
+    /// amount, otherwise the rebind can race and fail with "address in use".
+    pub async fn restart(&self) -> Result<(), String> {
+        self.stop();
+        for _ in 0..40 {
+            if !self.state.is_running() {
+                break;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(25)).await;
+        }
+        self.start().await
+    }
+}
+
+/// Bind address implied by the current network settings.
+fn bind_ip(settings: &crate::settings::AppSettings) -> IpAddr {
+    if settings.remote_local_network_enabled {
+        IpAddr::V4(Ipv4Addr::UNSPECIFIED)
+    } else {
+        IpAddr::V4(Ipv4Addr::LOCALHOST)
     }
 }
 

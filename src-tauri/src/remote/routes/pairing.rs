@@ -25,12 +25,7 @@ pub async fn create_session(
     }
 
     let port = *state.bind_port.lock().await;
-    let local_ip = local_ip_hint();
-    let endpoints = QrEndpoints {
-        local: local_ip.map(|ip| format!("{}:{}", ip, port)),
-        mdns: Some(format!("handy-remote.local:{}", port)),
-        tailscale: None,
-    };
+    let endpoints = build_endpoints(&settings, port);
 
     let (session, qr) =
         state
@@ -58,6 +53,40 @@ pub async fn claim(
             body.platform,
         )
         .map_err(|e| json_error(StatusCode::BAD_REQUEST, "claim_failed", e))?;
+
+    // When the user turned off "require device approval", claiming a valid
+    // session is enough: knowing the session secret already proves the phone
+    // scanned the QR code shown on this computer.
+    if !get_settings(&state.app).remote_device_approval_required {
+        let credentials = state.auth.issue_device(
+            session
+                .device_name
+                .clone()
+                .unwrap_or_else(|| "Mobile".to_string()),
+            session.device_platform.clone(),
+            &state.fingerprint,
+        );
+        let session = state
+            .pairing
+            .approve(&session.session_id, true, Some(credentials.clone()))
+            .map_err(|e| json_error(StatusCode::BAD_REQUEST, "approve_failed", e))?;
+
+        let _ = state.app.emit(
+            "remote-pairing-approved",
+            json!({
+                "sessionId": session.session_id,
+                "deviceId": credentials.device_id,
+                "auto": true,
+            }),
+        );
+
+        return Ok(Json(PairingClaimResponse {
+            session_id: session.session_id,
+            code: session.code,
+            server_name: state.server_name.clone(),
+            status: "approved".to_string(),
+        }));
+    }
 
     // Notify desktop UI so the user can approve.
     let _ = state.app.emit(
@@ -165,4 +194,92 @@ fn local_ip_hint() -> Option<String> {
     }
 }
 
+/// Endpoints advertised in the pairing QR code, honouring the network toggles.
+///
+/// Advertising a LAN address while local network access is disabled would hand
+/// the phone an endpoint the server is not even listening on.
+pub(crate) fn build_endpoints(settings: &crate::settings::AppSettings, port: u16) -> QrEndpoints {
+    let local_enabled = settings.remote_local_network_enabled;
+    QrEndpoints {
+        local: if local_enabled {
+            local_ip_hint().map(|ip| format!("{}:{}", ip, port))
+        } else {
+            None
+        },
+        mdns: if local_enabled {
+            Some(format!("handy-remote.local:{}", port))
+        } else {
+            None
+        },
+        tailscale: if settings.remote_access_enabled {
+            tailscale_ip_hint().map(|ip| format!("{}:{}", ip, port))
+        } else {
+            None
+        },
+    }
+}
+
+/// Best-effort Tailscale address for this machine.
+///
+/// Tailscale hands out addresses in the 100.64.0.0/10 CGNAT range, so we can
+/// recognise one without shelling out to the Tailscale CLI.
+fn tailscale_ip_hint() -> Option<String> {
+    let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    // Any address inside the tailnet range routes over the Tailscale interface
+    // when it is up; the connect is local-only and sends no packets.
+    socket.connect("100.100.100.100:80").ok()?;
+    match socket.local_addr().ok()?.ip() {
+        std::net::IpAddr::V4(v4) if is_tailscale_v4(v4) => Some(v4.to_string()),
+        _ => None,
+    }
+}
+
+fn is_tailscale_v4(ip: std::net::Ipv4Addr) -> bool {
+    let [a, b, ..] = ip.octets();
+    a == 100 && (64..128).contains(&b)
+}
+
 use tauri::Emitter;
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn settings_with(local: bool, remote: bool) -> crate::settings::AppSettings {
+        let mut settings = crate::settings::get_default_settings();
+        settings.remote_local_network_enabled = local;
+        settings.remote_access_enabled = remote;
+        settings
+    }
+
+    #[test]
+    fn local_endpoints_are_omitted_when_local_network_is_disabled() {
+        let endpoints = build_endpoints(&settings_with(false, false), 8765);
+        assert!(endpoints.local.is_none());
+        assert!(endpoints.mdns.is_none());
+    }
+
+    #[test]
+    fn mdns_endpoint_is_advertised_when_local_network_is_enabled() {
+        let endpoints = build_endpoints(&settings_with(true, false), 8765);
+        assert_eq!(
+            endpoints.mdns.as_deref(),
+            Some("handy-remote.local:8765"),
+            "mDNS endpoint should follow the local network toggle"
+        );
+    }
+
+    #[test]
+    fn tailscale_endpoint_requires_remote_access() {
+        let endpoints = build_endpoints(&settings_with(true, false), 8765);
+        assert!(endpoints.tailscale.is_none());
+    }
+
+    #[test]
+    fn tailscale_range_detection_matches_cgnat_block() {
+        assert!(is_tailscale_v4("100.64.0.1".parse().unwrap()));
+        assert!(is_tailscale_v4("100.127.255.254".parse().unwrap()));
+        assert!(!is_tailscale_v4("100.128.0.1".parse().unwrap()));
+        assert!(!is_tailscale_v4("192.168.0.10".parse().unwrap()));
+    }
+}

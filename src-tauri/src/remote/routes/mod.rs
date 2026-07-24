@@ -19,6 +19,35 @@ use std::time::Instant;
 use tower_http::cors::{Any, CorsLayer};
 use tower_http::limit::RequestBodyLimitLayer;
 
+/// Build the endpoints advertised in a pairing QR code from the current
+/// network settings. Re-exported so the Tauri command path and the HTTP route
+/// cannot drift apart.
+pub(crate) use pairing::build_endpoints as build_pairing_endpoints;
+
+/// Authorize a request from its `Authorization` header.
+///
+/// Single definition shared by every protected route: this used to be copy
+/// pasted into five route modules, so any change to the auth contract had to be
+/// made five times and could silently diverge.
+pub(crate) fn require_auth(
+    state: &RemoteServerState,
+    headers: &axum::http::HeaderMap,
+) -> Result<
+    crate::remote::auth::AuthorizedDevice,
+    (
+        axum::http::StatusCode,
+        axum::Json<crate::remote::dto::ApiError>,
+    ),
+> {
+    let bearer = headers
+        .get(axum::http::header::AUTHORIZATION)
+        .and_then(|v| v.to_str().ok());
+    state
+        .auth
+        .authorize(bearer)
+        .map_err(|e| health::json_error(axum::http::StatusCode::UNAUTHORIZED, "unauthorized", e))
+}
+
 /// Log every remote request with its status. Auth rejections and malformed
 /// uploads used to be returned as JSON without leaving any trace in the desktop
 /// log, which made "send fails while connected" impossible to diagnose.
