@@ -81,7 +81,17 @@
     "modelFallback": "No model",
     "modelMeta": "Tap to choose the model on the PC",
     "modelStreaming": "Real-time transcription",
-    "modelOffline": "Transcribes when you finish"
+    "modelOffline": "Transcribes when you finish",
+    "promptLabel": "Cleanup prompt",
+    "promptHint": "Choose which cleanup style the computer should apply.",
+    "promptUnavailable": "No prompts configured on the computer",
+    "promptNone": "Default prompt",
+    "promptSelectTitle": "Choose cleanup prompt",
+    "promptChoose": "Choose a prompt",
+    "promptTitle": "Post-processing prompt",
+    "choosePrompt": "Choose prompt",
+    "promptFallback": "Default prompt",
+    "selectPromptTitle": "Post-processing prompt"
   },
   "recording": {
     "title": "Recording",
@@ -157,7 +167,21 @@
     "notDownloaded": "Not downloaded",
     "empty": "No models found.",
     "loadError": "Could not load models.",
-    "notDownloadedHint": "Download this model on the computer to use it."
+    "notDownloadedHint": "Download this model on the computer to use it.",
+    "searchPlaceholder": "Search models by name...",
+    "allLanguages": "All languages",
+    "filterLanguages": "Languages",
+    "sortDefault": "Default",
+    "sortAccuracy": "Accuracy",
+    "sortSpeed": "Speed",
+    "accuracy": "Accuracy",
+    "speed": "Speed",
+    "languagesCount": "{{count}} languages",
+    "languageOnly": "{{language}}",
+    "languageFilter": "Language",
+    "sortBy": "Sort",
+    "languageCount_one": "{{count}} language",
+    "languageCount_other": "{{count}} languages"
   },
   "offlineQueue": {
     "title": "Offline queue",
@@ -201,7 +225,9 @@
     "retention24h": "After 24 hours",
     "retention7d": "After 7 days",
     "retentionNever": "Never",
-    "microphoneHint": "Open system settings"
+    "microphoneHint": "Open system settings",
+    "postProcessing": "Post-processing",
+    "postProcessingHint": "Choose the cleanup prompt used by the PC"
   },
   "biometricGate": {
     "title": "Handy Remote locked",
@@ -222,10 +248,10 @@
     "queueItems": "{{count}} in queue",
     "version": "App version",
     "testConnection": "Test connection",
-    "testing": "Testing?",
+    "testing": "Testing…",
     "reachable": "Computer reachable.",
     "unreachable": "Could not reach the computer.",
-    "none": "?",
+    "none": "—",
     "notPaired": "No paired computer."
   }
 }

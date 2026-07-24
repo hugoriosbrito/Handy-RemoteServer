@@ -1,7 +1,9 @@
-use crate::remote::dto::{PostProcessingInfo, PostProcessingPromptDto};
+use crate::remote::dto::{
+    ClientSettingsResponse, PostProcessingInfo, PostProcessingPromptDto, SelectPromptRequest,
+};
 use crate::remote::routes::health::json_error;
 use crate::remote::state::RemoteServerState;
-use crate::settings::get_settings;
+use crate::settings::{get_settings, write_settings};
 use axum::extract::State;
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
@@ -75,5 +77,57 @@ pub async fn get_info(
         model,
         selected_prompt,
         prompts,
+    }))
+}
+
+/// Persist the selected post-processing prompt so the phone can choose which
+/// cleanup style the PC should apply.
+pub async fn select_prompt(
+    State(state): State<Arc<RemoteServerState>>,
+    headers: HeaderMap,
+    Json(body): Json<SelectPromptRequest>,
+) -> Result<Json<PostProcessingInfo>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    let _ = require_auth(&state, &headers)?;
+
+    let prompt_id = body.prompt_id.trim().to_string();
+    if prompt_id.is_empty() {
+        return Err(json_error(
+            StatusCode::BAD_REQUEST,
+            "invalid_prompt",
+            "promptId is required",
+        ));
+    }
+
+    let mut settings = get_settings(&state.app);
+    let exists = settings
+        .post_process_prompts
+        .iter()
+        .any(|prompt| prompt.id == prompt_id);
+    if !exists {
+        return Err(json_error(
+            StatusCode::BAD_REQUEST,
+            "unknown_prompt",
+            "prompt not found",
+        ));
+    }
+
+    settings.post_process_selected_prompt_id = Some(prompt_id);
+    write_settings(&state.app, settings);
+
+    get_info(State(state), headers).await
+}
+
+/// Expose non-sensitive desktop settings the phone needs for feedback parity
+/// (sound theme / audio feedback).
+pub async fn client_settings(
+    State(state): State<Arc<RemoteServerState>>,
+    headers: HeaderMap,
+) -> Result<Json<ClientSettingsResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    let _ = require_auth(&state, &headers)?;
+    let settings = get_settings(&state.app);
+
+    Ok(Json(ClientSettingsResponse {
+        sound_theme: settings.sound_theme.as_str().to_string(),
+        audio_feedback: settings.audio_feedback,
     }))
 }

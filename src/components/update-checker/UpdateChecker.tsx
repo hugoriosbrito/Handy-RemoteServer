@@ -87,6 +87,13 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
       }
     } catch (error) {
       console.error("Failed to check for updates:", error);
+      // Fork builds are unsigned and may lack latest.json. Manual checks should
+      // still surface the fork releases page instead of silently failing.
+      if (isManualCheckRef.current) {
+        openUrl(
+          "https://github.com/hugoriosbrito/Handy-RemoteServer/releases/latest",
+        );
+      }
     } finally {
       setIsChecking(false);
       isManualCheckRef.current = false;
@@ -203,7 +210,9 @@ const UpdateChecker: React.FC<UpdateCheckerProps> = ({ className = "" }) => {
               <button
                 className="px-3 py-1.5 text-sm rounded bg-logo-primary text-white hover:bg-logo-primary/80 transition-colors"
                 onClick={() => {
-                  openUrl("https://github.com/cjpais/Handy/releases/latest");
+                  openUrl(
+                    "https://github.com/hugoriosbrito/Handy-RemoteServer/releases/latest",
+                  );
                   setShowPortableUpdateDialog(false);
                 }}
               >

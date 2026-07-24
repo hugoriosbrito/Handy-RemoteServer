@@ -127,7 +127,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               <Icon width={24} height={24} className="shrink-0" />
               <p
-                className="text-sm font-medium truncate"
+                className="min-w-0 flex-1 text-sm font-medium leading-tight break-words"
                 title={t(section.labelKey)}
               >
                 {t(section.labelKey)}

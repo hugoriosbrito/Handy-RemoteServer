@@ -78,11 +78,35 @@ export const ModelSummarySchema = z.object({
   supportsTranslation: z.boolean(),
   supportsStreaming: z.boolean().optional(),
   isRecommended: z.boolean(),
+  accuracyScore: z.number().optional(),
+  speedScore: z.number().optional(),
+  supportedLanguages: z.array(z.string()).optional(),
 });
 
 export const ModelsInfoSchema = z.object({
   activeModelId: z.string().nullable().optional(),
   models: z.array(ModelSummarySchema),
+});
+
+export const PostProcessingPromptSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+});
+
+export const PostProcessingInfoSchema = z.object({
+  available: z.boolean(),
+  configured: z.boolean(),
+  apiKeyConfigured: z.boolean(),
+  providerId: z.string().nullable().optional(),
+  providerLabel: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+  selectedPrompt: PostProcessingPromptSchema.nullable().optional(),
+  prompts: z.array(PostProcessingPromptSchema),
+});
+
+export const ClientSettingsSchema = z.object({
+  soundTheme: z.string(),
+  audioFeedback: z.boolean(),
 });
 
 export type ModelSummary = {
@@ -95,11 +119,17 @@ export type ModelSummary = {
   supportsTranslation: boolean;
   supportsStreaming: boolean;
   isRecommended: boolean;
+  accuracyScore?: number;
+  speedScore?: number;
+  supportedLanguages?: string[];
 };
 export type ModelsInfo = {
   activeModelId?: string | null;
   models: ModelSummary[];
 };
+export type PostProcessingPrompt = z.infer<typeof PostProcessingPromptSchema>;
+export type PostProcessingInfo = z.infer<typeof PostProcessingInfoSchema>;
+export type ClientSettings = z.infer<typeof ClientSettingsSchema>;
 
 export const HealthSchema = z.object({
   status: z.string(),
@@ -450,6 +480,9 @@ export const api = {
       models: data.models.map((m) => ({
         ...m,
         supportsStreaming: m.supportsStreaming === true,
+        accuracyScore: m.accuracyScore ?? 0,
+        speedScore: m.speedScore ?? 0,
+        supportedLanguages: m.supportedLanguages ?? [],
       })),
     };
   },
@@ -470,6 +503,9 @@ export const api = {
       models: data.models.map((m) => ({
         ...m,
         supportsStreaming: m.supportsStreaming === true,
+        accuracyScore: m.accuracyScore ?? 0,
+        speedScore: m.speedScore ?? 0,
+        supportedLanguages: m.supportedLanguages ?? [],
       })),
     };
   },
@@ -500,6 +536,20 @@ export const api = {
         .passthrough(),
       { method: "DELETE", token, baseUrl },
     ),
+
+  getPostProcessing: (token: string, baseUrl?: string) =>
+    request("/v1/post-processing", PostProcessingInfoSchema, { token, baseUrl }),
+
+  selectPrompt: (token: string, promptId: string, baseUrl?: string) =>
+    request("/v1/post-processing/select-prompt", PostProcessingInfoSchema, {
+      method: "POST",
+      body: JSON.stringify({ promptId }),
+      token,
+      baseUrl,
+    }),
+
+  getClientSettings: (token: string, baseUrl?: string) =>
+    request("/v1/settings", ClientSettingsSchema, { token, baseUrl }),
 
   parseQrPayload: (raw: string): QrPayload => {
     const json = extractQrJson(raw);

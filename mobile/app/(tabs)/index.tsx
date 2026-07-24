@@ -1,11 +1,11 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
-import { Toggle } from "@/components/ui";
+import { ActionSheet, Toggle } from "@/components/ui";
 import { HandyIcon } from "@/components/HandyLogo";
 import {
   spacing,
@@ -24,6 +24,7 @@ import { probeServerHealth } from "@/lib/connection";
 export default function RecordTabScreen() {
   const { t } = useTranslation();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const postProcessEnabled = useSettingsStore((s) => s.postProcessEnabled);
   const setPostProcess = useSettingsStore((s) => s.setPostProcess);
   const computer = useConnectionStore((s) => s.computer);
@@ -31,6 +32,7 @@ export default function RecordTabScreen() {
   const baseUrl = useConnectionStore((s) => s.baseUrl);
   const lastTranscription = useRecordingStore((s) => s.lastTranscription);
   const offlineCount = useRecordingStore((s) => s.offlineQueue.length);
+  const [promptSheetOpen, setPromptSheetOpen] = useState(false);
 
   const modelsQuery = useQuery({
     queryKey: ["models", token, baseUrl],
@@ -40,7 +42,37 @@ export default function RecordTabScreen() {
       return api.getModels(token, baseUrl ?? undefined);
     },
   });
+
+  const postProcessQuery = useQuery({
+    queryKey: ["post-processing", token, baseUrl],
+    enabled: Boolean(token),
+    queryFn: async () => {
+      if (!token) return null;
+      return api.getPostProcessing(token, baseUrl ?? undefined);
+    },
+  });
+
+  const selectPromptMutation = useMutation({
+    mutationFn: async (promptId: string) => {
+      if (!token) throw new Error("no token");
+      return api.selectPrompt(token, promptId, baseUrl ?? undefined);
+    },
+    onSuccess: (data) => {
+      queryClient.setQueryData(["post-processing", token, baseUrl], data);
+    },
+  });
+
   const activeModel = modelsQuery.data?.models.find((m) => m.isActive);
+  const postInfo = postProcessQuery.data;
+  const selectedPrompt = postInfo?.selectedPrompt ?? null;
+  const promptOptions = (postInfo?.prompts ?? []).map((prompt) => ({
+    label: prompt.name,
+    icon:
+      selectedPrompt?.id === prompt.id
+        ? ("checkmark-circle" as const)
+        : ("ellipse-outline" as const),
+    onPress: () => selectPromptMutation.mutate(prompt.id),
+  }));
   const colors = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
@@ -49,7 +81,6 @@ export default function RecordTabScreen() {
       router.push("/pair/scan");
       return;
     }
-    // Refresh reachability before opening the recorder (non-blocking).
     if (baseUrl) void probeServerHealth(baseUrl);
     router.push("/recording");
   };
@@ -137,6 +168,34 @@ export default function RecordTabScreen() {
             label={t("record.postProcess")}
             hint={t("record.postProcessHint")}
           />
+          {postProcessEnabled && computer && token ? (
+            <>
+              <View style={styles.modelDivider} />
+              <TouchableOpacity
+                style={styles.promptRow}
+                onPress={() => setPromptSheetOpen(true)}
+                activeOpacity={0.75}
+                disabled={!postInfo?.available || selectPromptMutation.isPending}
+              >
+                <View style={styles.modelInfo}>
+                  <Text style={styles.promptLabel}>
+                    {t("record.choosePrompt")}
+                  </Text>
+                  <Text style={styles.modelMeta}>
+                    {selectedPrompt?.name ??
+                      (postInfo?.configured
+                        ? t("record.promptFallback")
+                        : t("record.promptUnavailable"))}
+                  </Text>
+                </View>
+                <Ionicons
+                  name="chevron-forward"
+                  size={20}
+                  color={colors.midGray}
+                />
+              </TouchableOpacity>
+            </>
+          ) : null}
         </View>
 
         <View style={styles.recordArea}>
@@ -167,6 +226,14 @@ export default function RecordTabScreen() {
           </TouchableOpacity>
         ) : null}
       </View>
+
+      <ActionSheet
+        visible={promptSheetOpen}
+        title={t("record.choosePrompt")}
+        options={promptOptions}
+        cancelLabel={t("common.cancel")}
+        onClose={() => setPromptSheetOpen(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -264,6 +331,17 @@ const makeStyles = (colors: ThemeColors) =>
       marginTop: 2,
       fontSize: typography.sizes.sm,
       color: colors.midGray,
+    },
+    promptRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingBottom: spacing.xs,
+    },
+    promptLabel: {
+      fontSize: typography.sizes.md,
+      fontWeight: typography.weights.medium,
+      color: colors.text,
     },
     recordArea: {
       flex: 1,
