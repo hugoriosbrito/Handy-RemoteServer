@@ -153,7 +153,7 @@ pub async fn create_transcription(
             post_processed: false,
             prompt_name: None,
             model: Some(settings.selected_model.clone()),
-        duration_ms: ((samples.len() as u64) * 1000) / 16_000,
+            duration_ms: ((samples.len() as u64) * 1000) / 16_000,
         }));
     }
 
@@ -382,10 +382,8 @@ pub async fn reprocess(
         post_processed: processed.post_processed_text.is_some(),
         prompt_name: selected_prompt_name(&settings),
         model: Some(settings.selected_model.clone()),
-        duration_ms: wav_duration_ms(
-            &state.history.recordings_dir().join(&updated.file_name),
-        )
-        .unwrap_or(0),
+        duration_ms: wav_duration_ms(&state.history.recordings_dir().join(&updated.file_name))
+            .unwrap_or(0),
     };
 
     TRANSCRIPTION_CACHE
@@ -433,9 +431,7 @@ pub async fn get_transcription(
         post_processed: entry.post_processed_text.is_some(),
         prompt_name: entry.post_process_prompt,
         model: None,
-        duration_ms: wav_duration_ms(
-            &state.history.recordings_dir().join(&entry.file_name),
-        )
-        .unwrap_or(0),
+        duration_ms: wav_duration_ms(&state.history.recordings_dir().join(&entry.file_name))
+            .unwrap_or(0),
     }))
 }
