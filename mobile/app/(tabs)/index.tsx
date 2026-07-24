@@ -175,7 +175,9 @@ export default function RecordTabScreen() {
                 style={styles.promptRow}
                 onPress={() => setPromptSheetOpen(true)}
                 activeOpacity={0.75}
-                disabled={!postInfo?.available || selectPromptMutation.isPending}
+                disabled={
+                  !postInfo?.available || selectPromptMutation.isPending
+                }
               >
                 <View style={styles.modelInfo}>
                   <Text style={styles.promptLabel}>

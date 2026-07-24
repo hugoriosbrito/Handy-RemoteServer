@@ -59,7 +59,12 @@ function ScoreMeter({
     <View style={styles.scoreMeter}>
       <Text style={styles.scoreLabel}>{label}</Text>
       <View style={styles.scoreTrack}>
-        <View style={[styles.scoreFill, { width: `${width}%`, backgroundColor: colors.primary }]} />
+        <View
+          style={[
+            styles.scoreFill,
+            { width: `${width}%`, backgroundColor: colors.primary },
+          ]}
+        />
       </View>
     </View>
   );
@@ -119,16 +124,21 @@ export default function ModelsScreen() {
         if (!haystack.includes(queryText)) return false;
       }
       if (languageFilter !== "all") {
-        const langs = (model.supportedLanguages ?? []).map((lang) => lang.toLowerCase());
-        if (!(langs.includes("auto") || langs.includes(languageFilter))) return false;
+        const langs = (model.supportedLanguages ?? []).map((lang) =>
+          lang.toLowerCase(),
+        );
+        if (!(langs.includes("auto") || langs.includes(languageFilter)))
+          return false;
       }
       return true;
     });
 
     filtered.sort((a, b) => {
       if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
-      if (sortMode === "accuracy") return (b.accuracyScore ?? 0) - (a.accuracyScore ?? 0);
-      if (sortMode === "speed") return (b.speedScore ?? 0) - (a.speedScore ?? 0);
+      if (sortMode === "accuracy")
+        return (b.accuracyScore ?? 0) - (a.accuracyScore ?? 0);
+      if (sortMode === "speed")
+        return (b.speedScore ?? 0) - (a.speedScore ?? 0);
       if (a.isDownloaded !== b.isDownloaded) return a.isDownloaded ? -1 : 1;
       return a.name.localeCompare(b.name);
     });
@@ -138,7 +148,8 @@ export default function ModelsScreen() {
   const selectedLanguageLabel =
     languageFilter === "all"
       ? t("models.allLanguages")
-      : COMMON_FILTER_LANGS.find((lang) => lang.code === languageFilter)?.label ?? languageFilter;
+      : (COMMON_FILTER_LANGS.find((lang) => lang.code === languageFilter)
+          ?.label ?? languageFilter);
 
   const renderItem = ({ item }: { item: ModelSummary }) => {
     const disabled = !item.isDownloaded || selectMutation.isPending;
@@ -149,7 +160,8 @@ export default function ModelsScreen() {
         style={[styles.card, item.isActive && styles.cardActive]}
         activeOpacity={disabled ? 1 : 0.8}
         onPress={() => {
-          if (item.isDownloaded && !item.isActive) selectMutation.mutate(item.id);
+          if (item.isDownloaded && !item.isActive)
+            selectMutation.mutate(item.id);
         }}
         disabled={disabled}
       >
@@ -161,21 +173,39 @@ export default function ModelsScreen() {
             </Text>
           </View>
           {item.isActive ? (
-            <Ionicons name="checkmark-circle" size={24} color={colors.primary} />
+            <Ionicons
+              name="checkmark-circle"
+              size={24}
+              color={colors.primary}
+            />
           ) : item.isDownloaded ? (
             <Ionicons name="ellipse-outline" size={24} color={colors.midGray} />
           ) : (
-            <Ionicons name="cloud-download-outline" size={22} color={colors.midGray} />
+            <Ionicons
+              name="cloud-download-outline"
+              size={22}
+              color={colors.midGray}
+            />
           )}
         </View>
 
-        {(accuracy > 0 || speed > 0) ? (
+        {accuracy > 0 || speed > 0 ? (
           <View style={styles.scoreRow}>
             {accuracy > 0 ? (
-              <ScoreMeter label={t("models.accuracy")} value={accuracy} colors={colors} styles={styles} />
+              <ScoreMeter
+                label={t("models.accuracy")}
+                value={accuracy}
+                colors={colors}
+                styles={styles}
+              />
             ) : null}
             {speed > 0 ? (
-              <ScoreMeter label={t("models.speed")} value={speed} colors={colors} styles={styles} />
+              <ScoreMeter
+                label={t("models.speed")}
+                value={speed}
+                colors={colors}
+                styles={styles}
+              />
             ) : null}
           </View>
         ) : null}
@@ -186,7 +216,9 @@ export default function ModelsScreen() {
             <Text style={styles.metaBadge}>
               {item.supportedLanguages!.includes("auto")
                 ? t("models.multilingual")
-                : t("models.languageCount", { count: item.supportedLanguages!.length })}
+                : t("models.languageCount", {
+                    count: item.supportedLanguages!.length,
+                  })}
             </Text>
           ) : null}
           {item.supportsTranslation ? (
@@ -237,15 +269,29 @@ export default function ModelsScreen() {
             <Text style={styles.filterChipText}>{selectedLanguageLabel}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterChip, sortMode === "accuracy" && styles.filterChipActive]}
-            onPress={() => setSortMode((prev) => (prev === "accuracy" ? "default" : "accuracy"))}
+            style={[
+              styles.filterChip,
+              sortMode === "accuracy" && styles.filterChipActive,
+            ]}
+            onPress={() =>
+              setSortMode((prev) =>
+                prev === "accuracy" ? "default" : "accuracy",
+              )
+            }
             activeOpacity={0.8}
           >
-            <Text style={styles.filterChipText}>{t("models.sortAccuracy")}</Text>
+            <Text style={styles.filterChipText}>
+              {t("models.sortAccuracy")}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.filterChip, sortMode === "speed" && styles.filterChipActive]}
-            onPress={() => setSortMode((prev) => (prev === "speed" ? "default" : "speed"))}
+            style={[
+              styles.filterChip,
+              sortMode === "speed" && styles.filterChipActive,
+            ]}
+            onPress={() =>
+              setSortMode((prev) => (prev === "speed" ? "default" : "speed"))
+            }
             activeOpacity={0.8}
           >
             <Text style={styles.filterChipText}>{t("models.sortSpeed")}</Text>
@@ -266,7 +312,10 @@ export default function ModelsScreen() {
             keyExtractor={(item) => item.id}
             renderItem={renderItem}
             refreshControl={
-              <RefreshControl refreshing={query.isFetching} onRefresh={onRefresh} />
+              <RefreshControl
+                refreshing={query.isFetching}
+                onRefresh={onRefresh}
+              />
             }
             contentContainerStyle={styles.list}
             ListEmptyComponent={
@@ -282,8 +331,14 @@ export default function ModelsScreen() {
         animationType="fade"
         onRequestClose={() => setLanguageModalOpen(false)}
       >
-        <Pressable style={styles.modalBackdrop} onPress={() => setLanguageModalOpen(false)}>
-          <Pressable style={styles.modalCard} onPress={(e) => e.stopPropagation()}>
+        <Pressable
+          style={styles.modalBackdrop}
+          onPress={() => setLanguageModalOpen(false)}
+        >
+          <Pressable
+            style={styles.modalCard}
+            onPress={(e) => e.stopPropagation()}
+          >
             <Text style={styles.modalTitle}>{t("models.filterLanguage")}</Text>
             <ScrollView style={{ maxHeight: 360 }}>
               <TouchableOpacity
@@ -293,7 +348,9 @@ export default function ModelsScreen() {
                   setLanguageModalOpen(false);
                 }}
               >
-                <Text style={styles.modalItemText}>{t("models.allLanguages")}</Text>
+                <Text style={styles.modalItemText}>
+                  {t("models.allLanguages")}
+                </Text>
                 {languageFilter === "all" ? (
                   <Ionicons name="checkmark" size={18} color={colors.primary} />
                 ) : null}
@@ -309,7 +366,11 @@ export default function ModelsScreen() {
                 >
                   <Text style={styles.modalItemText}>{lang.label}</Text>
                   {languageFilter === lang.code ? (
-                    <Ionicons name="checkmark" size={18} color={colors.primary} />
+                    <Ionicons
+                      name="checkmark"
+                      size={18}
+                      color={colors.primary}
+                    />
                   ) : null}
                 </TouchableOpacity>
               ))}

@@ -538,7 +538,10 @@ export const api = {
     ),
 
   getPostProcessing: (token: string, baseUrl?: string) =>
-    request("/v1/post-processing", PostProcessingInfoSchema, { token, baseUrl }),
+    request("/v1/post-processing", PostProcessingInfoSchema, {
+      token,
+      baseUrl,
+    }),
 
   selectPrompt: (token: string, promptId: string, baseUrl?: string) =>
     request("/v1/post-processing/select-prompt", PostProcessingInfoSchema, {
