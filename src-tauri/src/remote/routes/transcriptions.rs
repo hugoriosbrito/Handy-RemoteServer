@@ -332,7 +332,7 @@ pub async fn retranscribe(
         post_processed: should_post && processed.post_processed_text.is_some(),
         prompt_name: selected_prompt_name(&settings),
         model: Some(settings.selected_model.clone()),
-        duration_ms: ((samples.len() as u64) * 1000) / 16_000,
+        duration_ms: wav_duration_ms(&path).unwrap_or(0),
     };
 
     TRANSCRIPTION_CACHE
