@@ -1,0 +1,82 @@
+# EAS reads this from the git root (monorepo). Prefer exclusions over '*'
+# whitelists — negation patterns produced an empty 80 B archive.
+
+# --- dependency / build outputs ---
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+.expo/
+**/.expo/
+.git/
+**/.git/
+
+# Rust / Tauri (nested .gitignore is not always honored by EAS)
+src-tauri/target/
+**/target/
+src-tauri/transcribe-libs/
+*.pdb
+
+# Desktop app / repo areas not needed to build mobile/
+/src/
+/public/
+/docs/
+/nix/
+/.nix/
+/tests/
+/scripts/
+/packages/
+/sponsor-images/
+/.cargo/
+/.github/
+/.vscode/
+/.claude/
+/.crush/
+/.direnv/
+/playwright-report/
+/test-results/
+/blob-report/
+/result/
+
+# Prevent EAS from treating the Tauri root as the JS project to install
+/package.json
+/bun.lock
+/package-lock.json
+/yarn.lock
+/pnpm-lock.yaml
+/app.config.js
+/app.json
+/eas.json
+/vite.config.ts
+/tsconfig.json
+/tsconfig.node.json
+/eslint.config.js
+/playwright.config.ts
+/index.html
+/flake.nix
+/flake.lock
+/remote-session-preview.html
+
+# Mobile local artifacts
+mobile/node_modules/
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+mobile/android/
+mobile/ios/
+mobile/**/*.apk
+mobile/**/*.aab
+mobile/.env
+mobile/.env.*
+mobile/**/*.log
+mobile/build-*.json
+mobile/build-*.txt
+mobile/log-*.bin
+
+# Misc
+**/.DS_Store
+*.local
+*.local.*
+.env
+.env.*
+recording_*

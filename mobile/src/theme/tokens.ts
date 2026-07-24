@@ -1,4 +1,7 @@
-export const colors = {
+﻿// Light palette — values kept identical to the app's original static theme so
+// light mode is byte-for-byte unchanged. `surface` mirrors the old `white`
+// card background; `white` stays literal white for text/icons on the primary.
+export const lightColors = {
   primary: '#da5893',
   primarySoft: '#FDF2F7',
   primaryMuted: '#F8D5E6',
@@ -9,9 +12,11 @@ export const colors = {
   textSecondary: '#6B6B6B',
   background: '#FFFFFF',
   backgroundAlt: '#FAFAFA',
-  midGray: '#808080',
+  surface: '#FFFFFF',
+  // ~4.6:1 on #FAFAFA — meets WCAG AA for small text.
+  midGray: '#6E6E6E',
   success: '#2F9E6A',
-  warning: '#E08A3A',
+  warning: '#C56A18',
   warningSoft: '#FFF3E8',
   codeBg: '#FDF2F7',
   softPink: '#FDF2F7',
@@ -22,6 +27,38 @@ export const colors = {
   recording: '#E53935',
   overlay: '#1A1A1A',
 } as const;
+
+export type ThemeColors = { [K in keyof typeof lightColors]: string };
+
+export const darkColors: ThemeColors = {
+  primary: '#e56aa6',
+  primarySoft: '#2A2028',
+  primaryMuted: '#3A2A34',
+  backgroundUi: '#da5893',
+  logoPrimary: '#faa2ca',
+  logoStroke: '#382731',
+  text: '#F4F4F5',
+  textSecondary: '#AFAFAF',
+  background: '#161618',
+  backgroundAlt: '#0F0F11',
+  surface: '#1F1F22',
+  // ~4.6:1 on #0F0F11.
+  midGray: '#A3A3A3',
+  success: '#3FB47D',
+  warning: '#F0B06A',
+  warningSoft: '#3A2E1E',
+  codeBg: '#241C22',
+  softPink: '#241C22',
+  white: '#FFFFFF',
+  border: '#2E2E32',
+  borderStrong: '#3A3A40',
+  error: '#EF5F5F',
+  recording: '#FF5A52',
+  overlay: '#000000',
+};
+
+/** Default export kept so any non-themed reference still resolves to light. */
+export const colors = lightColors;
 
 export const spacing = {
   xs: 4,

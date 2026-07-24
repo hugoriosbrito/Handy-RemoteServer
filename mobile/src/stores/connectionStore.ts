@@ -1,11 +1,12 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
-import { baseUrlFromQr, type QrPayload } from '@/api/client';
+import { baseUrlCandidatesFromQr, baseUrlFromQr, type QrPayload } from '@/api/client';
 
 const TOKEN_KEY = 'handy_auth_token';
 const REFRESH_KEY = 'handy_refresh_token';
 const COMPUTER_KEY = 'handy_computer';
 const BASE_URL_KEY = 'handy_base_url';
+const ENDPOINTS_KEY = 'handy_endpoints';
 
 export interface Computer {
   id: string;
@@ -21,12 +22,16 @@ export interface PendingPairing {
   serverName: string;
   fingerprint: string;
   baseUrl: string;
+  /** All base URLs advertised in the QR, for reconnect failover. */
+  endpoints: string[];
 }
 
 interface ConnectionState {
   token: string | null;
   refreshToken: string | null;
   baseUrl: string | null;
+  /** Known reachable base URLs (LAN IP, mDNS, tailscale) for failover. */
+  endpoints: string[];
   computer: Computer | null;
   computers: Computer[];
   pairingCode: string;
@@ -38,10 +43,13 @@ interface ConnectionState {
   setPendingFromQr: (qr: QrPayload, code?: string) => void;
   setConnecting: (v: boolean) => void;
   setReconnecting: (v: boolean) => void;
+  setComputerOnline: (online: boolean) => void;
+  /** Switch the active base URL (e.g. after reconnect failover) and persist it. */
+  setActiveBaseUrl: (url: string) => void;
   connect: (
     token: string,
     computer: Computer,
-    opts?: { refreshToken?: string; baseUrl?: string },
+    opts?: { refreshToken?: string; baseUrl?: string; endpoints?: string[] },
   ) => Promise<void>;
   disconnect: () => Promise<void>;
   loadPersisted: () => Promise<void>;
@@ -73,6 +81,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   token: null,
   refreshToken: null,
   baseUrl: null,
+  endpoints: [],
   computer: null,
   computers: [],
   pairingCode: '',
@@ -89,6 +98,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     }),
 
   setPendingFromQr: (qr, code) => {
+    const candidates = baseUrlCandidatesFromQr(qr);
     const resolvedBaseUrl = baseUrlFromQr(qr);
     set({
       pendingPairing: {
@@ -98,27 +108,59 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         serverName: qr.serverName,
         fingerprint: qr.fingerprint,
         baseUrl: resolvedBaseUrl,
+        endpoints: candidates,
       },
       pairingCode: code ?? get().pairingCode,
       baseUrl: resolvedBaseUrl,
+      endpoints: candidates,
     });
   },
 
   setConnecting: (v) => set({ isConnecting: v }),
   setReconnecting: (v) => set({ isReconnecting: v }),
 
+  setActiveBaseUrl: (url) => {
+    if (get().baseUrl === url) return;
+    void persist(BASE_URL_KEY, url);
+    set({ baseUrl: url });
+  },
+
+  setComputerOnline: (online) =>
+    set((s) => {
+      if (!s.computer) return {};
+      const computer = { ...s.computer, isOnline: online, lastSeen: new Date().toISOString() };
+      void persist(COMPUTER_KEY, JSON.stringify(computer));
+      return {
+        computer,
+        computers: s.computers.map((c) =>
+          c.id === computer.id ? computer : c,
+        ),
+      };
+    }),
+
   connect: async (token, computer, opts) => {
     const nextBaseUrl = opts?.baseUrl ?? get().baseUrl;
     const refreshToken = opts?.refreshToken ?? get().refreshToken;
+    // Merge advertised endpoints with the active URL so failover always has it.
+    const endpoints = Array.from(
+      new Set(
+        [
+          ...(opts?.endpoints ?? get().endpoints),
+          ...(nextBaseUrl ? [nextBaseUrl] : []),
+        ].filter(Boolean),
+      ),
+    );
     await persist(TOKEN_KEY, token);
     await persist(COMPUTER_KEY, JSON.stringify(computer));
     if (refreshToken) await persist(REFRESH_KEY, refreshToken);
     if (nextBaseUrl) await persist(BASE_URL_KEY, nextBaseUrl);
+    await persist(ENDPOINTS_KEY, JSON.stringify(endpoints));
     set((s) => ({
       token,
       computer,
       refreshToken: refreshToken ?? null,
       baseUrl: nextBaseUrl ?? null,
+      endpoints,
       computers: s.computers.some((c) => c.id === computer.id)
         ? s.computers.map((c) => (c.id === computer.id ? computer : c))
         : [...s.computers, computer],
@@ -131,11 +173,13 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     await persist(REFRESH_KEY, null);
     await persist(COMPUTER_KEY, null);
     await persist(BASE_URL_KEY, null);
+    await persist(ENDPOINTS_KEY, null);
     set({
       token: null,
       refreshToken: null,
       computer: null,
       baseUrl: null,
+      endpoints: [],
     });
   },
 
@@ -144,15 +188,27 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     const refreshToken = await read(REFRESH_KEY);
     const computerJson = await read(COMPUTER_KEY);
     const baseUrl = await read(BASE_URL_KEY);
+    const endpointsJson = await read(ENDPOINTS_KEY);
     if (token && computerJson) {
       try {
         const computer = JSON.parse(computerJson) as Computer;
+        let endpoints: string[] = [];
+        try {
+          endpoints = endpointsJson ? (JSON.parse(endpointsJson) as string[]) : [];
+        } catch {
+          endpoints = [];
+        }
+        // Ensure the active URL is always among the failover candidates.
+        if (baseUrl && !endpoints.includes(baseUrl)) endpoints = [baseUrl, ...endpoints];
+        // Assume online until a health probe says otherwise — stale isOnline:false
+        // from a previous session was falsely showing "PC offline".
         set({
           token,
           refreshToken,
-          computer,
+          computer: { ...computer, isOnline: true },
           baseUrl,
-          computers: [computer],
+          endpoints,
+          computers: [{ ...computer, isOnline: true }],
         });
       } catch {
         // ignore corrupt storage

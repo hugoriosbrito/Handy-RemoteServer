@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
 import { HandyLogo } from '@/components/HandyLogo';
-import { colors, spacing, typography, radius } from '@/theme/tokens';
+import { spacing, typography, radius, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { api } from '@/api/client';
 
@@ -31,6 +32,8 @@ export default function ConfirmPairScreen() {
   const [statusHint, setStatusHint] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startedRef = useRef(false);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
     return () => {
@@ -185,6 +188,9 @@ export default function ConfirmPairScreen() {
         ) : null}
 
         {error ? <Text style={styles.error}>{error}</Text> : null}
+        {pending?.baseUrl ? (
+          <Text style={styles.endpointHint}>{pending.baseUrl}</Text>
+        ) : null}
 
         <View style={styles.actions}>
           {!isConnecting ? (
@@ -201,7 +207,8 @@ export default function ConfirmPairScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   header: {
     flexDirection: 'row',
@@ -282,6 +289,13 @@ const styles = StyleSheet.create({
     color: colors.error,
     fontSize: typography.sizes.sm,
     textAlign: 'center',
+  },
+  endpointHint: {
+    marginTop: spacing.xs,
+    fontSize: typography.sizes.xs,
+    color: colors.midGray,
+    textAlign: 'center',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   actions: {
     marginTop: 'auto',

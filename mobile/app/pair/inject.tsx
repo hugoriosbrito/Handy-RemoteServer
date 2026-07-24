@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { api } from '@/api/client';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { spacing, typography, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 /**
  * Deep-link / automation entry: /pair/inject?payload=<urlencoded JSON QR>
@@ -15,6 +16,8 @@ export default function InjectPairScreen() {
   const params = useLocalSearchParams<{ payload?: string }>();
   const setPendingFromQr = useConnectionStore((s) => s.setPendingFromQr);
   const [error, setError] = useState<string | null>(null);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   useEffect(() => {
     try {
@@ -47,7 +50,8 @@ export default function InjectPairScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.background },
   box: {
     flex: 1,

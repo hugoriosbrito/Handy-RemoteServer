@@ -1,21 +1,29 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   SectionList,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Input } from '@/components/ui';
-import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
+import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { api, Transcription } from '@/api/client';
 import { formatDuration, useRecordingStore } from '@/stores/recordingStore';
 import { useConnectionStore } from '@/stores/connectionStore';
+
+function isPhoneSource(name?: string | null): boolean {
+  if (!name) return false;
+  const n = name.toLowerCase();
+  return n.includes('mobile') || n.includes('phone') || n.includes('android') || n.includes('ios');
+}
 
 function dayKey(dateStr: string): string {
   return new Date(dateStr).toDateString();
@@ -39,8 +47,10 @@ export default function HistoryScreen() {
 
   const token = useConnectionStore((s) => s.token);
   const baseUrl = useConnectionStore((s) => s.baseUrl);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isRefetching, refetch } = useQuery({
     queryKey: ['history', token, baseUrl],
     queryFn: async () => {
       if (!token) return { items: [] as Transcription[] };
@@ -51,7 +61,16 @@ export default function HistoryScreen() {
       }
     },
     enabled: Boolean(token),
+    refetchOnMount: 'always',
+    refetchInterval: 30_000,
+    refetchIntervalInBackground: false,
   });
+
+  useFocusEffect(
+    useCallback(() => {
+      if (token) void refetch();
+    }, [token, refetch]),
+  );
 
   const filtered = useMemo(() => {
     return (data?.items ?? []).filter((item) => {
@@ -59,14 +78,10 @@ export default function HistoryScreen() {
         return false;
       }
       if (sourceFilter === 'phone') {
-        return (item.computerName ?? '').toLowerCase().includes('mobile')
-          || (item.computerName ?? '').toLowerCase().includes('phone');
+        return isPhoneSource(item.computerName);
       }
       if (sourceFilter === 'computer') {
-        return !(
-          (item.computerName ?? '').toLowerCase().includes('mobile')
-          || (item.computerName ?? '').toLowerCase().includes('phone')
-        );
+        return !isPhoneSource(item.computerName);
       }
       return true;
     });
@@ -141,6 +156,13 @@ export default function HistoryScreen() {
             sections={sections}
             keyExtractor={(item) => item.id}
             stickySectionHeadersEnabled={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={isRefetching && !isLoading}
+                onRefresh={() => void refetch()}
+                tintColor={colors.primary}
+              />
+            }
             renderSectionHeader={({ section }) => (
               <Text style={styles.sectionTitle}>{section.title}</Text>
             )}
@@ -149,6 +171,7 @@ export default function HistoryScreen() {
                 onPress={() => handlePress(item)}
                 activeOpacity={0.7}
                 style={styles.item}
+                accessibilityRole="button"
               >
                 <View style={styles.itemHeader}>
                   <Text style={styles.itemDuration}>
@@ -156,7 +179,7 @@ export default function HistoryScreen() {
                   </Text>
                   <Ionicons
                     name={
-                      (item.computerName ?? '').toLowerCase().includes('mobile')
+                      isPhoneSource(item.computerName)
                         ? 'phone-portrait-outline'
                         : 'desktop-outline'
                     }
@@ -178,7 +201,8 @@ export default function HistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.backgroundAlt },
   container: {
     flex: 1,
@@ -201,7 +225,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.xs,
     borderRadius: radius.full,
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderWidth: 1,
     borderColor: colors.border,
   },
@@ -226,7 +250,7 @@ const styles = StyleSheet.create({
     marginTop: spacing.sm,
   },
   item: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     padding: spacing.md,
     marginBottom: spacing.sm,

@@ -4,13 +4,12 @@ use crate::remote::routes::health::json_error;
 use crate::remote::state::RemoteServerState;
 use crate::settings::get_settings;
 use axum::extract::{Multipart, Path, State};
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::{header, HeaderMap, StatusCode};
+use axum::response::{IntoResponse, Response};
 use axum::Json;
 use log::{error, info};
 use once_cell::sync::Lazy;
 use std::collections::HashMap;
-use std::io::Write;
-use std::path::PathBuf;
 use std::sync::{Arc, Mutex};
 
 static TRANSCRIPTION_CACHE: Lazy<Mutex<HashMap<String, TranscriptionResponse>>> =
@@ -73,6 +72,7 @@ pub async fn create_transcription(
         }
     }
 
+    let _ = &filename;
     let bytes = audio_bytes.ok_or_else(|| {
         json_error(
             StatusCode::BAD_REQUEST,
@@ -89,34 +89,25 @@ pub async fn create_transcription(
         ));
     }
 
-    // Persist into the history recordings directory as a WAV the pipeline understands.
+    // Decode whatever the client recorded (Android/iOS emit AAC in an m4a
+    // container; desktop clients may send WAV) into 16 kHz mono f32 samples.
+    let samples = crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(|e| {
+        json_error(
+            StatusCode::BAD_REQUEST,
+            "invalid_audio",
+            format!("could not decode uploaded audio: {}", e),
+        )
+    })?;
+
+    // Persist a 16 kHz WAV into the recordings dir for history retention.
     let file_name = format!(
         "handy-remote-{}-{}.wav",
         chrono::Utc::now().timestamp(),
         crate::remote::auth::uuid_simple()
     );
     let wav_path = state.history.recordings_dir().join(&file_name);
-
-    // If client uploaded non-wav, still write bytes first then attempt decode.
-    // MVP accepts WAV 16-bit; write through temp then copy if needed.
-    let temp_path = write_temp_audio(&bytes, &filename)
-        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "temp_file", e))?;
-
-    let samples = crate::audio_toolkit::read_wav_samples(&temp_path).map_err(|e| {
-        let _ = std::fs::remove_file(&temp_path);
-        json_error(
-            StatusCode::BAD_REQUEST,
-            "invalid_audio",
-            format!("could not decode audio (WAV 16-bit mono expected): {}", e),
-        )
-    })?;
-
-    // Copy validated WAV into recordings dir for history retention.
-    std::fs::copy(&temp_path, &wav_path).map_err(|e| {
-        let _ = std::fs::remove_file(&temp_path);
-        json_error(StatusCode::INTERNAL_SERVER_ERROR, "copy", e.to_string())
-    })?;
-    let _ = std::fs::remove_file(&temp_path);
+    crate::audio_toolkit::save_wav_file(&wav_path, &samples)
+        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "save_wav", e.to_string()))?;
 
     info!(
         "Remote transcription from device {} ({} samples)",
@@ -173,7 +164,174 @@ pub async fn create_transcription(
         .unwrap()
         .insert(response.id.clone(), response.clone());
 
-    let _ = wav_path; // retained on disk via history file_name
+    Ok(Json(response))
+}
+
+/// Resolve the friendly name of the currently-selected post-processing prompt.
+fn selected_prompt_name(settings: &crate::settings::AppSettings) -> Option<String> {
+    settings
+        .post_process_selected_prompt_id
+        .as_ref()
+        .and_then(|id| {
+            settings
+                .post_process_prompts
+                .iter()
+                .find(|p| &p.id == id)
+                .map(|p| p.name.clone())
+        })
+}
+
+/// Load the history entry for a numeric id, mapping errors to HTTP responses.
+async fn load_entry(
+    state: &RemoteServerState,
+    id: &str,
+) -> Result<crate::managers::history::HistoryEntry, (StatusCode, Json<crate::remote::dto::ApiError>)>
+{
+    let entry_id: i64 = id
+        .parse()
+        .map_err(|_| json_error(StatusCode::BAD_REQUEST, "invalid_id", "id must be numeric"))?;
+    state
+        .history
+        .get_entry_by_id(entry_id)
+        .await
+        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?
+        .ok_or_else(|| json_error(StatusCode::NOT_FOUND, "not_found", "transcription not found"))
+}
+
+/// Stream the stored WAV audio for a transcription so the mobile client can play
+/// it back — including streaming recordings, whose full audio only exists here.
+pub async fn get_transcription_audio(
+    State(state): State<Arc<RemoteServerState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Response, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    let _ = require_auth(&state, &headers)?;
+    let entry = load_entry(&state, &id).await?;
+
+    if entry.file_name.is_empty() {
+        return Err(json_error(
+            StatusCode::NOT_FOUND,
+            "no_audio",
+            "no audio stored for this entry",
+        ));
+    }
+
+    let path = state.history.recordings_dir().join(&entry.file_name);
+    let bytes = std::fs::read(&path).map_err(|e| {
+        json_error(
+            StatusCode::NOT_FOUND,
+            "no_audio",
+            format!("audio unavailable: {}", e),
+        )
+    })?;
+
+    Ok(([(header::CONTENT_TYPE, "audio/wav")], bytes).into_response())
+}
+
+/// Re-run speech-to-text on the audio the PC already stored for this entry.
+pub async fn retranscribe(
+    State(state): State<Arc<RemoteServerState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<TranscriptionResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    let _ = require_auth(&state, &headers)?;
+    let entry = load_entry(&state, &id).await?;
+
+    let path = state.history.recordings_dir().join(&entry.file_name);
+    let samples = crate::audio_toolkit::read_wav_samples(&path).map_err(|e| {
+        json_error(
+            StatusCode::NOT_FOUND,
+            "no_audio",
+            format!("audio unavailable: {}", e),
+        )
+    })?;
+
+    let raw_text = state.transcription.transcribe(samples).map_err(|e| {
+        error!("Remote re-transcription failed: {}", e);
+        json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "transcription_failed",
+            e.to_string(),
+        )
+    })?;
+
+    let settings = get_settings(&state.app);
+    let should_post = entry.post_process_requested && settings.post_process_enabled;
+    let processed = process_transcription_output(&state.app, &raw_text, should_post).await;
+
+    let updated = state
+        .history
+        .update_transcription(
+            entry.id,
+            processed.final_text.clone(),
+            processed.post_processed_text.clone(),
+            processed.post_process_prompt.clone(),
+        )
+        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?;
+
+    let response = TranscriptionResponse {
+        id: updated.id.to_string(),
+        raw_text: raw_text.clone(),
+        final_text: processed.final_text,
+        post_processed: should_post && processed.post_processed_text.is_some(),
+        prompt_name: selected_prompt_name(&settings),
+        model: Some(settings.selected_model.clone()),
+    };
+
+    TRANSCRIPTION_CACHE
+        .lock()
+        .unwrap()
+        .insert(response.id.clone(), response.clone());
+
+    Ok(Json(response))
+}
+
+/// Re-run AI post-processing on the text the PC already stored for this entry.
+pub async fn reprocess(
+    State(state): State<Arc<RemoteServerState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<TranscriptionResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    let _ = require_auth(&state, &headers)?;
+    let entry = load_entry(&state, &id).await?;
+
+    let settings = get_settings(&state.app);
+    if !settings.post_process_enabled {
+        return Err(json_error(
+            StatusCode::BAD_REQUEST,
+            "post_processing_disabled",
+            "post-processing is disabled on the PC",
+        ));
+    }
+
+    // Post-process the plain transcription text stored for this entry.
+    let source = entry.transcription_text.clone();
+    let processed = process_transcription_output(&state.app, &source, true).await;
+
+    let updated = state
+        .history
+        .update_transcription(
+            entry.id,
+            source.clone(),
+            processed.post_processed_text.clone(),
+            processed.post_process_prompt.clone(),
+        )
+        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?;
+
+    let response = TranscriptionResponse {
+        id: updated.id.to_string(),
+        raw_text: source.clone(),
+        final_text: processed.post_processed_text.clone().unwrap_or(source),
+        post_processed: processed.post_processed_text.is_some(),
+        prompt_name: selected_prompt_name(&settings),
+        model: Some(settings.selected_model.clone()),
+    };
+
+    TRANSCRIPTION_CACHE
+        .lock()
+        .unwrap()
+        .insert(response.id.clone(), response.clone());
+
     Ok(Json(response))
 }
 
@@ -213,18 +371,3 @@ pub async fn get_transcription(
     }))
 }
 
-fn write_temp_audio(bytes: &[u8], filename: &str) -> Result<PathBuf, String> {
-    let ext = std::path::Path::new(filename)
-        .extension()
-        .and_then(|e| e.to_str())
-        .unwrap_or("wav");
-    let path = std::env::temp_dir().join(format!(
-        "handy-remote-{}-{}.{}",
-        crate::remote::auth::now_secs(),
-        crate::remote::auth::uuid_simple(),
-        ext
-    ));
-    let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
-    file.write_all(bytes).map_err(|e| e.to_string())?;
-    Ok(path)
-}

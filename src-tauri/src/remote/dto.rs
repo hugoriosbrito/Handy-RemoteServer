@@ -156,6 +156,33 @@ pub struct PostProcessingPromptDto {
 
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ModelsInfo {
+    pub active_model_id: Option<String>,
+    pub models: Vec<ModelSummary>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ModelSummary {
+    pub id: String,
+    pub name: String,
+    pub description: String,
+    pub size_mb: u64,
+    pub is_downloaded: bool,
+    pub is_active: bool,
+    pub supports_translation: bool,
+    pub supports_streaming: bool,
+    pub is_recommended: bool,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SelectModelRequest {
+    pub model_id: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ApiError {
     pub error: String,
     pub message: String,

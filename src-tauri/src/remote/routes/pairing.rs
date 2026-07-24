@@ -155,10 +155,14 @@ pub async fn session_status(
 }
 
 fn local_ip_hint() -> Option<String> {
-    // Best-effort: use UDP connect trick without sending packets.
+    // Best-effort: UDP connect trick (no packets sent) to discover the
+    // outbound interface IPv4. Skip loopback so the QR is usable on LAN phones.
     let socket = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
     socket.connect("8.8.8.8:80").ok()?;
-    socket.local_addr().ok().map(|a| a.ip().to_string())
+    match socket.local_addr().ok()?.ip() {
+        std::net::IpAddr::V4(v4) if !v4.is_loopback() => Some(v4.to_string()),
+        _ => None,
+    }
 }
 
 use tauri::Emitter;

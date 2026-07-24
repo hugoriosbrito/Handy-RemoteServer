@@ -1,10 +1,12 @@
+import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { HandyLogo } from '@/components/HandyLogo';
 import { Button } from '@/components/ui';
-import { colors, spacing, typography } from '@/theme/tokens';
+import { spacing, typography, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 import { useConnectionStore } from '@/stores/connectionStore';
 import { useSettingsStore } from '@/stores/settingsStore';
 
@@ -13,6 +15,8 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const token = useConnectionStore((s) => s.token);
   const hasCompletedOnboarding = useSettingsStore((s) => s.hasCompletedOnboarding);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const handleConnect = () => {
     if (token && hasCompletedOnboarding) {
@@ -40,7 +44,8 @@ export default function WelcomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: colors.background,

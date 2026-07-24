@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system';
 
 const QUEUE_KEY = 'handy_offline_queue';
 
@@ -24,6 +25,8 @@ interface RecordingState {
   lastAudioUri: string | null;
   lastModel: string | null;
   lastPostProcessed: boolean;
+  /** Server-side transcription/history id — enables playback & reprocessing. */
+  lastId: string | null;
   offlineQueue: OfflineQueueItem[];
   setStatus: (status: RecordingStatus) => void;
   setElapsed: (ms: number) => void;
@@ -34,6 +37,13 @@ interface RecordingState {
     audioUri?: string | null;
     model?: string | null;
     postProcessed?: boolean;
+    id?: string | null;
+  }) => void;
+  /** Patch the stored result after a re-transcribe / reprocess. */
+  updateResult: (patch: {
+    text?: string;
+    model?: string | null;
+    postProcessed?: boolean;
   }) => void;
   resetSession: () => void;
   loadQueue: () => Promise<void>;
@@ -41,6 +51,8 @@ interface RecordingState {
   addToOfflineQueue: (item: OfflineQueueItem) => void;
   updateQueueItem: (id: string, patch: Partial<OfflineQueueItem>) => void;
   removeFromOfflineQueue: (id: string) => void;
+  /** Drop queued recordings whose audio is older than the retention window. */
+  pruneExpiredQueue: (retentionHours: number) => Promise<void>;
 }
 
 async function writeQueue(items: OfflineQueueItem[]) {
@@ -60,13 +72,14 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   lastAudioUri: null,
   lastModel: null,
   lastPostProcessed: false,
+  lastId: null,
   offlineQueue: [],
 
   setStatus: (status) => set({ status }),
   setElapsed: (ms) => set({ elapsedMs: ms }),
   setLiveText: (text) => set({ liveText: text }),
 
-  setResult: ({ text, durationMs, audioUri, model, postProcessed }) =>
+  setResult: ({ text, durationMs, audioUri, model, postProcessed, id }) =>
     set({
       status: 'idle',
       lastTranscription: text,
@@ -74,9 +87,18 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
       lastAudioUri: audioUri ?? null,
       lastModel: model ?? null,
       lastPostProcessed: Boolean(postProcessed),
+      lastId: id ?? null,
       liveText: '',
       elapsedMs: 0,
     }),
+
+  updateResult: ({ text, model, postProcessed }) =>
+    set((s) => ({
+      lastTranscription: text ?? s.lastTranscription,
+      lastModel: model ?? s.lastModel,
+      lastPostProcessed:
+        postProcessed === undefined ? s.lastPostProcessed : postProcessed,
+    })),
 
   resetSession: () =>
     set({
@@ -117,7 +139,32 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   },
 
   removeFromOfflineQueue: (id) => {
+    const item = get().offlineQueue.find((q) => q.id === id);
+    if (item?.uri) {
+      void FileSystem.deleteAsync(item.uri, { idempotent: true }).catch(() => undefined);
+    }
     const offlineQueue = get().offlineQueue.filter((q) => q.id !== id);
+    set({ offlineQueue });
+    void writeQueue(offlineQueue);
+  },
+
+  pruneExpiredQueue: async (retentionHours) => {
+    // -1 (or non-positive) means "never delete".
+    if (!retentionHours || retentionHours < 0) return;
+    const cutoff = Date.now() - retentionHours * 3600_000;
+    const current = get().offlineQueue;
+    const expired = current.filter((q) => new Date(q.createdAt).getTime() < cutoff);
+    if (expired.length === 0) return;
+    await Promise.all(
+      expired.map((q) =>
+        q.uri
+          ? FileSystem.deleteAsync(q.uri, { idempotent: true }).catch(() => undefined)
+          : Promise.resolve(),
+      ),
+    );
+    const offlineQueue = current.filter(
+      (q) => new Date(q.createdAt).getTime() >= cutoff,
+    );
     set({ offlineQueue });
     void writeQueue(offlineQueue);
   },

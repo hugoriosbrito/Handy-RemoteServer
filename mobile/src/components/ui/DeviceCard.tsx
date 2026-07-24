@@ -1,7 +1,9 @@
+import { useMemo } from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Card } from './Card';
-import { colors, typography, spacing, radius } from '@/theme/tokens';
+import { typography, spacing, radius, type ThemeColors } from '@/theme/tokens';
+import { useTheme } from '@/theme/ThemeProvider';
 
 interface DeviceCardProps {
   name: string;
@@ -11,6 +13,8 @@ interface DeviceCardProps {
 }
 
 export function DeviceCard({ name, subtitle, isOnline, code }: DeviceCardProps) {
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
   return (
     <Card style={styles.card}>
       <View style={styles.row}>
@@ -40,7 +44,8 @@ export function DeviceCard({ name, subtitle, isOnline, code }: DeviceCardProps) 
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   card: {
     marginVertical: spacing.sm,
   },

@@ -1,10 +1,7 @@
 import { Platform } from 'react-native';
 import { z } from 'zod';
 
-const DEFAULT_API_URL =
-  Platform.OS === 'android'
-    ? 'http://10.0.2.2:8765'
-    : 'http://127.0.0.1:8765';
+const DEFAULT_API_URL = 'http://127.0.0.1:8765';
 
 export const API_BASE_URL =
   process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? DEFAULT_API_URL;
@@ -71,6 +68,39 @@ export const HistoryEntrySchema = z.object({
   timestamp: z.number().optional(),
 });
 
+export const ModelSummarySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  sizeMb: z.number(),
+  isDownloaded: z.boolean(),
+  isActive: z.boolean(),
+  supportsTranslation: z.boolean(),
+  supportsStreaming: z.boolean().optional(),
+  isRecommended: z.boolean(),
+});
+
+export const ModelsInfoSchema = z.object({
+  activeModelId: z.string().nullable().optional(),
+  models: z.array(ModelSummarySchema),
+});
+
+export type ModelSummary = {
+  id: string;
+  name: string;
+  description: string;
+  sizeMb: number;
+  isDownloaded: boolean;
+  isActive: boolean;
+  supportsTranslation: boolean;
+  supportsStreaming: boolean;
+  isRecommended: boolean;
+};
+export type ModelsInfo = {
+  activeModelId?: string | null;
+  models: ModelSummary[];
+};
+
 export const HealthSchema = z.object({
   status: z.string(),
   version: z.string(),
@@ -84,6 +114,17 @@ export const ServerInfoSchema = z.object({
   platform: z.string().optional(),
   port: z.number().optional(),
 });
+
+export const TranscriptionResponseSchema = z.object({
+  id: z.string(),
+  rawText: z.string(),
+  finalText: z.string(),
+  postProcessed: z.boolean(),
+  promptName: z.string().nullable().optional(),
+  model: z.string().nullable().optional(),
+});
+
+export type TranscriptionResponse = z.infer<typeof TranscriptionResponseSchema>;
 
 export type PairingClaimResponse = z.infer<typeof PairingClaimResponseSchema>;
 export type DeviceCredentials = z.infer<typeof DeviceCredentialsSchema>;
@@ -102,10 +143,72 @@ export type Transcription = {
 interface RequestOptions extends RequestInit {
   token?: string | null;
   baseUrl?: string;
+  /** Abort the request after this many ms. Prevents hangs on stale LAN IPs. */
+  timeoutMs?: number;
+}
+
+/** Default per-request timeout. LAN probes must fail fast, not hang for minutes. */
+const DEFAULT_TIMEOUT_MS = 8000;
+
+/**
+ * fetch() with an AbortController timeout. A request to an unreachable LAN host
+ * would otherwise hang for a very long time, stalling reconnection and health polls.
+ */
+async function fetchWithTimeout(
+  url: string,
+  init: RequestInit & { timeoutMs?: number } = {},
+): Promise<Response> {
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, signal, ...rest } = init;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  if (signal) {
+    if (signal.aborted) controller.abort();
+    else signal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
+  try {
+    return await fetch(url, { ...rest, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 function resolveBaseUrl(override?: string): string {
-  return (override ?? API_BASE_URL).replace(/\/$/, '');
+  return rewriteLoopback(override ?? API_BASE_URL).replace(/\/$/, '');
+}
+
+/** On Android emulator, host loopback is 10.0.2.2 — not 127.0.0.1. */
+function rewriteLoopback(url: string): string {
+  if (Platform.OS !== 'android') return url;
+  try {
+    const parsed = new URL(url.includes('://') ? url : `http://${url}`);
+    if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') {
+      parsed.hostname = '10.0.2.2';
+      return parsed.toString().replace(/\/$/, '');
+    }
+  } catch {
+    // keep original
+  }
+  return url;
+}
+
+function isLoopbackBaseUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url.includes('://') ? url : `http://${url}`);
+    return parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+  } catch {
+    return false;
+  }
+}
+
+function networkErrorMessage(url: string, cause: unknown): string {
+  const detail = cause instanceof Error ? cause.message : String(cause);
+  if (/network request failed/i.test(detail) || /failed to fetch/i.test(detail)) {
+    if (isLoopbackBaseUrl(url) && Platform.OS !== 'web') {
+      return `Não foi possível alcançar ${url}. No celular físico use o IP da rede local do PC (não 127.0.0.1). Confira Wi‑Fi, firewall e se o Acesso móvel está ativo.`;
+    }
+    return `Falha de rede ao contatar ${url}. Celular e PC precisam estar na mesma Wi‑Fi; no Windows, permita a porta do Handy no Firewall.`;
+  }
+  return detail || 'Falha de rede';
 }
 
 async function request<T>(
@@ -113,17 +216,23 @@ async function request<T>(
   schema: z.ZodType<T>,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { token, headers, baseUrl, ...rest } = options;
+  const { token, headers, baseUrl, timeoutMs, ...rest } = options;
   const url = `${resolveBaseUrl(baseUrl)}${path}`;
 
-  const response = await fetch(url, {
-    ...rest,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...headers,
-    },
-  });
+  let response: Response;
+  try {
+    response = await fetchWithTimeout(url, {
+      ...rest,
+      timeoutMs,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...headers,
+      },
+    });
+  } catch (e) {
+    throw new ApiError(0, networkErrorMessage(url, e), { url });
+  }
 
   const body = await response.json().catch(() => null);
 
@@ -141,35 +250,57 @@ async function request<T>(
 function endpointToBaseUrl(endpoint: string | null | undefined): string | null {
   if (!endpoint) return null;
   if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-    return endpoint.replace(/\/$/, '');
+    return rewriteLoopback(endpoint.replace(/\/$/, ''));
   }
-  return `http://${endpoint}`.replace(/\/$/, '');
+  return rewriteLoopback(`http://${endpoint}`.replace(/\/$/, ''));
 }
 
-/** Prefer LAN IP from QR; on Android emulator always use the host alias. */
+/**
+ * All reachable base URLs advertised in the QR, in preference order and
+ * de-duplicated. Keeping every candidate (LAN IP + mDNS `.local` + tailscale)
+ * lets the app recover automatically when the PC's DHCP IP changes: even if the
+ * stored LAN IP goes stale, the mDNS name still resolves on the same network.
+ */
+export function baseUrlCandidatesFromQr(qr: QrPayload): string[] {
+  const ordered = [
+    endpointToBaseUrl(qr.endpoints?.local ?? null),
+    endpointToBaseUrl(qr.endpoints?.mdns ?? null),
+    endpointToBaseUrl(qr.endpoints?.tailscale ?? null),
+  ].filter((u): u is string => Boolean(u));
+  const unique = Array.from(new Set(ordered));
+  return unique.length > 0 ? unique : [resolveBaseUrl()];
+}
+
+/** Prefer LAN IP from QR; rewrite emulator loopback when needed. */
 export function baseUrlFromQr(qr: QrPayload): string {
-  // With `adb reverse tcp:8765`, 10.0.2.2 and 127.0.0.1 both reach the host.
-  // Prefer the stable emulator alias so QR LAN IPs (container/host) still work.
-  if (Platform.OS === 'android') {
-    const local = endpointToBaseUrl(qr.endpoints?.local ?? null);
-    if (local) {
-      try {
-        const parsed = new URL(local);
-        return `http://10.0.2.2:${parsed.port || '8765'}`;
-      } catch {
-        return API_BASE_URL;
-      }
-    }
-    return API_BASE_URL;
+  return baseUrlCandidatesFromQr(qr)[0];
+}
+
+function extractQrJson(raw: string): string {
+  const trimmed = raw.trim();
+  if (trimmed.startsWith('{')) return trimmed;
+
+  // Deep link: handy-remote://pair/inject?payload=<urlencoded json>
+  try {
+    const asUrl = new URL(trimmed);
+    const payload = asUrl.searchParams.get('payload');
+    if (payload) return decodeURIComponent(payload);
+  } catch {
+    // not a URL
   }
 
-  const local = endpointToBaseUrl(qr.endpoints?.local ?? null);
-  return local ?? API_BASE_URL;
+  // Query-only or path with payload=
+  const match = /(?:^|[?&])payload=([^&]+)/.exec(trimmed);
+  if (match?.[1]) {
+    return decodeURIComponent(match[1]);
+  }
+
+  return trimmed;
 }
 
 export const api = {
   health: (baseUrl?: string) =>
-    request('/v1/health', HealthSchema, { baseUrl }),
+    request('/v1/health', HealthSchema, { baseUrl, timeoutMs: 4000 }),
 
   getServerInfo: (baseUrl?: string) =>
     request('/v1/server', ServerInfoSchema, { baseUrl }),
@@ -231,13 +362,20 @@ export const api = {
     }
 
     const url = `${resolveBaseUrl(opts?.baseUrl)}/v1/transcriptions`;
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-      body: form,
-    });
+    let response: Response;
+    try {
+      response = await fetchWithTimeout(url, {
+        method: 'POST',
+        // Audio uploads can be large / slow on the LAN — allow generous headroom.
+        timeoutMs: 45000,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+    } catch (e) {
+      throw new ApiError(0, networkErrorMessage(url, e), { url });
+    }
 
     const body = await response.json().catch(() => null);
     if (!response.ok) {
@@ -248,16 +386,54 @@ export const api = {
       );
     }
 
-    return z
-      .object({
-        id: z.string(),
-        rawText: z.string(),
-        finalText: z.string(),
-        postProcessed: z.boolean(),
-        promptName: z.string().nullable().optional(),
-        model: z.string().nullable().optional(),
-      })
-      .parse(body);
+    return TranscriptionResponseSchema.parse(body);
+  },
+
+  /** Absolute URL of the stored audio for a transcription (streamed from the PC). */
+  transcriptionAudioUrl: (id: string, baseUrl?: string): string =>
+    `${resolveBaseUrl(baseUrl)}/v1/transcriptions/${encodeURIComponent(id)}/audio`,
+
+  /** Re-run speech-to-text on the audio the PC already stored for this entry. */
+  retranscribe: (token: string, id: string, baseUrl?: string) =>
+    request(
+      `/v1/transcriptions/${encodeURIComponent(id)}/retranscribe`,
+      TranscriptionResponseSchema,
+      { method: 'POST', token, baseUrl, timeoutMs: 45000 },
+    ),
+
+  /** Re-run AI post-processing on the text the PC already stored for this entry. */
+  reprocess: (token: string, id: string, baseUrl?: string) =>
+    request(
+      `/v1/transcriptions/${encodeURIComponent(id)}/reprocess`,
+      TranscriptionResponseSchema,
+      { method: 'POST', token, baseUrl, timeoutMs: 45000 },
+    ),
+
+  getModels: async (token: string, baseUrl?: string): Promise<ModelsInfo> => {
+    const data = await request('/v1/models', ModelsInfoSchema, { token, baseUrl });
+    return {
+      activeModelId: data.activeModelId,
+      models: data.models.map((m) => ({
+        ...m,
+        supportsStreaming: m.supportsStreaming === true,
+      })),
+    };
+  },
+
+  selectModel: async (token: string, modelId: string, baseUrl?: string): Promise<ModelsInfo> => {
+    const data = await request('/v1/models/select', ModelsInfoSchema, {
+      method: 'POST',
+      body: JSON.stringify({ modelId }),
+      token,
+      baseUrl,
+    });
+    return {
+      activeModelId: data.activeModelId,
+      models: data.models.map((m) => ({
+        ...m,
+        supportsStreaming: m.supportsStreaming === true,
+      })),
+    };
   },
 
   listDevices: (token: string, baseUrl?: string) =>
@@ -288,7 +464,8 @@ export const api = {
     ),
 
   parseQrPayload: (raw: string): QrPayload => {
-    const parsed = JSON.parse(raw) as unknown;
+    const json = extractQrJson(raw);
+    const parsed = JSON.parse(json) as unknown;
     return QrPayloadSchema.parse(parsed);
   },
 };

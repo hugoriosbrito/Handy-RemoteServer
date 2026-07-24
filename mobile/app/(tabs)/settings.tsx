@@ -1,14 +1,17 @@
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { useMemo, useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import Constants from 'expo-constants';
-import { Toggle } from '@/components/ui';
+import * as LocalAuthentication from 'expo-local-authentication';
+import { Toggle, ActionSheet } from '@/components/ui';
 import { HandyLogo } from '@/components/HandyLogo';
-import { colors, spacing, typography, radius, shadows } from '@/theme/tokens';
+import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
+import { useTheme, useThemeInfo } from '@/theme/ThemeProvider';
 import { useConnectionStore } from '@/stores/connectionStore';
-import { useSettingsStore } from '@/stores/settingsStore';
+import { useSettingsStore, type AudioRetentionHours } from '@/stores/settingsStore';
 import { useRecordingStore } from '@/stores/recordingStore';
 import i18n, { setStoredLanguage } from '@/i18n';
 
@@ -19,11 +22,53 @@ export default function SettingsScreen() {
   const computer = useConnectionStore((s) => s.computer);
   const language = useSettingsStore((s) => s.language);
   const setLanguage = useSettingsStore((s) => s.setLanguage);
-  const backgroundRecord = useSettingsStore((s) => s.backgroundRecord);
-  const setBackgroundRecord = useSettingsStore((s) => s.setBackgroundRecord);
   const biometrics = useSettingsStore((s) => s.biometrics);
   const setBiometrics = useSettingsStore((s) => s.setBiometrics);
+  const setThemeMode = useSettingsStore((s) => s.setThemeMode);
+  const audioRetentionHours = useSettingsStore((s) => s.audioRetentionHours);
+  const setAudioRetention = useSettingsStore((s) => s.setAudioRetention);
+  const { scheme } = useThemeInfo();
   const offlineCount = useRecordingStore((s) => s.offlineQueue.length);
+  const [biometricError, setBiometricError] = useState<string | null>(null);
+  const [retentionOpen, setRetentionOpen] = useState(false);
+  const colors = useTheme();
+  const styles = useMemo(() => makeStyles(colors), [colors]);
+
+  const retentionLabel = (hours: AudioRetentionHours) => {
+    switch (hours) {
+      case 1:
+        return t('settings.retention1h');
+      case 168:
+        return t('settings.retention7d');
+      case -1:
+        return t('settings.retentionNever');
+      default:
+        return t('settings.retention24h');
+    }
+  };
+
+  const handleBiometricsToggle = async (next: boolean) => {
+    if (!next) {
+      setBiometricError(null);
+      setBiometrics(false);
+      return;
+    }
+    // Enabling: confirm the device can actually authenticate before persisting.
+    const hasHardware = await LocalAuthentication.hasHardwareAsync();
+    const enrolled = await LocalAuthentication.isEnrolledAsync();
+    if (!hasHardware || !enrolled) {
+      setBiometricError(t('settings.biometricsUnavailable'));
+      return;
+    }
+    const result = await LocalAuthentication.authenticateAsync({
+      promptMessage: t('biometricGate.prompt'),
+      cancelLabel: t('common.cancel'),
+    });
+    if (result.success) {
+      setBiometricError(null);
+      setBiometrics(true);
+    }
+  };
 
   const toggleLanguage = async () => {
     const next = language === 'pt-BR' ? 'en' : 'pt-BR';
@@ -75,38 +120,47 @@ export default function SettingsScreen() {
             </Text>
           </TouchableOpacity>
           <View style={styles.divider} />
-          <View style={styles.toggleRow}>
-            <Toggle
-              value={backgroundRecord}
-              onValueChange={setBackgroundRecord}
-              label={t('settings.backgroundRecord')}
-            />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.row}>
-            <Text style={styles.rowLabel}>{t('settings.deleteAudio')}</Text>
-            <Text style={styles.rowValue}>{t('settings.deleteAudioValue')}</Text>
-          </View>
+          <TouchableOpacity style={styles.row} onPress={() => setRetentionOpen(true)}>
+            <Text style={styles.rowLabel}>{t('settings.audioRetention')}</Text>
+            <View style={styles.rowRight}>
+              <Text style={styles.rowValue}>{retentionLabel(audioRetentionHours)}</Text>
+              <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
+            </View>
+          </TouchableOpacity>
           <View style={styles.divider} />
           <View style={styles.toggleRow}>
             <Toggle
               value={biometrics}
-              onValueChange={setBiometrics}
+              onValueChange={(v) => void handleBiometricsToggle(v)}
               label={t('settings.biometrics')}
+            />
+            {biometricError ? (
+              <Text style={styles.biometricError}>{biometricError}</Text>
+            ) : null}
+          </View>
+          <View style={styles.divider} />
+          <View style={styles.toggleRow}>
+            <Toggle
+              value={scheme === 'dark'}
+              onValueChange={(v) => setThemeMode(v ? 'dark' : 'light')}
+              label={t('settings.darkMode')}
             />
           </View>
           <View style={styles.divider} />
           <TouchableOpacity
             style={styles.row}
-            onPress={() => router.push('/onboarding/microphone')}
+            onPress={() => void Linking.openSettings()}
           >
             <Text style={styles.rowLabel}>{t('settings.microphone')}</Text>
-            <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
+            <View style={styles.rowRight}>
+              <Text style={styles.rowValue}>{t('settings.microphoneHint')}</Text>
+              <Ionicons name="open-outline" size={18} color={colors.midGray} />
+            </View>
           </TouchableOpacity>
           <View style={styles.divider} />
           <TouchableOpacity
             style={styles.row}
-            onPress={() => router.push('/recording-reconnect')}
+            onPress={() => router.push('/diagnostics')}
           >
             <Text style={styles.rowLabel}>{t('settings.diagnostics')}</Text>
             <Ionicons name="chevron-forward" size={18} color={colors.midGray} />
@@ -134,11 +188,26 @@ export default function SettingsScreen() {
           </TouchableOpacity>
         ) : null}
       </ScrollView>
+      <ActionSheet
+        visible={retentionOpen}
+        title={t('settings.audioRetentionTitle')}
+        cancelLabel={t('common.cancel')}
+        onClose={() => setRetentionOpen(false)}
+        options={([1, 24, 168, -1] as AudioRetentionHours[]).map((hours) => ({
+          label: retentionLabel(hours),
+          icon: audioRetentionHours === hours ? 'checkmark-circle' : 'ellipse-outline',
+          onPress: () => {
+            setAudioRetention(hours);
+            setRetentionOpen(false);
+          },
+        }))}
+      />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (colors: ThemeColors) =>
+  StyleSheet.create({
   safe: { flex: 1, backgroundColor: colors.backgroundAlt },
   scroll: { flex: 1 },
   container: {
@@ -162,7 +231,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   section: {
-    backgroundColor: colors.white,
+    backgroundColor: colors.surface,
     borderRadius: radius.lg,
     marginBottom: spacing.md,
     paddingVertical: spacing.xs,
@@ -177,6 +246,11 @@ const styles = StyleSheet.create({
   },
   toggleRow: {
     paddingHorizontal: spacing.md,
+  },
+  biometricError: {
+    color: colors.error,
+    fontSize: typography.sizes.sm,
+    paddingBottom: spacing.sm,
   },
   rowLabel: {
     fontSize: typography.sizes.md,

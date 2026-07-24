@@ -29,8 +29,13 @@ dist-ssr
 .claude/
 
 /target/
+src-tauri/target/
 recording_*
 .crush/
+
+# Accidental EAS config at monorepo root (mobile app lives in mobile/)
+/eas.json
+/app.json
 
 # Playwright
 playwright-report/

@@ -1,16 +1,21 @@
 import { create } from 'zustand';
+// UI/UX audit: audio retention setting
 import * as SecureStore from 'expo-secure-store';
 
 const SETTINGS_KEY = 'handy_settings';
+
+export type ThemeMode = 'light' | 'dark' | 'system';
 
 export interface AppSettings {
   postProcessEnabled: boolean;
   microphoneGranted: boolean;
   language: 'pt-BR' | 'en';
   hasCompletedOnboarding: boolean;
-  backgroundRecord: boolean;
   biometrics: boolean;
+  themeMode: ThemeMode;
+  audioRetentionHours: AudioRetentionHours;
 }
+export type AudioRetentionHours = 1 | 24 | 168 | -1;
 
 interface SettingsState extends AppSettings {
   loaded: boolean;
@@ -18,8 +23,9 @@ interface SettingsState extends AppSettings {
   setMicrophoneGranted: (v: boolean) => void;
   setLanguage: (lang: 'pt-BR' | 'en') => void;
   setOnboardingComplete: (v: boolean) => void;
-  setBackgroundRecord: (v: boolean) => void;
   setBiometrics: (v: boolean) => void;
+  setThemeMode: (mode: ThemeMode) => void;
+  setAudioRetention: (hours: AudioRetentionHours) => void;
   loadSettings: () => Promise<void>;
   persist: () => Promise<void>;
 }
@@ -29,8 +35,10 @@ const defaults: AppSettings = {
   microphoneGranted: false,
   language: 'pt-BR',
   hasCompletedOnboarding: false,
-  backgroundRecord: false,
   biometrics: false,
+  // Explicit light by default — do not follow the OS dark mode automatically.
+  themeMode: 'light',
+  audioRetentionHours: 24,
 };
 
 export const useSettingsStore = create<SettingsState>((set, get) => ({
@@ -57,13 +65,17 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
     void get().persist();
   },
 
-  setBackgroundRecord: (v) => {
-    set({ backgroundRecord: v });
+  setBiometrics: (v) => {
+    set({ biometrics: v });
     void get().persist();
   },
 
-  setBiometrics: (v) => {
-    set({ biometrics: v });
+  setThemeMode: (mode) => {
+    set({ themeMode: mode });
+    void get().persist();
+  },
+  setAudioRetention: (hours) => {
+    set({ audioRetentionHours: hours });
     void get().persist();
   },
 
@@ -72,7 +84,16 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       const raw = await SecureStore.getItemAsync(SETTINGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<AppSettings>;
-        set({ ...defaults, ...parsed, loaded: true });
+        // Migrate legacy "system" so dark mode is never applied silently.
+        const themeMode =
+          parsed.themeMode === 'system' || !parsed.themeMode
+            ? 'light'
+            : parsed.themeMode;
+        set({ ...defaults, ...parsed, themeMode, loaded: true });
+        if (parsed.themeMode === 'system') {
+          // Persist the migration so the toggle stays in sync next launch.
+          void get().persist();
+        }
       } else {
         set({ loaded: true });
       }
@@ -87,20 +108,22 @@ export const useSettingsStore = create<SettingsState>((set, get) => ({
       microphoneGranted,
       language,
       hasCompletedOnboarding,
-      backgroundRecord,
-      biometrics,
-    } = get();
-    try {
-      await SecureStore.setItemAsync(
+    biometrics,
+    themeMode,
+    audioRetentionHours,
+  } = get();
+  try {
+    await SecureStore.setItemAsync(
         SETTINGS_KEY,
         JSON.stringify({
           postProcessEnabled,
           microphoneGranted,
           language,
-          hasCompletedOnboarding,
-          backgroundRecord,
-          biometrics,
-        }),
+        hasCompletedOnboarding,
+        biometrics,
+        themeMode,
+        audioRetentionHours,
+      }),
       );
     } catch {
       // ignore
