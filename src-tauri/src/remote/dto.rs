@@ -83,6 +83,12 @@ pub struct PairingApproveRequest {
     pub approve: bool,
 }
 
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RefreshRequest {
+    pub refresh_token: String,
+}
+
 #[derive(Debug, Clone, Serialize, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct DeviceCredentials {

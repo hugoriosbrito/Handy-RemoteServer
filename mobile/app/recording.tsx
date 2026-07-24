@@ -400,7 +400,11 @@ export default function RecordingScreen() {
           router.replace("/recording-reconnect");
           return;
         }
-        setError(t("recording.uploadFailed"));
+        setError(
+          useConnectionStore.getState().needsRepair
+            ? t("recording.pairingExpired")
+            : t("recording.uploadFailed"),
+        );
         setStatus("idle");
         finishingRef.current = false;
       }

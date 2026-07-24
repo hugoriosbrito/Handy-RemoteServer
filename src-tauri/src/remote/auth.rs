@@ -1,11 +1,22 @@
 use crate::remote::dto::DeviceCredentials;
+use log::{debug, warn};
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use tauri::AppHandle;
+use tauri_plugin_store::StoreExt;
 use uuid::Uuid;
 
-#[derive(Debug, Clone)]
+/// Store file holding paired-device credentials. Kept separate from the
+/// settings store so a settings reset never silently unpairs every phone.
+pub const REMOTE_AUTH_STORE_PATH: &str = "remote_auth_store.json";
+const DEVICES_KEY: &str = "devices";
+const FINGERPRINT_KEY: &str = "fingerprint";
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct AuthorizedDevice {
     pub id: String,
     pub name: String,
@@ -21,11 +32,45 @@ pub struct AuthorizedDevice {
 pub struct AuthStore {
     devices: Mutex<HashMap<String, AuthorizedDevice>>,
     access_index: Mutex<HashMap<String, String>>,
+    refresh_index: Mutex<HashMap<String, String>>,
+    /// Present once the store is bound to the running app; without it the
+    /// store stays in-memory only (used by unit tests).
+    app: Mutex<Option<AppHandle>>,
 }
 
 impl AuthStore {
-    pub fn new() -> Self {
-        Self::default()
+    /// Build a store backed by the on-disk device list. Devices paired in a
+    /// previous run keep working after Handy restarts instead of silently
+    /// returning 401 to a phone that still shows "connected".
+    pub fn with_app(app: AppHandle) -> Self {
+        let store = Self::default();
+        let devices = load_devices(&app);
+        {
+            let mut map = store.devices.lock().unwrap();
+            let mut access = store.access_index.lock().unwrap();
+            let mut refresh = store.refresh_index.lock().unwrap();
+            for device in devices {
+                if device.revoked {
+                    continue;
+                }
+                access.insert(device.access_token_hash.clone(), device.id.clone());
+                refresh.insert(device.refresh_token_hash.clone(), device.id.clone());
+                map.insert(device.id.clone(), device);
+            }
+            debug!("Remote auth: restored {} paired device(s)", map.len());
+        }
+        *store.app.lock().unwrap() = Some(app);
+        store
+    }
+
+    fn persist(&self) {
+        let app = match self.app.lock().unwrap().clone() {
+            Some(app) => app,
+            None => return,
+        };
+        let devices: Vec<AuthorizedDevice> =
+            self.devices.lock().unwrap().values().cloned().collect();
+        save_devices(&app, &devices);
     }
 
     pub fn issue_device(
@@ -53,10 +98,15 @@ impl AuthStore {
             .lock()
             .unwrap()
             .insert(device.access_token_hash.clone(), device_id.clone());
+        self.refresh_index
+            .lock()
+            .unwrap()
+            .insert(device.refresh_token_hash.clone(), device_id.clone());
         self.devices
             .lock()
             .unwrap()
             .insert(device_id.clone(), device);
+        self.persist();
 
         DeviceCredentials {
             device_id,
@@ -64,6 +114,62 @@ impl AuthStore {
             refresh_token,
             server_fingerprint: fingerprint.to_string(),
         }
+    }
+
+    /// Exchange a refresh token for a fresh credential pair. Both tokens are
+    /// rotated so a leaked refresh token cannot be replayed.
+    pub fn refresh(
+        &self,
+        refresh_token: &str,
+        fingerprint: &str,
+    ) -> Result<DeviceCredentials, String> {
+        let hash = hash_token(refresh_token);
+        let device_id = self
+            .refresh_index
+            .lock()
+            .unwrap()
+            .get(&hash)
+            .cloned()
+            .ok_or_else(|| "invalid refresh token".to_string())?;
+
+        let access_token = format!("at_{}", random_token());
+        let new_refresh_token = format!("rt_{}", random_token());
+        let (old_access_hash, old_refresh_hash) = {
+            let mut devices = self.devices.lock().unwrap();
+            let device = devices
+                .get_mut(&device_id)
+                .ok_or_else(|| "device not found".to_string())?;
+            if device.revoked {
+                return Err("device revoked".to_string());
+            }
+            let previous = (
+                device.access_token_hash.clone(),
+                device.refresh_token_hash.clone(),
+            );
+            device.access_token_hash = hash_token(&access_token);
+            device.refresh_token_hash = hash_token(&new_refresh_token);
+            device.last_seen_at = Some(now_secs());
+            previous
+        };
+
+        {
+            let mut access = self.access_index.lock().unwrap();
+            access.remove(&old_access_hash);
+            access.insert(hash_token(&access_token), device_id.clone());
+        }
+        {
+            let mut refresh = self.refresh_index.lock().unwrap();
+            refresh.remove(&old_refresh_hash);
+            refresh.insert(hash_token(&new_refresh_token), device_id.clone());
+        }
+        self.persist();
+
+        Ok(DeviceCredentials {
+            device_id,
+            access_token,
+            refresh_token: new_refresh_token,
+            server_fingerprint: fingerprint.to_string(),
+        })
     }
 
     pub fn authorize(&self, bearer: Option<&str>) -> Result<AuthorizedDevice, String> {
@@ -100,18 +206,101 @@ impl AuthStore {
     }
 
     pub fn revoke(&self, device_id: &str) -> bool {
-        let mut devices = self.devices.lock().unwrap();
-        if let Some(device) = devices.get_mut(device_id) {
-            device.revoked = true;
+        let revoked = {
+            let mut devices = self.devices.lock().unwrap();
+            match devices.get_mut(device_id) {
+                Some(device) => {
+                    device.revoked = true;
+                    true
+                }
+                None => false,
+            }
+        };
+        if revoked {
             self.access_index
                 .lock()
                 .unwrap()
                 .retain(|_, id| id != device_id);
-            true
-        } else {
-            false
+            self.refresh_index
+                .lock()
+                .unwrap()
+                .retain(|_, id| id != device_id);
+            self.persist();
         }
+        revoked
     }
+}
+
+fn load_devices(app: &AppHandle) -> Vec<AuthorizedDevice> {
+    let store = match app.store(crate::portable::store_path(REMOTE_AUTH_STORE_PATH)) {
+        Ok(store) => store,
+        Err(e) => {
+            warn!("Remote auth: could not open credential store ({e}); pairing will not persist");
+            return Vec::new();
+        }
+    };
+    store
+        .get(DEVICES_KEY)
+        .and_then(
+            |value| match serde_json::from_value::<Vec<AuthorizedDevice>>(value) {
+                Ok(devices) => Some(devices),
+                Err(e) => {
+                    warn!("Remote auth: stored devices are unreadable ({e}); starting empty");
+                    None
+                }
+            },
+        )
+        .unwrap_or_default()
+}
+
+fn save_devices(app: &AppHandle, devices: &[AuthorizedDevice]) {
+    let store = match app.store(crate::portable::store_path(REMOTE_AUTH_STORE_PATH)) {
+        Ok(store) => store,
+        Err(e) => {
+            warn!("Remote auth: could not open credential store ({e}); pairing will not persist");
+            return;
+        }
+    };
+    match serde_json::to_value(devices) {
+        Ok(value) => {
+            store.set(DEVICES_KEY, value);
+            if let Err(e) = store.save() {
+                warn!("Remote auth: failed to save credential store: {e}");
+            }
+        }
+        Err(e) => warn!("Remote auth: failed to serialize devices: {e}"),
+    }
+}
+
+/// Server fingerprint, stable across restarts. The phone pins this value at
+/// pairing time, so regenerating it every boot made the paired PC look like a
+/// different machine.
+pub fn load_or_create_fingerprint(app: &AppHandle, generate: impl FnOnce() -> String) -> String {
+    let store = match app.store(crate::portable::store_path(REMOTE_AUTH_STORE_PATH)) {
+        Ok(store) => store,
+        Err(e) => {
+            warn!(
+                "Remote auth: could not open credential store ({e}); using ephemeral fingerprint"
+            );
+            return generate();
+        }
+    };
+    if let Some(existing) = store
+        .get(FINGERPRINT_KEY)
+        .and_then(|v| v.as_str().map(|s| s.to_string()))
+        .filter(|s| !s.is_empty())
+    {
+        return existing;
+    }
+    let fingerprint = generate();
+    store.set(
+        FINGERPRINT_KEY,
+        serde_json::Value::String(fingerprint.clone()),
+    );
+    if let Err(e) = store.save() {
+        warn!("Remote auth: failed to persist fingerprint: {e}");
+    }
+    fingerprint
 }
 
 pub fn hash_token(token: &str) -> String {

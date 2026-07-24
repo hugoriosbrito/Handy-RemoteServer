@@ -192,6 +192,8 @@
 
     "uploadFailed": "Upload failed. Please try again.",
 
+    "pairingExpired": "This phone is no longer authorized on the PC. Pair again to keep sending recordings.",
+
     "lastSegment": "Last segment",
 
     "finishAndSave": "Finish and save",

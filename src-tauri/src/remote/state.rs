@@ -33,14 +33,15 @@ impl RemoteServerState {
         history: Arc<HistoryManager>,
         port: u16,
     ) -> Self {
-        let fingerprint = generate_fingerprint();
+        let fingerprint =
+            crate::remote::auth::load_or_create_fingerprint(&app, generate_fingerprint);
         let server_name = hostname_label();
         Self {
+            auth: Arc::new(AuthStore::with_app(app.clone())),
             app,
             transcription,
             models,
             history,
-            auth: Arc::new(AuthStore::new()),
             pairing: Arc::new(PairingStore::new()),
             fingerprint,
             server_name,

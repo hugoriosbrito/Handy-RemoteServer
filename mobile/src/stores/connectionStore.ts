@@ -50,6 +50,11 @@ interface ConnectionState {
   setComputerOnline: (online: boolean) => void;
   /** Switch the active base URL (e.g. after reconnect failover) and persist it. */
   setActiveBaseUrl: (url: string) => void;
+  /** Replace the stored token pair after a refresh rotation. */
+  setCredentials: (token: string, refreshToken?: string | null) => void;
+  /** Marks the pairing as no longer valid on the PC (needs re-pairing). */
+  needsRepair: boolean;
+  setNeedsRepair: (v: boolean) => void;
   connect: (
     token: string,
     computer: Computer,
@@ -92,6 +97,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   pendingPairing: null,
   isConnecting: false,
   isReconnecting: false,
+  needsRepair: false,
 
   setPairingCode: (code) => set({ pairingCode: code }),
 
@@ -128,6 +134,18 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
     void persist(BASE_URL_KEY, url);
     set({ baseUrl: url });
   },
+
+  setCredentials: (token, refreshToken) => {
+    void persist(TOKEN_KEY, token);
+    if (refreshToken) void persist(REFRESH_KEY, refreshToken);
+    set({
+      token,
+      refreshToken: refreshToken ?? get().refreshToken,
+      needsRepair: false,
+    });
+  },
+
+  setNeedsRepair: (v) => set({ needsRepair: v }),
 
   setComputerOnline: (online) =>
     set((s) => {
@@ -173,6 +191,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         ? s.computers.map((c) => (c.id === computer.id ? computer : c))
         : [...s.computers, computer],
       pendingPairing: null,
+      needsRepair: false,
     }));
   },
 
@@ -188,6 +207,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       computer: null,
       baseUrl: null,
       endpoints: [],
+      needsRepair: false,
     });
   },
 

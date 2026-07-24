@@ -57,6 +57,13 @@ export const PairingStatusSchema = z.object({
   credentials: DeviceCredentialsSchema.nullable().optional(),
 });
 
+export const SessionInfoSchema = z.object({
+  deviceId: z.string(),
+  deviceName: z.string().optional(),
+  serverName: z.string().optional(),
+  fingerprint: z.string().optional(),
+});
+
 export const HistoryEntrySchema = z.object({
   id: z.string(),
   source: z.string(),
@@ -342,6 +349,23 @@ export const api = {
 
   getServerInfo: (baseUrl?: string) =>
     request("/v1/server", ServerInfoSchema, { baseUrl }),
+
+  /** Authenticated probe: confirms the stored token is still accepted. */
+  getSession: (token: string, baseUrl?: string) =>
+    request("/v1/auth/session", SessionInfoSchema, {
+      token,
+      baseUrl,
+      timeoutMs: 4000,
+    }),
+
+  /** Rotate an expired/unknown access token using the stored refresh token. */
+  refreshCredentials: (refreshToken: string, baseUrl?: string) =>
+    request("/v1/auth/refresh", DeviceCredentialsSchema, {
+      method: "POST",
+      body: JSON.stringify({ refreshToken }),
+      baseUrl,
+      timeoutMs: 8000,
+    }),
 
   claimPairing: (
     data: {

@@ -192,6 +192,8 @@
 
     "uploadFailed": "Falha no envio. Tente novamente.",
 
+    "pairingExpired": "Este celular não está mais autorizado no PC. Refaça o pareamento para continuar enviando as gravações.",
+
     "lastSegment": "Último segmento",
 
     "finishAndSave": "Finalizar e salvar",

@@ -1,7 +1,11 @@
-import { api } from "@/api/client";
+import { api, ApiError } from "@/api/client";
 import { useConnectionStore } from "@/stores/connectionStore";
 
-/** Probe the paired Handy server. Returns true when reachable. */
+/**
+ * Probe the paired Handy server. Returns true when reachable **and** the stored
+ * token is still accepted: `/v1/health` is unauthenticated, so probing it alone
+ * reported "connected" even when every upload was being rejected with 401.
+ */
 export async function probeServerHealth(
   baseUrl?: string | null,
 ): Promise<boolean> {
@@ -10,10 +14,59 @@ export async function probeServerHealth(
 
   try {
     await api.health(url);
-    useConnectionStore.getState().setComputerOnline(true);
-    return true;
   } catch {
     useConnectionStore.getState().setComputerOnline(false);
+    return false;
+  }
+
+  const token = useConnectionStore.getState().token;
+  if (!token) {
+    useConnectionStore.getState().setComputerOnline(true);
+    return true;
+  }
+
+  try {
+    await api.getSession(token, url);
+    useConnectionStore.getState().setComputerOnline(true);
+    useConnectionStore.getState().setNeedsRepair(false);
+    return true;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      const refreshed = await refreshCredentials(url);
+      useConnectionStore.getState().setComputerOnline(refreshed);
+      return refreshed;
+    }
+    // Reachable but a non-auth failure: still treat the PC as online.
+    useConnectionStore.getState().setComputerOnline(true);
+    return true;
+  }
+}
+
+/**
+ * Rotate the stored credentials using the refresh token. Returns true when a
+ * new access token was obtained; false means the pairing is gone on the PC and
+ * the user has to pair again.
+ */
+export async function refreshCredentials(
+  baseUrl?: string | null,
+): Promise<boolean> {
+  const state = useConnectionStore.getState();
+  const url = baseUrl ?? state.baseUrl;
+  const refreshToken = state.refreshToken;
+  if (!url || !refreshToken) {
+    useConnectionStore.getState().setNeedsRepair(true);
+    return false;
+  }
+  try {
+    const credentials = await api.refreshCredentials(refreshToken, url);
+    useConnectionStore
+      .getState()
+      .setCredentials(credentials.accessToken, credentials.refreshToken);
+    return true;
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) {
+      useConnectionStore.getState().setNeedsRepair(true);
+    }
     return false;
   }
 }
@@ -64,9 +117,11 @@ export async function uploadWithRetry(
 ) {
   const attempts = opts.attempts ?? 3;
   let lastError: unknown;
+  let activeToken = token;
+  let refreshTried = false;
   for (let i = 0; i < attempts; i++) {
     try {
-      const result = await api.uploadTranscription(token, uriOrUris, {
+      const result = await api.uploadTranscription(activeToken, uriOrUris, {
         postProcess: opts.postProcess,
         baseUrl: opts.baseUrl,
         filename: opts.filename,
@@ -76,6 +131,22 @@ export async function uploadWithRetry(
       return result;
     } catch (e) {
       lastError = e;
+      // A rejected token never recovers by retrying the same request. Rotate
+      // credentials once and retry with the new access token; if the PC no
+      // longer knows this device, surface "re-pair needed" instead of a
+      // generic upload failure.
+      if (e instanceof ApiError && e.status === 401 && !refreshTried) {
+        refreshTried = true;
+        const refreshed = await refreshCredentials(opts.baseUrl);
+        if (refreshed) {
+          const next = useConnectionStore.getState().token;
+          if (next) {
+            activeToken = next;
+            continue;
+          }
+        }
+        throw e;
+      }
       if (i < attempts - 1) {
         await new Promise((r) => setTimeout(r, 700 * (i + 1)));
       }
