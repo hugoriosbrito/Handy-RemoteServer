@@ -1,17 +1,17 @@
-import { createContext, useContext, useMemo } from 'react';
-import { lightColors, darkColors, type ThemeColors } from './tokens';
-import { useSettingsStore, type ThemeMode } from '@/stores/settingsStore';
+import { createContext, useContext, useMemo } from "react";
+import { lightColors, darkColors, type ThemeColors } from "./tokens";
+import { useSettingsStore, type ThemeMode } from "@/stores/settingsStore";
 
 interface ThemeValue {
   colors: ThemeColors;
-  scheme: 'light' | 'dark';
+  scheme: "light" | "dark";
   mode: ThemeMode;
 }
 
 const ThemeContext = createContext<ThemeValue>({
   colors: lightColors,
-  scheme: 'light',
-  mode: 'light',
+  scheme: "light",
+  mode: "light",
 });
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
@@ -19,15 +19,17 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
 
   const value = useMemo<ThemeValue>(() => {
     // Only honor explicit light/dark. Legacy "system" falls back to light.
-    const scheme: 'light' | 'dark' = mode === 'dark' ? 'dark' : 'light';
+    const scheme: "light" | "dark" = mode === "dark" ? "dark" : "light";
     return {
-      colors: scheme === 'dark' ? darkColors : lightColors,
+      colors: scheme === "dark" ? darkColors : lightColors,
       scheme,
       mode,
     };
   }, [mode]);
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 }
 
 /** Returns the active theme's color palette. */

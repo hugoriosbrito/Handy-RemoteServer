@@ -1,7 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, Animated, AccessibilityInfo } from 'react-native';
-import { radius, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useEffect, useMemo, useRef, useState } from "react";
+import { View, StyleSheet, Animated, AccessibilityInfo } from "react-native";
+import { radius, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 interface WaveformProps {
   active?: boolean;
@@ -10,7 +10,12 @@ interface WaveformProps {
   height?: number;
 }
 
-export function Waveform({ active = true, amplitude, barCount = 24, height = 64 }: WaveformProps) {
+export function Waveform({
+  active = true,
+  amplitude,
+  barCount = 24,
+  height = 64,
+}: WaveformProps) {
   const colors = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
   const [reduceMotion, setReduceMotion] = useState(false);
@@ -23,7 +28,9 @@ export function Waveform({ active = true, amplitude, barCount = 24, height = 64 
     AccessibilityInfo.isReduceMotionEnabled().then((v) => {
       if (!cancelled) setReduceMotion(v);
     });
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   useEffect(() => {
@@ -43,7 +50,11 @@ export function Waveform({ active = true, amplitude, barCount = 24, height = 64 
 
     if (amplitude !== undefined) {
       const loops = anims.map((anim, i) => {
-        const target = Math.max(0.15, amplitude * (0.25 + 0.75 * Math.abs(Math.sin((i / barCount) * Math.PI))));
+        const target = Math.max(
+          0.15,
+          amplitude *
+            (0.25 + 0.75 * Math.abs(Math.sin((i / barCount) * Math.PI))),
+        );
         return Animated.loop(
           Animated.sequence([
             Animated.timing(anim, {
@@ -105,17 +116,17 @@ export function Waveform({ active = true, amplitude, barCount = 24, height = 64 
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingHorizontal: 16,
-  },
-  bar: {
-    width: 3,
-    borderRadius: radius.sm,
-    backgroundColor: colors.primary,
-    opacity: 0.95,
-  },
-});
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 4,
+      paddingHorizontal: 16,
+    },
+    bar: {
+      width: 3,
+      borderRadius: radius.sm,
+      backgroundColor: colors.primary,
+      opacity: 0.95,
+    },
+  });

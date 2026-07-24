@@ -1,6 +1,4 @@
-use crate::remote::dto::{
-    ApiError, HealthResponse, ServerCapabilities, ServerInfoResponse,
-};
+use crate::remote::dto::{ApiError, HealthResponse, ServerCapabilities, ServerInfoResponse};
 use crate::remote::state::RemoteServerState;
 use crate::settings::get_settings;
 use axum::extract::State;
@@ -15,9 +13,7 @@ pub async fn health(State(state): State<Arc<RemoteServerState>>) -> Json<HealthR
     })
 }
 
-pub async fn server_info(
-    State(state): State<Arc<RemoteServerState>>,
-) -> Json<ServerInfoResponse> {
+pub async fn server_info(State(state): State<Arc<RemoteServerState>>) -> Json<ServerInfoResponse> {
     let settings = get_settings(&state.app);
     let port = *state.bind_port.lock().await;
     Json(ServerInfoResponse {
@@ -35,7 +31,11 @@ pub async fn server_info(
     })
 }
 
-pub fn json_error(status: axum::http::StatusCode, error: &str, message: impl Into<String>) -> (axum::http::StatusCode, Json<ApiError>) {
+pub fn json_error(
+    status: axum::http::StatusCode,
+    error: &str,
+    message: impl Into<String>,
+) -> (axum::http::StatusCode, Json<ApiError>) {
     (
         status,
         Json(ApiError {

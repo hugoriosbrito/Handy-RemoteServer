@@ -370,7 +370,9 @@ export const MobileAccessSettings: React.FC = () => {
                     <Smartphone size={18} className="text-text" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-sm font-medium truncate">{device.name}</p>
+                    <p className="text-sm font-medium truncate">
+                      {device.name}
+                    </p>
                     <p className="text-xs text-mid-gray truncate">
                       {device.platform ||
                         t("settings.mobileAccess.devices.unknownPlatform")}{" "}

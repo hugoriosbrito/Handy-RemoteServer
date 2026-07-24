@@ -27,18 +27,18 @@ handy-remote/
 
 Rodando dentro do processo Tauri (porta padrão `8765`):
 
-| Método | Rota | Auth |
-|--------|------|------|
-| GET | `/v1/health` | público |
-| GET | `/v1/server` | público |
-| POST | `/v1/pairing/sessions` | desktop / local |
-| POST | `/v1/pairing/claim` | secreto do QR |
-| POST | `/v1/pairing/approve` | desktop |
-| GET | `/v1/pairing/sessions/:id` | público (credenciais só após approve) |
-| GET/DELETE | `/v1/devices` | Bearer |
-| POST | `/v1/transcriptions` | Bearer (multipart WAV) |
-| GET | `/v1/post-processing` | Bearer (sem API keys) |
-| GET/DELETE | `/v1/history` | Bearer |
+| Método     | Rota                       | Auth                                  |
+| ---------- | -------------------------- | ------------------------------------- |
+| GET        | `/v1/health`               | público                               |
+| GET        | `/v1/server`               | público                               |
+| POST       | `/v1/pairing/sessions`     | desktop / local                       |
+| POST       | `/v1/pairing/claim`        | secreto do QR                         |
+| POST       | `/v1/pairing/approve`      | desktop                               |
+| GET        | `/v1/pairing/sessions/:id` | público (credenciais só após approve) |
+| GET/DELETE | `/v1/devices`              | Bearer                                |
+| POST       | `/v1/transcriptions`       | Bearer (multipart WAV)                |
+| GET        | `/v1/post-processing`      | Bearer (sem API keys)                 |
+| GET/DELETE | `/v1/history`              | Bearer                                |
 
 Compartilha `TranscriptionManager`, `ModelManager` e `HistoryManager` já inicializados.
 

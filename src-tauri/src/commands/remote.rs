@@ -1,5 +1,5 @@
-use crate::remote::server::RemoteServer;
 use crate::remote::dto::{DeviceInfo, PairingSessionResponse};
+use crate::remote::server::RemoteServer;
 use crate::settings::{get_settings, write_settings};
 use serde::Serialize;
 use specta::Type;
@@ -18,7 +18,8 @@ pub struct RemoteServerStatus {
 #[specta::specta]
 pub fn get_remote_server_status(app: AppHandle) -> Result<RemoteServerStatus, String> {
     let settings = get_settings(&app);
-    let (running, fingerprint, server_name) = if let Some(server) = app.try_state::<RemoteServer>() {
+    let (running, fingerprint, server_name) = if let Some(server) = app.try_state::<RemoteServer>()
+    {
         let state = server.state();
         (
             state.is_running(),
@@ -140,12 +141,10 @@ pub fn create_remote_pairing_session(app: AppHandle) -> Result<PairingSessionRes
         mdns: Some(format!("handy-remote.local:{}", port)),
         tailscale: None,
     };
-    let (session, qr) = state.pairing.create_session(
-        &state.server_name,
-        &state.fingerprint,
-        endpoints,
-        5 * 60,
-    );
+    let (session, qr) =
+        state
+            .pairing
+            .create_session(&state.server_name, &state.fingerprint, endpoints, 5 * 60);
     Ok(PairingSessionResponse {
         session_id: session.session_id,
         code: session.code,
@@ -194,7 +193,10 @@ pub fn approve_remote_pairing_session(
     })
 }
 
-fn session_preview_name(state: &crate::remote::state::RemoteServerState, session_id: &str) -> String {
+fn session_preview_name(
+    state: &crate::remote::state::RemoteServerState,
+    session_id: &str,
+) -> String {
     state
         .pairing
         .get(session_id)
@@ -206,7 +208,10 @@ fn session_preview_platform(
     state: &crate::remote::state::RemoteServerState,
     session_id: &str,
 ) -> Option<String> {
-    state.pairing.get(session_id).and_then(|s| s.device_platform)
+    state
+        .pairing
+        .get(session_id)
+        .and_then(|s| s.device_platform)
 }
 
 #[tauri::command]

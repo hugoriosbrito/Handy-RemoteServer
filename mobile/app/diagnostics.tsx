@@ -1,16 +1,28 @@
-import { useMemo, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import Constants from 'expo-constants';
-import { Button } from '@/components/ui';
-import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useConnectionStore } from '@/stores/connectionStore';
-import { useRecordingStore } from '@/stores/recordingStore';
-import { probeServerHealth } from '@/lib/connection';
+import { useMemo, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  ScrollView,
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import Constants from "expo-constants";
+import { Button } from "@/components/ui";
+import {
+  spacing,
+  typography,
+  radius,
+  shadows,
+  type ThemeColors,
+} from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { useRecordingStore } from "@/stores/recordingStore";
+import { probeServerHealth } from "@/lib/connection";
 
 // Read-only connection diagnostics. Opening this screen must not mutate any
 // state on its own -- the only network call happens when the user taps
@@ -23,19 +35,19 @@ export default function DiagnosticsScreen() {
   const endpoints = useConnectionStore((s) => s.endpoints);
   const queueCount = useRecordingStore((s) => s.offlineQueue.length);
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<'ok' | 'fail' | null>(null);
+  const [testResult, setTestResult] = useState<"ok" | "fail" | null>(null);
   const colors = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const runTest = async () => {
     if (!baseUrl) {
-      setTestResult('fail');
+      setTestResult("fail");
       return;
     }
     setTesting(true);
     setTestResult(null);
     const ok = await probeServerHealth(baseUrl);
-    setTestResult(ok ? 'ok' : 'fail');
+    setTestResult(ok ? "ok" : "fail");
     setTesting(false);
   };
 
@@ -47,63 +59,78 @@ export default function DiagnosticsScreen() {
         <TouchableOpacity
           style={styles.backBtn}
           onPress={() => router.back()}
-          accessibilityLabel={t('common.back')}
+          accessibilityLabel={t("common.back")}
           accessibilityRole="button"
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         >
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
 
-        <Text style={styles.title}>{t('diagnostics.title')}</Text>
-        <Text style={styles.subtitle}>{t('diagnostics.subtitle')}</Text>
+        <Text style={styles.title}>{t("diagnostics.title")}</Text>
+        <Text style={styles.subtitle}>{t("diagnostics.subtitle")}</Text>
 
         {computer ? (
           <View style={styles.card}>
-            <Row label={t('diagnostics.computer')} value={computer.name} styles={styles} />
+            <Row
+              label={t("diagnostics.computer")}
+              value={computer.name}
+              styles={styles}
+            />
             <View style={styles.divider} />
             <View style={styles.row}>
-              <Text style={styles.rowLabel}>{t('diagnostics.status')}</Text>
+              <Text style={styles.rowLabel}>{t("diagnostics.status")}</Text>
               <View style={styles.statusRow}>
                 <View
                   style={[
                     styles.dot,
-                    { backgroundColor: isOnline ? colors.success : colors.midGray },
+                    {
+                      backgroundColor: isOnline
+                        ? colors.success
+                        : colors.midGray,
+                    },
                   ]}
                 />
-                <Text style={[styles.rowValue, { color: isOnline ? colors.success : colors.midGray }]}>
-                  {isOnline ? t('diagnostics.online') : t('diagnostics.offline')}
+                <Text
+                  style={[
+                    styles.rowValue,
+                    { color: isOnline ? colors.success : colors.midGray },
+                  ]}
+                >
+                  {isOnline
+                    ? t("diagnostics.online")
+                    : t("diagnostics.offline")}
                 </Text>
               </View>
             </View>
             <View style={styles.divider} />
             <Row
-              label={t('diagnostics.activeEndpoint')}
-              value={baseUrl ?? t('diagnostics.none')}
+              label={t("diagnostics.activeEndpoint")}
+              value={baseUrl ?? t("diagnostics.none")}
               mono
               styles={styles}
             />
             <View style={styles.divider} />
             <Row
-              label={t('diagnostics.queue')}
-              value={t('diagnostics.queueItems', { count: queueCount })}
+              label={t("diagnostics.queue")}
+              value={t("diagnostics.queueItems", { count: queueCount })}
               styles={styles}
             />
             <View style={styles.divider} />
             <Row
-              label={t('diagnostics.version')}
-              value={Constants.expoConfig?.version ?? '0.1.0'}
+              label={t("diagnostics.version")}
+              value={Constants.expoConfig?.version ?? "0.1.0"}
               styles={styles}
             />
           </View>
         ) : (
           <View style={styles.card}>
-            <Text style={styles.rowValue}>{t('diagnostics.notPaired')}</Text>
+            <Text style={styles.rowValue}>{t("diagnostics.notPaired")}</Text>
           </View>
         )}
 
         {endpoints.length > 1 ? (
           <View style={styles.card}>
-            <Text style={styles.rowLabel}>{t('diagnostics.endpoints')}</Text>
+            <Text style={styles.rowLabel}>{t("diagnostics.endpoints")}</Text>
             {endpoints.map((url) => (
               <Text key={url} style={styles.endpoint}>
                 {url}
@@ -113,13 +140,22 @@ export default function DiagnosticsScreen() {
         ) : null}
 
         {testResult ? (
-          <Text style={[styles.testResult, { color: testResult === 'ok' ? colors.success : colors.error }]}>
-            {testResult === 'ok' ? t('diagnostics.reachable') : t('diagnostics.unreachable')}
+          <Text
+            style={[
+              styles.testResult,
+              { color: testResult === "ok" ? colors.success : colors.error },
+            ]}
+          >
+            {testResult === "ok"
+              ? t("diagnostics.reachable")
+              : t("diagnostics.unreachable")}
           </Text>
         ) : null}
 
         <Button
-          title={testing ? t('diagnostics.testing') : t('diagnostics.testConnection')}
+          title={
+            testing ? t("diagnostics.testing") : t("diagnostics.testConnection")
+          }
           onPress={() => void runTest()}
           disabled={testing || !baseUrl}
           style={styles.testBtn}
@@ -162,7 +198,7 @@ const makeStyles = (colors: ThemeColors) =>
       marginBottom: spacing.md,
       width: 40,
       height: 40,
-      justifyContent: 'center',
+      justifyContent: "center",
     },
     title: {
       fontSize: typography.sizes.xxl,
@@ -185,9 +221,9 @@ const makeStyles = (colors: ThemeColors) =>
       ...shadows.card,
     },
     row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
       paddingVertical: spacing.md,
       gap: spacing.md,
     },
@@ -199,14 +235,14 @@ const makeStyles = (colors: ThemeColors) =>
       flexShrink: 1,
       fontSize: typography.sizes.sm,
       color: colors.midGray,
-      textAlign: 'right',
+      textAlign: "right",
     },
     mono: {
-      fontVariant: ['tabular-nums'],
+      fontVariant: ["tabular-nums"],
     },
     statusRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.xs,
     },
     dot: { width: 8, height: 8, borderRadius: 4 },
@@ -221,7 +257,7 @@ const makeStyles = (colors: ThemeColors) =>
     },
     testResult: {
       fontSize: typography.sizes.sm,
-      textAlign: 'center',
+      textAlign: "center",
       marginBottom: spacing.sm,
     },
     testBtn: {

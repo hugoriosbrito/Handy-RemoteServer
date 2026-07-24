@@ -51,6 +51,10 @@ pub async fn revoke_device(
     if state.auth.revoke(&id) {
         Ok(Json(json!({ "revoked": true, "id": id, "at": now_secs() })))
     } else {
-        Err(json_error(StatusCode::NOT_FOUND, "not_found", "device not found"))
+        Err(json_error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            "device not found",
+        ))
     }
 }

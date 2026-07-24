@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { api } from '@/api/client';
-import { useConnectionStore } from '@/stores/connectionStore';
-import { spacing, typography, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { api } from "@/api/client";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { spacing, typography, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 /**
  * Deep-link / automation entry: /pair/inject?payload=<urlencoded JSON QR>
@@ -22,15 +22,15 @@ export default function InjectPairScreen() {
   useEffect(() => {
     try {
       if (!params.payload) {
-        setError('Missing payload');
+        setError("Missing payload");
         return;
       }
       const raw = decodeURIComponent(String(params.payload));
       const qr = api.parseQrPayload(raw);
       setPendingFromQr(qr);
-      router.replace('/pair/confirm');
+      router.replace("/pair/confirm");
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Invalid payload');
+      setError(e instanceof Error ? e.message : "Invalid payload");
     }
   }, [params.payload, router, setPendingFromQr]);
 
@@ -52,21 +52,21 @@ export default function InjectPairScreen() {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  box: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-    padding: spacing.lg,
-  },
-  text: {
-    color: colors.midGray,
-    fontSize: typography.sizes.md,
-  },
-  error: {
-    color: colors.error,
-    fontSize: typography.sizes.md,
-    textAlign: 'center',
-  },
-});
+    safe: { flex: 1, backgroundColor: colors.background },
+    box: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+      padding: spacing.lg,
+    },
+    text: {
+      color: colors.midGray,
+      fontSize: typography.sizes.md,
+    },
+    error: {
+      color: colors.error,
+      fontSize: typography.sizes.md,
+      textAlign: "center",
+    },
+  });

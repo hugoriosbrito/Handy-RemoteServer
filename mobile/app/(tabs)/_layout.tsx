@@ -1,8 +1,8 @@
-import { Tabs } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import { typography } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
+import { Tabs } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
+import { typography } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 export default function TabLayout() {
   const { t } = useTranslation();
@@ -29,7 +29,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: t('tabs.record'),
+          title: t("tabs.record"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="mic" size={size} color={color} />
           ),
@@ -38,7 +38,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="history"
         options={{
-          title: t('tabs.history'),
+          title: t("tabs.history"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="time-outline" size={size} color={color} />
           ),
@@ -47,7 +47,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="settings"
         options={{
-          title: t('tabs.settings'),
+          title: t("tabs.settings"),
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="settings-outline" size={size} color={color} />
           ),

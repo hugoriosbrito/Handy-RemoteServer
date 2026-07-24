@@ -1,19 +1,19 @@
-import { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@/components/ui';
-import { spacing, typography, radius, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useConnectionStore } from '@/stores/connectionStore';
-import { useRecordingStore } from '@/stores/recordingStore';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { probeServerHealth, uploadWithRetry } from '@/lib/connection';
+import { useEffect, useMemo, useState } from "react";
+import { View, Text, StyleSheet, ActivityIndicator } from "react-native";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useQueryClient } from "@tanstack/react-query";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { Button } from "@/components/ui";
+import { spacing, typography, radius, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { useRecordingStore } from "@/stores/recordingStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { probeServerHealth, uploadWithRetry } from "@/lib/connection";
 
-type FailReason = 'offline' | 'upload';
+type FailReason = "offline" | "upload";
 
 export default function RecordingReconnectScreen() {
   const { t } = useTranslation();
@@ -25,11 +25,13 @@ export default function RecordingReconnectScreen() {
   const baseUrl = useConnectionStore((s) => s.baseUrl);
   const offlineQueue = useRecordingStore((s) => s.offlineQueue);
   const updateQueueItem = useRecordingStore((s) => s.updateQueueItem);
-  const removeFromOfflineQueue = useRecordingStore((s) => s.removeFromOfflineQueue);
+  const removeFromOfflineQueue = useRecordingStore(
+    (s) => s.removeFromOfflineQueue,
+  );
   const setResult = useRecordingStore((s) => s.setResult);
   const postProcessEnabled = useSettingsStore((s) => s.postProcessEnabled);
   const [failed, setFailed] = useState(false);
-  const [failReason, setFailReason] = useState<FailReason>('offline');
+  const [failReason, setFailReason] = useState<FailReason>("offline");
   const [attempt, setAttempt] = useState(0);
   const colors = useTheme();
   const styles = useMemo(() => makeStyles(colors), [colors]);
@@ -39,15 +41,17 @@ export default function RecordingReconnectScreen() {
     let cancelled = false;
 
     const retry = async () => {
-      const pending = offlineQueue.find((q) => q.status === 'pending' || q.status === 'failed');
+      const pending = offlineQueue.find(
+        (q) => q.status === "pending" || q.status === "failed",
+      );
       if (!pending || !token) {
-        setFailReason('offline');
+        setFailReason("offline");
         setFailed(true);
         setReconnecting(false);
         return;
       }
 
-      updateQueueItem(pending.id, { status: 'uploading' });
+      updateQueueItem(pending.id, { status: "uploading" });
 
       // Probe first — if the PC is up, upload with retries instead of
       // immediately declaring "offline".
@@ -62,8 +66,8 @@ export default function RecordingReconnectScreen() {
           if (cancelled) return;
           if (await probeServerHealth(baseUrl)) break;
           if (i === 3) {
-            updateQueueItem(pending.id, { status: 'failed' });
-            setFailReason('offline');
+            updateQueueItem(pending.id, { status: "failed" });
+            setFailReason("offline");
             setFailed(true);
             setReconnecting(false);
             return;
@@ -90,14 +94,14 @@ export default function RecordingReconnectScreen() {
           postProcessed: result.postProcessed,
           id: result.id,
         });
-        void queryClient.invalidateQueries({ queryKey: ['history'] });
+        void queryClient.invalidateQueries({ queryKey: ["history"] });
         setReconnecting(false);
-        router.replace('/result');
+        router.replace("/result");
       } catch {
         if (cancelled) return;
-        updateQueueItem(pending.id, { status: 'failed' });
+        updateQueueItem(pending.id, { status: "failed" });
         const stillOnline = await probeServerHealth(baseUrl);
-        setFailReason(stillOnline ? 'upload' : 'offline');
+        setFailReason(stillOnline ? "upload" : "offline");
         setFailed(true);
         setReconnecting(false);
       }
@@ -116,45 +120,53 @@ export default function RecordingReconnectScreen() {
   }, []);
 
   const subtitle = failed
-    ? failReason === 'upload'
-      ? t('recording.sendFailed', { name: computer?.name ?? 'Handy' })
-      : t('offlineQueue.computerOffline', { name: computer?.name ?? 'Handy' })
+    ? failReason === "upload"
+      ? t("recording.sendFailed", { name: computer?.name ?? "Handy" })
+      : t("offlineQueue.computerOffline", { name: computer?.name ?? "Handy" })
     : attempt > 0
-      ? t('recording.tryingComputerAttempt', {
-          name: computer?.name ?? 'Handy',
+      ? t("recording.tryingComputerAttempt", {
+          name: computer?.name ?? "Handy",
           attempt,
         })
-      : t('recording.tryingComputer', { name: computer?.name ?? 'Handy' });
+      : t("recording.tryingComputer", { name: computer?.name ?? "Handy" });
 
   return (
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.iconWrap}>
           <Ionicons
-            name={failed ? (failReason === 'upload' ? 'alert-circle-outline' : 'cloud-offline-outline') : 'sync'}
+            name={
+              failed
+                ? failReason === "upload"
+                  ? "alert-circle-outline"
+                  : "cloud-offline-outline"
+                : "sync"
+            }
             size={40}
             color={colors.warning}
           />
         </View>
         <Text style={styles.title}>
           {failed
-            ? failReason === 'upload'
-              ? t('recording.sendFailedTitle')
-              : t('recording.audioSaved')
-            : t('recording.reconnecting')}
+            ? failReason === "upload"
+              ? t("recording.sendFailedTitle")
+              : t("recording.audioSaved")
+            : t("recording.reconnecting")}
         </Text>
         <Text style={styles.subtitle}>{subtitle}</Text>
-        {!failed ? <ActivityIndicator size="large" color={colors.warning} /> : null}
+        {!failed ? (
+          <ActivityIndicator size="large" color={colors.warning} />
+        ) : null}
         {failed ? (
           <View style={styles.actions}>
             <Button
-              title={t('recording.finishAndSave')}
-              onPress={() => router.replace('/offline-queue')}
+              title={t("recording.finishAndSave")}
+              onPress={() => router.replace("/offline-queue")}
             />
             <Button
-              title={t('common.retry')}
+              title={t("common.retry")}
               variant="ghost"
-              onPress={() => router.replace('/recording-reconnect')}
+              onPress={() => router.replace("/recording-reconnect")}
             />
           </View>
         ) : null}
@@ -168,8 +180,8 @@ const makeStyles = (colors: ThemeColors) =>
     safe: { flex: 1, backgroundColor: colors.warningSoft },
     container: {
       flex: 1,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       paddingHorizontal: spacing.xl,
       gap: spacing.md,
     },
@@ -178,25 +190,25 @@ const makeStyles = (colors: ThemeColors) =>
       height: 88,
       borderRadius: 44,
       backgroundColor: colors.surface,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginBottom: spacing.sm,
     },
     title: {
       fontSize: typography.sizes.xl,
       fontWeight: typography.weights.bold,
       color: colors.text,
-      textAlign: 'center',
+      textAlign: "center",
     },
     subtitle: {
       fontSize: typography.sizes.md,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       lineHeight: 24,
       marginBottom: spacing.md,
     },
     actions: {
-      width: '100%',
+      width: "100%",
       gap: spacing.sm,
       marginTop: spacing.md,
     },

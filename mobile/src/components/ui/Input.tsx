@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { TextInput, StyleSheet, View, Text, ViewStyle } from 'react-native';
-import { radius, typography, spacing, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useMemo } from "react";
+import { TextInput, StyleSheet, View, Text, ViewStyle } from "react-native";
+import { radius, typography, spacing, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 interface InputProps {
   value: string;
@@ -9,7 +9,7 @@ interface InputProps {
   placeholder?: string;
   label?: string;
   secureTextEntry?: boolean;
-  keyboardType?: 'default' | 'number-pad' | 'email-address';
+  keyboardType?: "default" | "number-pad" | "email-address";
   maxLength?: number;
   style?: ViewStyle;
   autoFocus?: boolean;
@@ -21,7 +21,7 @@ export function Input({
   placeholder,
   label,
   secureTextEntry,
-  keyboardType = 'default',
+  keyboardType = "default",
   maxLength,
   style,
   autoFocus,
@@ -48,23 +48,23 @@ export function Input({
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  wrapper: {
-    width: '100%',
-  },
-  label: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-    marginBottom: spacing.sm,
-  },
-  input: {
-    backgroundColor: colors.codeBg,
-    borderRadius: radius.md,
-    paddingVertical: spacing.md,
-    paddingHorizontal: spacing.md,
-    fontSize: typography.sizes.md,
-    color: colors.text,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-});
+    wrapper: {
+      width: "100%",
+    },
+    label: {
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.medium,
+      color: colors.text,
+      marginBottom: spacing.sm,
+    },
+    input: {
+      backgroundColor: colors.codeBg,
+      borderRadius: radius.md,
+      paddingVertical: spacing.md,
+      paddingHorizontal: spacing.md,
+      fontSize: typography.sizes.md,
+      color: colors.text,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+  });

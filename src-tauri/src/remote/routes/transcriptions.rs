@@ -107,7 +107,7 @@ pub async fn create_transcription(
         let part = crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(|e| {
             json_error(
                 StatusCode::BAD_REQUEST,
-            "invalid_audio",
+                "invalid_audio",
                 format!("could not decode uploaded audio part {}: {}", idx + 1, e),
             )
         })?;
@@ -129,14 +129,17 @@ pub async fn create_transcription(
         preview
     );
 
-    let raw_text = state.transcription.transcribe(samples.clone()).map_err(|e| {
-        error!("Remote transcription failed: {}", e);
-        json_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "transcription_failed",
-            e.to_string(),
-        )
-    })?;
+    let raw_text = state
+        .transcription
+        .transcribe(samples.clone())
+        .map_err(|e| {
+            error!("Remote transcription failed: {}", e);
+            json_error(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                "transcription_failed",
+                e.to_string(),
+            )
+        })?;
 
     let settings = get_settings(&state.app);
 
@@ -232,7 +235,13 @@ async fn load_entry(
         .get_entry_by_id(entry_id)
         .await
         .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?
-        .ok_or_else(|| json_error(StatusCode::NOT_FOUND, "not_found", "transcription not found"))
+        .ok_or_else(|| {
+            json_error(
+                StatusCode::NOT_FOUND,
+                "not_found",
+                "transcription not found",
+            )
+        })
 }
 
 /// Stream the stored WAV audio for a transcription so the mobile client can play
@@ -392,7 +401,11 @@ pub async fn get_transcription(
         .await
         .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?
         .ok_or_else(|| {
-            json_error(StatusCode::NOT_FOUND, "not_found", "transcription not found")
+            json_error(
+                StatusCode::NOT_FOUND,
+                "not_found",
+                "transcription not found",
+            )
         })?;
 
     Ok(Json(TranscriptionResponse {
@@ -407,4 +420,3 @@ pub async fn get_transcription(
         model: None,
     }))
 }
-

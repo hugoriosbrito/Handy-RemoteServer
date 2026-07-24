@@ -1,7 +1,7 @@
-import * as Haptics from 'expo-haptics';
-import { activateKeepAwakeAsync, deactivateKeepAwake } from 'expo-keep-awake';
-import { Audio } from 'expo-av';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import * as Haptics from "expo-haptics";
+import { activateKeepAwakeAsync, deactivateKeepAwake } from "expo-keep-awake";
+import { Audio } from "expo-av";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -13,27 +13,33 @@ import {
   Platform,
   Linking,
   type AppStateStatus,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Waveform } from '@/components/ui';
-import { ActionSheet } from '@/components/ui';
-import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useRecordingStore, formatDuration } from '@/stores/recordingStore';
-import { useConnectionStore } from '@/stores/connectionStore';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { api } from '@/api/client';
-import { uploadWithRetry, probeServerHealth } from '@/lib/connection';
-import * as FileSystem from 'expo-file-system';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { Waveform } from "@/components/ui";
+import { ActionSheet } from "@/components/ui";
+import {
+  spacing,
+  typography,
+  radius,
+  shadows,
+  type ThemeColors,
+} from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useRecordingStore, formatDuration } from "@/stores/recordingStore";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { api } from "@/api/client";
+import { uploadWithRetry, probeServerHealth } from "@/lib/connection";
+import * as FileSystem from "expo-file-system";
 import {
   startBackgroundRecording,
   stopBackgroundRecording,
   isBackgroundRecordingActive,
-} from '@/lib/backgroundRecording';
+} from "@/lib/backgroundRecording";
 
 /** How often to rotate + upload a chunk when the active model supports streaming. */
 const STREAM_CHUNK_MS = 4000;
@@ -55,7 +61,7 @@ export default function RecordingScreen() {
   const postProcessEnabled = useSettingsStore((s) => s.postProcessEnabled);
 
   const modelsQuery = useQuery({
-    queryKey: ['models', token, baseUrl],
+    queryKey: ["models", token, baseUrl],
     enabled: Boolean(token),
     queryFn: async () => {
       if (!token) return { models: [], activeModelId: null };
@@ -70,13 +76,13 @@ export default function RecordingScreen() {
   const chunkTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const startTimeRef = useRef(0);
   const pausedAccumRef = useRef(0);
-  const liveTextRef = useRef('');
+  const liveTextRef = useRef("");
   const rotatingRef = useRef(false);
   const finishingRef = useRef(false);
   /** Local URIs of completed streaming chunks, kept for the final concatenated upload. */
   const chunkUrisRef = useRef<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [liveText, setLiveText] = useState('');
+  const [liveText, setLiveText] = useState("");
   const [meter, setMeter] = useState(0);
   const [micDenied, setMicDenied] = useState(false);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
@@ -100,15 +106,19 @@ export default function RecordingScreen() {
   const startTimer = () => {
     clearTimer();
     intervalRef.current = setInterval(() => {
-      if (useRecordingStore.getState().status === 'recording') {
-        setElapsed(pausedAccumRef.current + (Date.now() - startTimeRef.current));
+      if (useRecordingStore.getState().status === "recording") {
+        setElapsed(
+          pausedAccumRef.current + (Date.now() - startTimeRef.current),
+        );
       }
     }, 200);
   };
 
   const prepareAndStartRecording = async (): Promise<Audio.Recording> => {
     const recording = new Audio.Recording();
-    await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
+    await recording.prepareToRecordAsync(
+      Audio.RecordingOptionsPresets.HIGH_QUALITY,
+    );
     await recording.startAsync();
     return recording;
   };
@@ -129,7 +139,7 @@ export default function RecordingScreen() {
     const next = chunk.trim();
     if (!next) return;
     const combined = liveTextRef.current
-      ? `${liveTextRef.current} ${next}`.replace(/\s+/g, ' ').trim()
+      ? `${liveTextRef.current} ${next}`.replace(/\s+/g, " ").trim()
       : next;
     liveTextRef.current = combined;
     setLiveText(combined);
@@ -144,7 +154,7 @@ export default function RecordingScreen() {
       const result = await uploadWithRetry(token, uri, {
         preview: true,
         baseUrl: baseUrl ?? undefined,
-        filename: 'chunk.m4a',
+        filename: "chunk.m4a",
         attempts: 2,
       });
       appendLiveText(result.finalText || result.rawText);
@@ -161,7 +171,9 @@ export default function RecordingScreen() {
   const clearChunkFiles = async (uris: string[]) => {
     await Promise.all(
       uris.map((uri) =>
-        FileSystem.deleteAsync(uri, { idempotent: true }).catch(() => undefined),
+        FileSystem.deleteAsync(uri, { idempotent: true }).catch(
+          () => undefined,
+        ),
       ),
     );
   };
@@ -171,7 +183,7 @@ export default function RecordingScreen() {
       !streamingEnabled ||
       rotatingRef.current ||
       finishingRef.current ||
-      useRecordingStore.getState().status !== 'recording'
+      useRecordingStore.getState().status !== "recording"
     ) {
       return;
     }
@@ -210,18 +222,18 @@ export default function RecordingScreen() {
 
     const begin = async () => {
       setError(null);
-      setStatus('recording');
-      liveTextRef.current = '';
-      setLiveText('');
+      setStatus("recording");
+      liveTextRef.current = "";
+      setLiveText("");
       // Soft health check — don't block recording start.
       if (baseUrl) void probeServerHealth(baseUrl);
-     try {
+      try {
         const { status: micStatus } = await Audio.requestPermissionsAsync();
         setMeter(0);
         setMicDenied(false);
-        if (micStatus !== 'granted') {
+        if (micStatus !== "granted") {
           setMicDenied(true);
-          setStatus('idle');
+          setStatus("idle");
           return;
         }
         await Audio.setAudioModeAsync({
@@ -232,7 +244,7 @@ export default function RecordingScreen() {
         const recording = await prepareAndStartRecording();
         bindMetering(recording);
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-        void activateKeepAwakeAsync('recording');
+        void activateKeepAwakeAsync("recording");
         if (cancelled) {
           await recording.stopAndUnloadAsync();
           return;
@@ -245,15 +257,15 @@ export default function RecordingScreen() {
         // Keep capturing with the screen off / app backgrounded (Android needs a
         // foreground service + notification permission; iOS uses UIBackgroundModes).
         const bgOk = await startBackgroundRecording(
-          t('recording.notifTitle'),
-          t('recording.notifDesc'),
+          t("recording.notifTitle"),
+          t("recording.notifDesc"),
         );
-        if (!bgOk && Platform.OS === 'android' && !cancelled) {
-          setError(t('recording.notifPermissionDenied'));
+        if (!bgOk && Platform.OS === "android" && !cancelled) {
+          setError(t("recording.notifPermissionDenied"));
         }
       } catch (e) {
-        setError(e instanceof Error ? e.message : t('pair.failed'));
-        setStatus('idle');
+        setError(e instanceof Error ? e.message : t("pair.failed"));
+        setStatus("idle");
       }
     };
 
@@ -275,7 +287,7 @@ export default function RecordingScreen() {
 
   useEffect(() => {
     clearChunkTimer();
-    if (!streamingEnabled || status !== 'recording') return;
+    if (!streamingEnabled || status !== "recording") return;
     chunkTimerRef.current = setInterval(() => {
       void rotateChunk();
     }, STREAM_CHUNK_MS);
@@ -297,8 +309,8 @@ export default function RecordingScreen() {
     clearChunkTimer();
     pausedAccumRef.current =
       useRecordingStore.getState().elapsedMs || pausedAccumRef.current;
-    setStatus('paused');
-    setError(t('recording.backgroundPaused'));
+    setStatus("paused");
+    setError(t("recording.backgroundPaused"));
     try {
       if (streamingEnabled && !rotatingRef.current) {
         rotatingRef.current = true;
@@ -325,10 +337,10 @@ export default function RecordingScreen() {
   useEffect(() => {
     // iOS keeps capturing in the background (UIBackgroundModes: ['audio']), so
     // only auto-pause on Android, where background mic capture isn't available.
-    if (Platform.OS !== 'android') return;
-    const sub = AppState.addEventListener('change', (next: AppStateStatus) => {
-      if (next === 'active') return;
-      if (useRecordingStore.getState().status !== 'recording') return;
+    if (Platform.OS !== "android") return;
+    const sub = AppState.addEventListener("change", (next: AppStateStatus) => {
+      if (next === "active") return;
+      if (useRecordingStore.getState().status !== "recording") return;
       // If the foreground service is up, recording keeps going in the background —
       // don't pause. Only fall back to auto-pause when the service isn't running.
       if (isBackgroundRecordingActive()) return;
@@ -339,7 +351,7 @@ export default function RecordingScreen() {
   }, [streamingEnabled]);
 
   const handlePauseResume = async () => {
-    if (status === 'recording') {
+    if (status === "recording") {
       const rec = recordingRef.current;
       if (!rec) return;
       clearChunkTimer();
@@ -347,8 +359,8 @@ export default function RecordingScreen() {
       void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       pausedAccumRef.current = elapsedMs;
       clearTimer();
-      setStatus('paused');
-    } else if (status === 'paused') {
+      setStatus("paused");
+    } else if (status === "paused") {
       try {
         // The recorder may have been dropped when the app was backgrounded —
         // recreate a fresh one instead of failing to resume.
@@ -363,10 +375,10 @@ export default function RecordingScreen() {
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         setError(null);
         startTimeRef.current = Date.now();
-        setStatus('recording');
+        setStatus("recording");
         startTimer();
       } catch (e) {
-        setError(e instanceof Error ? e.message : t('recording.uploadFailed'));
+        setError(e instanceof Error ? e.message : t("recording.uploadFailed"));
       }
     }
   };
@@ -376,9 +388,9 @@ export default function RecordingScreen() {
     finishingRef.current = true;
     clearTimer();
     clearChunkTimer();
-    setStatus('processing');
+    setStatus("processing");
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    void deactivateKeepAwake('recording');
+    void deactivateKeepAwake("recording");
     void stopBackgroundRecording();
 
     // Wait briefly if a chunk rotation is mid-flight.
@@ -419,15 +431,15 @@ export default function RecordingScreen() {
             durationMs,
             uri,
             sizeBytes,
-            status: 'pending',
+            status: "pending",
           });
         }
         setResult({
-          text: liveTextRef.current || t('recording.audioSaved'),
+          text: liveTextRef.current || t("recording.audioSaved"),
           durationMs,
           audioUri: uri,
         });
-        router.replace('/offline-queue');
+        router.replace("/offline-queue");
         return;
       }
 
@@ -443,18 +455,22 @@ export default function RecordingScreen() {
           const result = await uploadWithRetry(token, parts, {
             postProcess: postProcessEnabled,
             baseUrl: baseUrl ?? undefined,
-            filename: 'recording.m4a',
+            filename: "recording.m4a",
             attempts: 3,
           });
-          const finalText =
-            (result.finalText || result.rawText || liveTextRef.current || '').trim();
+          const finalText = (
+            result.finalText ||
+            result.rawText ||
+            liveTextRef.current ||
+            ""
+          ).trim();
           setResult({
             text: finalText,
             durationMs,
             audioUri: uri ?? parts[parts.length - 1] ?? null,
             model: result.model ?? activeModel?.name,
             postProcessed: result.postProcessed,
-            id: result.id && result.id !== 'preview' ? result.id : null,
+            id: result.id && result.id !== "preview" ? result.id : null,
           });
           void clearChunkFiles(parts);
         } else if (liveTextRef.current) {
@@ -465,10 +481,10 @@ export default function RecordingScreen() {
             postProcessed: false,
           });
         } else {
-          throw new Error('missing_uri');
+          throw new Error("missing_uri");
         }
-        void queryClient.invalidateQueries({ queryKey: ['history'] });
-        router.replace('/result');
+        void queryClient.invalidateQueries({ queryKey: ["history"] });
+        router.replace("/result");
       } catch {
         // Prefer showing whatever live text we already have instead of a false "offline".
         if (liveTextRef.current) {
@@ -480,8 +496,8 @@ export default function RecordingScreen() {
             model: activeModel?.name,
             postProcessed: false,
           });
-          void queryClient.invalidateQueries({ queryKey: ['history'] });
-          router.replace('/result');
+          void queryClient.invalidateQueries({ queryKey: ["history"] });
+          router.replace("/result");
           return;
         }
         if (uri) {
@@ -492,19 +508,19 @@ export default function RecordingScreen() {
             createdAt: new Date().toISOString(),
             durationMs,
             uri,
-            status: 'pending',
+            status: "pending",
           });
-          router.replace('/recording-reconnect');
+          router.replace("/recording-reconnect");
           return;
         }
         void clearChunkFiles(parts);
-        setError(t('recording.uploadFailed'));
-        setStatus('idle');
+        setError(t("recording.uploadFailed"));
+        setStatus("idle");
         finishingRef.current = false;
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : t('pair.failed'));
-      setStatus('idle');
+      setError(e instanceof Error ? e.message : t("pair.failed"));
+      setStatus("idle");
       finishingRef.current = false;
     }
   };
@@ -531,7 +547,7 @@ export default function RecordingScreen() {
     chunkUrisRef.current = [];
     void clearChunkFiles(discarded);
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    void deactivateKeepAwake('recording');
+    void deactivateKeepAwake("recording");
     void stopBackgroundRecording();
     resetSession();
     router.back();
@@ -544,27 +560,38 @@ export default function RecordingScreen() {
           <View style={styles.livePill}>
             <View style={styles.liveDot} />
             <Text style={styles.liveLabel}>
-              {streamingEnabled ? t('recording.livePreview') : t('recording.title')}
+              {streamingEnabled
+                ? t("recording.livePreview")
+                : t("recording.title")}
             </Text>
           </View>
-          {computer ? <Text style={styles.computer}>{computer.name}</Text> : null}
+          {computer ? (
+            <Text style={styles.computer}>{computer.name}</Text>
+          ) : null}
         </View>
 
         <Text style={styles.timer}>{formatDuration(elapsedMs)}</Text>
-        <Waveform active={status === 'recording'} amplitude={meter} height={88} />
+        <Waveform
+          active={status === "recording"}
+          amplitude={meter}
+          height={88}
+        />
 
         {streamingEnabled ? (
-          <ScrollView style={styles.liveBox} contentContainerStyle={styles.liveBoxContent}>
+          <ScrollView
+            style={styles.liveBox}
+            contentContainerStyle={styles.liveBoxContent}
+          >
             <Text style={styles.liveText}>
-              {liveText || t('recording.livePreview')}
+              {liveText || t("recording.livePreview")}
             </Text>
           </ScrollView>
         ) : null}
 
-        {status === 'processing' ? (
+        {status === "processing" ? (
           <View style={styles.processing}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.processingText}>{t('common.loading')}</Text>
+            <Text style={styles.processingText}>{t("common.loading")}</Text>
           </View>
         ) : null}
 
@@ -573,13 +600,19 @@ export default function RecordingScreen() {
         {micDenied ? (
           <View style={styles.permissionBox}>
             <Ionicons name="mic-off-outline" size={40} color={colors.error} />
-            <Text style={styles.permissionTitle}>{t('recording.microphoneDenied')}</Text>
-            <Text style={styles.permissionHint}>{t('recording.permissionRequired')}</Text>
+            <Text style={styles.permissionTitle}>
+              {t("recording.microphoneDenied")}
+            </Text>
+            <Text style={styles.permissionHint}>
+              {t("recording.permissionRequired")}
+            </Text>
             <TouchableOpacity
               style={styles.permissionBtn}
               onPress={() => void Linking.openSettings()}
             >
-              <Text style={styles.permissionBtnText}>{t('recording.openSettings')}</Text>
+              <Text style={styles.permissionBtnText}>
+                {t("recording.openSettings")}
+              </Text>
             </TouchableOpacity>
           </View>
         ) : null}
@@ -588,18 +621,18 @@ export default function RecordingScreen() {
           <TouchableOpacity
             style={styles.sideBtn}
             onPress={() => void handleCancel()}
-            accessibilityLabel={t('recording.cancel')}
+            accessibilityLabel={t("recording.cancel")}
             accessibilityRole="button"
           >
             <Ionicons name="close" size={28} color={colors.text} />
-            <Text style={styles.sideLabel}>{t('recording.cancel')}</Text>
+            <Text style={styles.sideLabel}>{t("recording.cancel")}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.mainBtn}
             onPress={() => void handleFinish()}
-            disabled={status === 'processing'}
-            accessibilityLabel={t('recording.finish')}
+            disabled={status === "processing"}
+            accessibilityLabel={t("recording.finish")}
             accessibilityRole="button"
           >
             <Ionicons name="checkmark" size={36} color={colors.white} />
@@ -608,31 +641,35 @@ export default function RecordingScreen() {
           <TouchableOpacity
             style={styles.sideBtn}
             onPress={() => void handlePauseResume()}
-            disabled={status === 'processing'}
-            accessibilityLabel={status === 'paused' ? t('recording.resume') : t('recording.pause')}
+            disabled={status === "processing"}
+            accessibilityLabel={
+              status === "paused" ? t("recording.resume") : t("recording.pause")
+            }
             accessibilityRole="button"
           >
             <Ionicons
-              name={status === 'paused' ? 'play' : 'pause'}
+              name={status === "paused" ? "play" : "pause"}
               size={28}
               color={colors.text}
             />
             <Text style={styles.sideLabel}>
-              {status === 'paused' ? t('recording.resume') : t('recording.pause')}
+              {status === "paused"
+                ? t("recording.resume")
+                : t("recording.pause")}
             </Text>
           </TouchableOpacity>
         </View>
       </View>
       <ActionSheet
         visible={cancelConfirmOpen}
-        title={t('recording.cancelConfirmTitle')}
-        message={t('recording.cancelConfirmBody')}
-        cancelLabel={t('common.cancel')}
+        title={t("recording.cancelConfirmTitle")}
+        message={t("recording.cancelConfirmBody")}
+        cancelLabel={t("common.cancel")}
         onClose={() => setCancelConfirmOpen(false)}
         options={[
           {
-            label: t('recording.cancelConfirmAction'),
-            icon: 'trash-outline',
+            label: t("recording.cancelConfirmAction"),
+            icon: "trash-outline",
             destructive: true,
             onPress: () => void handleCancelConfirmed(),
           },
@@ -651,12 +688,12 @@ const makeStyles = (colors: ThemeColors) =>
       paddingTop: spacing.lg,
     },
     topRow: {
-      alignItems: 'center',
+      alignItems: "center",
       gap: spacing.sm,
     },
     livePill: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.sm,
       backgroundColor: colors.warningSoft,
       paddingHorizontal: spacing.md,
@@ -682,9 +719,9 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: 52,
       fontWeight: typography.weights.bold,
       color: colors.text,
-      textAlign: 'center',
+      textAlign: "center",
       marginVertical: spacing.lg,
-      fontVariant: ['tabular-nums'],
+      fontVariant: ["tabular-nums"],
     },
     liveBox: {
       maxHeight: 140,
@@ -703,26 +740,26 @@ const makeStyles = (colors: ThemeColors) =>
       lineHeight: 22,
     },
     processing: {
-      alignItems: 'center',
+      alignItems: "center",
       gap: spacing.sm,
       marginTop: spacing.lg,
     },
     processingText: { color: colors.midGray },
     error: {
       color: colors.error,
-      textAlign: 'center',
+      textAlign: "center",
       marginTop: spacing.md,
     },
     controls: {
-      marginTop: 'auto',
+      marginTop: "auto",
       paddingBottom: spacing.xxl,
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
     },
     sideBtn: {
       width: 88,
-      alignItems: 'center',
+      alignItems: "center",
       gap: spacing.xs,
     },
     sideLabel: {
@@ -734,11 +771,11 @@ const makeStyles = (colors: ThemeColors) =>
       height: 84,
       borderRadius: 42,
       backgroundColor: colors.primary,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
     },
     permissionBox: {
-      alignItems: 'center',
+      alignItems: "center",
       gap: spacing.sm,
       marginTop: spacing.lg,
       padding: spacing.lg,
@@ -750,12 +787,12 @@ const makeStyles = (colors: ThemeColors) =>
       fontSize: typography.sizes.lg,
       fontWeight: typography.weights.semibold,
       color: colors.text,
-      textAlign: 'center',
+      textAlign: "center",
     },
     permissionHint: {
       fontSize: typography.sizes.sm,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       lineHeight: 20,
     },
     permissionBtn: {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,17 @@ import {
   TouchableOpacity,
   Platform,
   ActivityIndicator,
-} from 'react-native';
-import { useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Button } from '@/components/ui';
-import { HandyLogo } from '@/components/HandyLogo';
-import { spacing, typography, radius, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useConnectionStore } from '@/stores/connectionStore';
-import { api } from '@/api/client';
+} from "react-native";
+import { useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { Button } from "@/components/ui";
+import { HandyLogo } from "@/components/HandyLogo";
+import { spacing, typography, radius, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { api } from "@/api/client";
 
 const POLL_MS = 1500;
 const POLL_TIMEOUT_MS = 120_000;
@@ -67,25 +67,25 @@ export default function ConfirmPairScreen() {
       { refreshToken, baseUrl },
     );
     setConnecting(false);
-    router.replace('/onboarding/microphone');
+    router.replace("/onboarding/microphone");
   };
 
   const handleAuthorize = async () => {
     if (!pending) {
-      setError(t('pair.missingQr'));
+      setError(t("pair.missingQr"));
       return;
     }
 
     setConnecting(true);
     setError(null);
-    setStatusHint(t('pair.claiming'));
+    setStatusHint(t("pair.claiming"));
 
     try {
       const claim = await api.claimPairing(
         {
           sessionId: pending.sessionId,
           secret: pending.secret,
-          deviceName: Platform.OS === 'ios' ? 'iPhone' : 'Android',
+          deviceName: Platform.OS === "ios" ? "iPhone" : "Android",
           platform: Platform.OS,
         },
         pending.baseUrl,
@@ -95,7 +95,7 @@ export default function ConfirmPairScreen() {
         ...pending,
         code: claim.code,
       });
-      setStatusHint(t('pair.waitingApproval', { code: claim.code }));
+      setStatusHint(t("pair.waitingApproval", { code: claim.code }));
 
       const startedAt = Date.now();
       stopPolling();
@@ -104,7 +104,7 @@ export default function ConfirmPairScreen() {
           if (Date.now() - startedAt > POLL_TIMEOUT_MS) {
             stopPolling();
             setConnecting(false);
-            setError(t('pair.timeout'));
+            setError(t("pair.timeout"));
             return;
           }
 
@@ -113,7 +113,7 @@ export default function ConfirmPairScreen() {
             pending.baseUrl,
           );
 
-          if (status.status === 'approved' && status.credentials) {
+          if (status.status === "approved" && status.credentials) {
             await finishWithCredentials(
               status.credentials.accessToken,
               status.credentials.refreshToken,
@@ -121,23 +121,23 @@ export default function ConfirmPairScreen() {
               claim.serverName,
               pending.baseUrl,
             );
-          } else if (status.status === 'rejected') {
+          } else if (status.status === "rejected") {
             stopPolling();
             setConnecting(false);
-            setError(t('pair.rejected'));
-          } else if (status.status === 'expired') {
+            setError(t("pair.rejected"));
+          } else if (status.status === "expired") {
             stopPolling();
             setConnecting(false);
-            setError(t('pair.expired'));
+            setError(t("pair.expired"));
           }
         } catch (e) {
-          console.warn('pairing poll failed', e);
+          console.warn("pairing poll failed", e);
         }
       }, POLL_MS);
     } catch (e) {
       setConnecting(false);
       setStatusHint(null);
-      setError(e instanceof Error ? e.message : t('pair.failed'));
+      setError(e instanceof Error ? e.message : t("pair.failed"));
     }
   };
 
@@ -163,18 +163,18 @@ export default function ConfirmPairScreen() {
         <TouchableOpacity style={styles.backBtn} onPress={handleCancel}>
           <Ionicons name="chevron-back" size={28} color={colors.text} />
         </TouchableOpacity>
-        <Text style={styles.headerTitle}>{t('pair.confirmTitle')}</Text>
+        <Text style={styles.headerTitle}>{t("pair.confirmTitle")}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <View style={styles.content}>
         <HandyLogo size={88} showWordmark={false} />
-        <Text style={styles.heading}>{t('pair.confirmSubtitle')}</Text>
-        <Text style={styles.body}>{t('pair.codeHint')}</Text>
+        <Text style={styles.heading}>{t("pair.confirmSubtitle")}</Text>
+        <Text style={styles.body}>{t("pair.codeHint")}</Text>
 
         <View style={styles.codeCard}>
-          <Text style={styles.codeLabel}>{t('pair.pairingCode')}</Text>
-          <Text style={styles.code}>{displayCode || '······'}</Text>
+          <Text style={styles.codeLabel}>{t("pair.pairingCode")}</Text>
+          <Text style={styles.code}>{displayCode || "······"}</Text>
           {pending?.serverName ? (
             <Text style={styles.serverName}>{pending.serverName}</Text>
           ) : null}
@@ -183,7 +183,9 @@ export default function ConfirmPairScreen() {
         {isConnecting && !error ? (
           <View style={styles.waitRow}>
             <ActivityIndicator color={colors.primary} />
-            <Text style={styles.waitText}>{statusHint ?? t('pair.waiting')}</Text>
+            <Text style={styles.waitText}>
+              {statusHint ?? t("pair.waiting")}
+            </Text>
           </View>
         ) : null}
 
@@ -194,10 +196,13 @@ export default function ConfirmPairScreen() {
 
         <View style={styles.actions}>
           {!isConnecting ? (
-            <Button title={t('pair.authorize')} onPress={() => void handleAuthorize()} />
+            <Button
+              title={t("pair.authorize")}
+              onPress={() => void handleAuthorize()}
+            />
           ) : null}
           <Button
-            title={t('pair.cancel')}
+            title={t("pair.cancel")}
             onPress={handleCancel}
             variant="ghost"
           />
@@ -209,98 +214,98 @@ export default function ConfirmPairScreen() {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.background },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm,
-  },
-  backBtn: { width: 40, height: 40, justifyContent: 'center' },
-  headerTitle: {
-    fontSize: typography.sizes.lg,
-    fontWeight: typography.weights.semibold,
-    color: colors.text,
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: spacing.xl,
-    paddingTop: spacing.lg,
-  },
-  heading: {
-    marginTop: spacing.lg,
-    fontSize: typography.sizes.xl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    textAlign: 'center',
-  },
-  body: {
-    marginTop: spacing.sm,
-    fontSize: typography.sizes.md,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    lineHeight: 22,
-  },
-  codeCard: {
-    width: '100%',
-    marginTop: spacing.lg,
-    backgroundColor: colors.codeBg,
-    borderRadius: radius.lg,
-    paddingVertical: spacing.lg,
-    paddingHorizontal: spacing.md,
-    alignItems: 'center',
-    gap: spacing.sm,
-  },
-  codeLabel: {
-    fontSize: typography.sizes.xs,
-    color: colors.midGray,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  code: {
-    fontSize: 36,
-    fontWeight: typography.weights.bold,
-    letterSpacing: 8,
-    color: colors.text,
-    fontVariant: ['tabular-nums'],
-  },
-  serverName: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontWeight: typography.weights.medium,
-  },
-  waitRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.sm,
-    marginTop: spacing.lg,
-    paddingHorizontal: spacing.md,
-  },
-  waitText: {
-    flex: 1,
-    fontSize: typography.sizes.sm,
-    color: colors.textSecondary,
-    lineHeight: 20,
-  },
-  error: {
-    marginTop: spacing.md,
-    color: colors.error,
-    fontSize: typography.sizes.sm,
-    textAlign: 'center',
-  },
-  endpointHint: {
-    marginTop: spacing.xs,
-    fontSize: typography.sizes.xs,
-    color: colors.midGray,
-    textAlign: 'center',
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-  },
-  actions: {
-    marginTop: 'auto',
-    width: '100%',
-    paddingBottom: spacing.xl,
-    gap: spacing.sm,
-  },
-});
+    safe: { flex: 1, backgroundColor: colors.background },
+    header: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.sm,
+    },
+    backBtn: { width: 40, height: 40, justifyContent: "center" },
+    headerTitle: {
+      fontSize: typography.sizes.lg,
+      fontWeight: typography.weights.semibold,
+      color: colors.text,
+    },
+    content: {
+      flex: 1,
+      alignItems: "center",
+      paddingHorizontal: spacing.xl,
+      paddingTop: spacing.lg,
+    },
+    heading: {
+      marginTop: spacing.lg,
+      fontSize: typography.sizes.xl,
+      fontWeight: typography.weights.bold,
+      color: colors.text,
+      textAlign: "center",
+    },
+    body: {
+      marginTop: spacing.sm,
+      fontSize: typography.sizes.md,
+      color: colors.textSecondary,
+      textAlign: "center",
+      lineHeight: 22,
+    },
+    codeCard: {
+      width: "100%",
+      marginTop: spacing.lg,
+      backgroundColor: colors.codeBg,
+      borderRadius: radius.lg,
+      paddingVertical: spacing.lg,
+      paddingHorizontal: spacing.md,
+      alignItems: "center",
+      gap: spacing.sm,
+    },
+    codeLabel: {
+      fontSize: typography.sizes.xs,
+      color: colors.midGray,
+      textTransform: "uppercase",
+      letterSpacing: 1,
+    },
+    code: {
+      fontSize: 36,
+      fontWeight: typography.weights.bold,
+      letterSpacing: 8,
+      color: colors.text,
+      fontVariant: ["tabular-nums"],
+    },
+    serverName: {
+      fontSize: typography.sizes.sm,
+      color: colors.primary,
+      fontWeight: typography.weights.medium,
+    },
+    waitRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: spacing.sm,
+      marginTop: spacing.lg,
+      paddingHorizontal: spacing.md,
+    },
+    waitText: {
+      flex: 1,
+      fontSize: typography.sizes.sm,
+      color: colors.textSecondary,
+      lineHeight: 20,
+    },
+    error: {
+      marginTop: spacing.md,
+      color: colors.error,
+      fontSize: typography.sizes.sm,
+      textAlign: "center",
+    },
+    endpointHint: {
+      marginTop: spacing.xs,
+      fontSize: typography.sizes.xs,
+      color: colors.midGray,
+      textAlign: "center",
+      fontFamily: Platform.OS === "ios" ? "Menlo" : "monospace",
+    },
+    actions: {
+      marginTop: "auto",
+      width: "100%",
+      paddingBottom: spacing.xl,
+      gap: spacing.sm,
+    },
+  });

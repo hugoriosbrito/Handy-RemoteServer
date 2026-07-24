@@ -1,7 +1,7 @@
-import { useMemo } from 'react';
-import { Switch, View, Text, StyleSheet } from 'react-native';
-import { typography, spacing, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
+import { useMemo } from "react";
+import { Switch, View, Text, StyleSheet } from "react-native";
+import { typography, spacing, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
 
 interface ToggleProps {
   value: boolean;
@@ -31,24 +31,24 @@ export function Toggle({ value, onValueChange, label, hint }: ToggleProps) {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: spacing.md,
-  },
-  textCol: {
-    flex: 1,
-    marginRight: spacing.md,
-  },
-  label: {
-    fontSize: typography.sizes.md,
-    fontWeight: typography.weights.medium,
-    color: colors.text,
-  },
-  hint: {
-    fontSize: typography.sizes.sm,
-    color: colors.midGray,
-    marginTop: spacing.xs,
-  },
-});
+    container: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      paddingVertical: spacing.md,
+    },
+    textCol: {
+      flex: 1,
+      marginRight: spacing.md,
+    },
+    label: {
+      fontSize: typography.sizes.md,
+      fontWeight: typography.weights.medium,
+      color: colors.text,
+    },
+    hint: {
+      fontSize: typography.sizes.sm,
+      color: colors.midGray,
+      marginTop: spacing.xs,
+    },
+  });

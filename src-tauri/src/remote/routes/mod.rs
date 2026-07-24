@@ -28,8 +28,14 @@ pub fn router(state: Arc<RemoteServerState>) -> Router {
         .route("/v1/pairing/sessions/{id}", get(pairing::session_status))
         .route("/v1/devices", get(devices::list_devices))
         .route("/v1/devices/{id}", delete(devices::revoke_device))
-        .route("/v1/transcriptions", post(transcriptions::create_transcription))
-        .route("/v1/transcriptions/{id}", get(transcriptions::get_transcription))
+        .route(
+            "/v1/transcriptions",
+            post(transcriptions::create_transcription),
+        )
+        .route(
+            "/v1/transcriptions/{id}",
+            get(transcriptions::get_transcription),
+        )
         .route(
             "/v1/transcriptions/{id}/audio",
             get(transcriptions::get_transcription_audio),
@@ -46,7 +52,10 @@ pub fn router(state: Arc<RemoteServerState>) -> Router {
         .route("/v1/models/select", post(models::select_model))
         .route("/v1/post-processing", get(post_processing::get_info))
         .route("/v1/history", get(history::list_history))
-        .route("/v1/history/{id}", get(history::get_history).delete(history::delete_history))
+        .route(
+            "/v1/history/{id}",
+            get(history::get_history).delete(history::delete_history),
+        )
         .layer(RequestBodyLimitLayer::new(25 * 1024 * 1024))
         .layer(cors)
         .with_state(state)

@@ -4,13 +4,13 @@
 use crate::apple_intelligence;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
-use crate::settings::{get_settings, AppSettings, APPLE_INTELLIGENCE_PROVIDER_ID};
 use crate::post_processing::types::ProcessedTranscription;
+use crate::settings::{get_settings, AppSettings, APPLE_INTELLIGENCE_PROVIDER_ID};
 use ferrous_opencc::{config::BuiltinConfig, OpenCC};
 use log::{debug, error, warn};
 use std::sync::Arc;
-use tauri::Manager;
 use tauri::AppHandle;
+use tauri::Manager;
 
 /// Field name for structured output JSON schema
 const TRANSCRIPTION_FIELD: &str = "transcription";
@@ -35,7 +35,10 @@ pub(crate) fn is_blank_transcription(transcription: &str) -> bool {
     transcription.trim().is_empty()
 }
 
-pub async fn post_process_transcription(settings: &AppSettings, transcription: &str) -> Option<String> {
+pub async fn post_process_transcription(
+    settings: &AppSettings,
+    transcription: &str,
+) -> Option<String> {
     if is_blank_transcription(transcription) {
         debug!("Post-processing skipped because the transcription is empty");
         return None;
@@ -387,4 +390,3 @@ pub async fn process_transcription_output(
         post_process_prompt,
     }
 }
-

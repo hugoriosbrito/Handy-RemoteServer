@@ -48,7 +48,9 @@ export const PairingApproveResponseSchema = z.object({
   sessionId: z.string().min(1),
   credentials: DeviceCredentialsSchema.optional().nullable(),
 });
-export type PairingApproveResponse = z.infer<typeof PairingApproveResponseSchema>;
+export type PairingApproveResponse = z.infer<
+  typeof PairingApproveResponseSchema
+>;
 
 export const PairingStatusResponseSchema = z.object({
   sessionId: z.string().min(1),
