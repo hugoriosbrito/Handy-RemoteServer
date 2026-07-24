@@ -1,259 +1,483 @@
-{
-  "common": {
-    "cancel": "Cancel",
-    "confirm": "Confirm",
-    "back": "Back",
-    "save": "Save",
-    "search": "Search",
-    "copy": "Copy",
-    "share": "Share",
-    "more": "More",
-    "connected": "Connected",
-    "disconnected": "Disconnected",
-    "offline": "Offline",
-    "online": "Online",
-    "discard": "Discard",
-    "retry": "Retry",
-    "delete": "Delete",
-    "loading": "Loading…",
-    "all": "All"
-  },
-  "welcome": {
-    "title": "Transcribe from your phone",
-    "subtitle": "Use Handy on your computer to turn voice into text, wherever you are.",
-    "connectComputer": "Connect computer"
-  },
-  "pair": {
-    "scanTitle": "Scan QR Code",
-    "scanHint": "Open Mobile Access in Handy and point the camera.",
-    "scanPoint": "Point at the Handy QR",
-    "enterCode": "Enter code",
-    "confirmTitle": "Confirm connection",
-    "confirmSubtitle": "Verify this is the correct computer.",
-    "codeHint": "Check that the same code appears on the computer.",
-    "pairingCode": "Pairing code",
-    "authorize": "Authorize",
-    "cancel": "Cancel",
-    "invalidQr": "Invalid QR code. Scan the code shown in Handy.",
-    "codeRequiresQr": "The 6-digit code is for verification on the computer. Scan the QR code to start pairing.",
-    "cameraPermission": "Camera permission is required to scan the QR code.",
-    "allowCamera": "Allow camera",
-    "missingQr": "Scan the Handy QR code before authorizing.",
-    "claiming": "Requesting authorization…",
-    "waitingApproval": "Waiting for approval on the computer. Check code {{code}}.",
-    "waiting": "Waiting…",
-    "timeout": "Timed out. Try scanning again.",
-    "rejected": "Pairing was rejected on the computer.",
-    "expired": "Session expired. Generate a new QR in Handy.",
-    "failed": "Failed to connect. Try again.",
-    "localNetwork": "Local network",
-    "enterCodeTitle": "Paste payload",
-    "enterCodeHint": "Paste the Handy QR JSON (or a handy-remote:// link with payload=).",
-    "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
-    "paste": "Paste from clipboard"
-  },
-  "onboarding": {
-    "microphoneTitle": "Allow microphone",
-    "microphoneSubtitle": "Handy needs the microphone to record and send your voice to the computer.",
-    "privacyNote": "Only active while recording.",
-    "allow": "Allow",
-    "notNow": "Not now",
-    "deniedTitle": "Microphone blocked",
-    "deniedBody": "You denied microphone access. Open system settings to allow it and record again.",
-    "openSettings": "Open settings"
-  },
-  "tabs": {
-    "record": "Record",
-    "history": "History",
-    "settings": "Settings"
-  },
-  "record": {
-    "title": "Record",
-    "tapToRecord": "Tap to record",
-    "postProcess": "Post-processing",
-    "postProcessHint": "Apply corrections and formatting after transcription.",
-    "startRecording": "Start recording",
-    "connectedTo": "Connected to {{name}}",
-    "notConnected": "No computer connected",
-    "onlineLocal": "Online · Local network",
-    "lastTranscription": "Last transcription",
-    "modelLabel": "Whisper Turbo",
-    "modelFallback": "No model",
-    "modelMeta": "Tap to choose the model on the PC",
-    "modelStreaming": "Real-time transcription",
-    "modelOffline": "Transcribes when you finish",
-    "promptLabel": "Cleanup prompt",
-    "promptHint": "Choose which cleanup style the computer should apply.",
-    "promptUnavailable": "No prompts configured on the computer",
-    "promptNone": "Default prompt",
-    "promptSelectTitle": "Choose cleanup prompt",
-    "promptChoose": "Choose a prompt",
-    "promptTitle": "Post-processing prompt",
-    "choosePrompt": "Choose prompt",
-    "promptFallback": "Default prompt",
-    "selectPromptTitle": "Post-processing prompt"
-  },
-  "recording": {
-    "title": "Recording",
-    "reconnecting": "Reconnecting…",
-    "audioSaved": "Audio saved on phone",
-    "tryingComputer": "Trying {{name}}",
-    "tryingComputerAttempt": "Trying {{name}} ({{attempt}})",
-    "sendFailedTitle": "Could not send",
-    "sendFailed": "Failed to send to {{name}}. The PC looks online — try again.",
-    "uploadFailed": "Upload failed. Please try again.",
-    "lastSegment": "Last segment",
-    "finishAndSave": "Finish and save",
-    "reconnectingHint": "Trying to restore the connection to the computer…",
-    "pause": "Pause",
-    "resume": "Resume",
-    "finish": "Finish",
-    "cancel": "Cancel",
-    "livePreview": "Live preview",
-    "backgroundPaused": "Paused — recording can't continue in the background. Tap resume.",
-    "notifTitle": "Handy is recording",
-    "notifDesc": "Tap to return to the recording",
-    "notifPermissionDenied": "Notification permission denied — recording may pause in the background.",
-    "microphoneDenied": "Microphone blocked",
-    "permissionRequired": "Allow microphone access in system settings to record.",
-    "openSettings": "Open settings",
-    "cancelConfirmTitle": "Discard recording?",
-    "cancelConfirmBody": "The audio captured so far will be lost.",
-    "cancelConfirmAction": "Discard"
-  },
-  "result": {
-    "title": "Transcription",
-    "recordAgain": "Record again",
-    "copied": "Copied!",
-    "duration": "Duration: {{duration}}",
-    "meta": "{{duration}} · {{model}} · {{processing}}",
-    "audio": "Audio",
-    "expiresIn": "Deletes in 24 h",
-    "noAudio": "Audio unavailable",
-    "retranscribe": "Re-transcribe",
-    "reprocess": "Reprocess (AI cleanup)",
-    "retranscribing": "Re-transcribing…",
-    "reprocessing": "Reprocessing…",
-    "actionFailed": "Couldn't complete. Try again.",
-    "noServerEntry": "This recording isn't on the PC anymore.",
-    "playbackFailed": "Couldn't play the audio.",
-    "empty": "No transcription to show.",
-    "processingPP": "post-processed",
-    "processingRaw": "raw"
-  },
-  "history": {
-    "title": "History",
-    "searchPlaceholder": "Search",
-    "empty": "No transcriptions yet.",
-    "today": "Today",
-    "yesterday": "Yesterday",
-    "phone": "Phone",
-    "computer": "Computer"
-  },
-  "computers": {
-    "title": "Computers",
-    "add": "Connect computer",
-    "lastSeen": "Last seen: {{date}}",
-    "remove": "Remove",
-    "empty": "No paired computers.",
-    "onlineLocal": "Online · Local network",
-    "offlineTailscale": "Offline · Tailscale"
-  },
-  "models": {
-    "title": "Models",
-    "subtitle": "Choose the transcription model used on the computer. Only downloaded models can be selected.",
-    "translation": "Translation",
-    "streaming": "Real-time",
-    "notDownloaded": "Not downloaded",
-    "empty": "No models found.",
-    "loadError": "Could not load models.",
-    "notDownloadedHint": "Download this model on the computer to use it.",
-    "searchPlaceholder": "Search models by name...",
-    "allLanguages": "All languages",
-    "filterLanguages": "Languages",
-    "sortDefault": "Default",
-    "sortAccuracy": "Accuracy",
-    "sortSpeed": "Speed",
-    "accuracy": "Accuracy",
-    "speed": "Speed",
-    "languagesCount": "{{count}} languages",
-    "languageOnly": "{{language}}",
-    "languageFilter": "Language",
-    "sortBy": "Sort",
-    "languageCount_one": "{{count}} language",
-    "languageCount_other": "{{count}} languages"
-  },
-  "offlineQueue": {
-    "title": "Offline queue",
-    "subtitle": "Recordings waiting to upload when the connection is restored.",
-    "empty": "No recordings in the queue.",
-    "pending": "{{count}} pending",
-    "pendingSize": "{{count}} pending · {{size}}",
-    "computerOffline": "{{name}} is offline",
-    "retry": "Retry",
-    "pendingCount": "{{count}} pending",
-    "deleteItem": "Delete recording",
-    "deleteTitle": "Delete recording?",
-    "deleteBody": "This recording and its audio will be deleted from the phone.",
-    "status": {
-      "pending": "Pending",
-      "uploading": "Uploading",
-      "failed": "Failed"
-    }
-  },
-  "settings": {
-    "title": "Settings",
-    "onThisPhone": "On this phone",
-    "computers": "Computers",
-    "offlineQueue": "Offline queue",
-    "language": "Language",
-    "languageValue": "Portuguese (Brazil)",
-    "backgroundRecord": "Record in background",
-    "deleteAudio": "Delete audio",
-    "deleteAudioValue": "After 24 hours",
-    "biometrics": "Biometrics",
-    "biometricsUnavailable": "No biometrics enrolled on this device.",
-    "darkMode": "Dark mode",
-    "diagnostics": "Diagnostics",
-    "microphone": "Microphone",
-    "about": "About",
-    "version": "Version {{version}}",
-    "disconnect": "Disconnect",
-    "audioRetention": "Delete audio",
-    "audioRetentionTitle": "When to delete audio",
-    "retention1h": "After 1 hour",
-    "retention24h": "After 24 hours",
-    "retention7d": "After 7 days",
-    "retentionNever": "Never",
-    "microphoneHint": "Open system settings",
-    "recordingSounds": "Recording sounds",
-    "recordingSoundsHint": "Play start and stop sounds while recording",
-    "postProcessing": "Post-processing",
-    "postProcessingHint": "Choose the cleanup prompt used by the PC"
-  },
-  "biometricGate": {
-    "title": "Handy Remote locked",
-    "subtitle": "Authenticate to continue.",
-    "unlock": "Unlock",
-    "prompt": "Authenticate to open Handy Remote"
-  },
-  "diagnostics": {
-    "title": "Diagnostics",
-    "subtitle": "Connection state with the paired computer.",
-    "computer": "Computer",
-    "status": "Status",
-    "online": "Online",
-    "offline": "Offline",
-    "activeEndpoint": "Active endpoint",
-    "endpoints": "Known endpoints",
-    "queue": "Offline queue",
-    "queueItems": "{{count}} in queue",
-    "version": "App version",
-    "testConnection": "Test connection",
-    "testing": "Testing…",
-    "reachable": "Computer reachable.",
-    "unreachable": "Could not reach the computer.",
-    "none": "—",
-    "notPaired": "No paired computer."
-  }
-}
+{
+  "common": {
+    "cancel": "Cancel",
+
+    "confirm": "Confirm",
+
+    "back": "Back",
+
+    "save": "Save",
+
+    "search": "Search",
+
+    "copy": "Copy",
+
+    "share": "Share",
+
+    "more": "More",
+
+    "connected": "Connected",
+
+    "disconnected": "Disconnected",
+
+    "offline": "Offline",
+
+    "online": "Online",
+
+    "discard": "Discard",
+
+    "retry": "Retry",
+
+    "delete": "Delete",
+
+    "loading": "Loading…",
+
+    "all": "All"
+  },
+
+  "welcome": {
+    "title": "Transcribe from your phone",
+
+    "subtitle": "Use Handy on your computer to turn voice into text, wherever you are.",
+
+    "connectComputer": "Connect computer"
+  },
+
+  "pair": {
+    "scanTitle": "Scan QR Code",
+
+    "scanHint": "Open Mobile Access in Handy and point the camera.",
+
+    "scanPoint": "Point at the Handy QR",
+
+    "enterCode": "Enter code",
+
+    "confirmTitle": "Confirm connection",
+
+    "confirmSubtitle": "Verify this is the correct computer.",
+
+    "codeHint": "Check that the same code appears on the computer.",
+
+    "pairingCode": "Pairing code",
+
+    "authorize": "Authorize",
+
+    "cancel": "Cancel",
+
+    "invalidQr": "Invalid QR code. Scan the code shown in Handy.",
+
+    "codeRequiresQr": "The 6-digit code is for verification on the computer. Scan the QR code to start pairing.",
+
+    "cameraPermission": "Camera permission is required to scan the QR code.",
+
+    "allowCamera": "Allow camera",
+
+    "missingQr": "Scan the Handy QR code before authorizing.",
+
+    "claiming": "Requesting authorization…",
+
+    "waitingApproval": "Waiting for approval on the computer. Check code {{code}}.",
+
+    "waiting": "Waiting…",
+
+    "timeout": "Timed out. Try scanning again.",
+
+    "rejected": "Pairing was rejected on the computer.",
+
+    "expired": "Session expired. Generate a new QR in Handy.",
+
+    "failed": "Failed to connect. Try again.",
+
+    "localNetwork": "Local network",
+
+    "enterCodeTitle": "Paste payload",
+
+    "enterCodeHint": "Paste the Handy QR JSON (or a handy-remote:// link with payload=).",
+
+    "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
+
+    "paste": "Paste from clipboard"
+  },
+
+  "onboarding": {
+    "microphoneTitle": "Allow microphone",
+
+    "microphoneSubtitle": "Handy needs the microphone to record and send your voice to the computer.",
+
+    "privacyNote": "Only active while recording.",
+
+    "allow": "Allow",
+
+    "notNow": "Not now",
+
+    "deniedTitle": "Microphone blocked",
+
+    "deniedBody": "You denied microphone access. Open system settings to allow it and record again.",
+
+    "openSettings": "Open settings"
+  },
+
+  "tabs": {
+    "record": "Record",
+
+    "history": "History",
+
+    "settings": "Settings"
+  },
+
+  "record": {
+    "title": "Record",
+
+    "tapToRecord": "Tap to record",
+
+    "postProcess": "Post-processing",
+
+    "postProcessHint": "Apply corrections and formatting after transcription.",
+
+    "startRecording": "Start recording",
+
+    "connectedTo": "Connected to {{name}}",
+
+    "notConnected": "No computer connected",
+
+    "onlineLocal": "Online · Local network",
+
+    "lastTranscription": "Last transcription",
+
+    "modelLabel": "Whisper Turbo",
+
+    "modelFallback": "No model",
+
+    "modelMeta": "Tap to choose the model on the PC",
+
+    "modelStreaming": "Real-time transcription",
+
+    "modelOffline": "Transcribes when you finish",
+
+    "promptLabel": "Cleanup prompt",
+
+    "promptHint": "Choose which cleanup style the computer should apply.",
+
+    "promptUnavailable": "No prompts configured on the computer",
+
+    "promptNone": "Default prompt",
+
+    "promptSelectTitle": "Choose cleanup prompt",
+
+    "promptChoose": "Choose a prompt",
+
+    "promptTitle": "Post-processing prompt",
+
+    "choosePrompt": "Choose prompt",
+
+    "promptFallback": "Default prompt",
+
+    "selectPromptTitle": "Post-processing prompt"
+  },
+
+  "recording": {
+    "title": "Recording",
+
+    "reconnecting": "Reconnecting…",
+
+    "audioSaved": "Audio saved on phone",
+
+    "tryingComputer": "Trying {{name}}",
+
+    "tryingComputerAttempt": "Trying {{name}} ({{attempt}})",
+
+    "sendFailedTitle": "Could not send",
+
+    "sendFailed": "Failed to send to {{name}}. The PC looks online — try again.",
+
+    "uploadFailed": "Upload failed. Please try again.",
+
+    "lastSegment": "Last segment",
+
+    "finishAndSave": "Finish and save",
+
+    "reconnectingHint": "Trying to restore the connection to the computer…",
+
+    "pause": "Pause",
+
+    "resume": "Resume",
+
+    "finish": "Finish",
+
+    "cancel": "Cancel",
+
+    "livePreview": "Live preview",
+
+    "backgroundPaused": "Paused — recording can't continue in the background. Tap resume.",
+
+    "notifTitle": "Handy is recording",
+
+    "notifDesc": "Tap to return to the recording",
+
+    "notifPermissionDenied": "Notification permission denied — recording may pause in the background.",
+
+    "microphoneDenied": "Microphone blocked",
+
+    "permissionRequired": "Allow microphone access in system settings to record.",
+
+    "openSettings": "Open settings",
+
+    "cancelConfirmTitle": "Discard recording?",
+
+    "cancelConfirmBody": "The audio captured so far will be lost.",
+
+    "cancelConfirmAction": "Discard"
+  },
+
+  "result": {
+    "title": "Transcription",
+
+    "recordAgain": "Record again",
+
+    "copied": "Copied!",
+
+    "duration": "Duration: {{duration}}",
+
+    "meta": "{{duration}} · {{model}} · {{processing}}",
+
+    "audio": "Audio",
+
+    "expiresIn": "Deletes in 24 h",
+
+    "noAudio": "Audio unavailable",
+
+    "retranscribe": "Re-transcribe",
+
+    "reprocess": "Reprocess (AI cleanup)",
+
+    "retranscribing": "Re-transcribing…",
+
+    "reprocessing": "Reprocessing…",
+
+    "actionFailed": "Couldn't complete. Try again.",
+
+    "noServerEntry": "This recording isn't on the PC anymore.",
+
+    "playbackFailed": "Couldn't play the audio.",
+
+    "empty": "No transcription to show.",
+
+    "processingPP": "post-processed",
+
+    "processingRaw": "raw"
+  },
+
+  "history": {
+    "title": "History",
+
+    "searchPlaceholder": "Search",
+
+    "empty": "No transcriptions yet.",
+
+    "today": "Today",
+
+    "yesterday": "Yesterday",
+
+    "phone": "Phone",
+
+    "computer": "Computer"
+  },
+
+  "computers": {
+    "title": "Computers",
+
+    "add": "Connect computer",
+
+    "lastSeen": "Last seen: {{date}}",
+
+    "remove": "Remove",
+
+    "empty": "No paired computers.",
+
+    "onlineLocal": "Online · Local network",
+
+    "offlineTailscale": "Offline · Tailscale"
+  },
+
+  "models": {
+    "title": "Models",
+
+    "subtitle": "Choose the transcription model used on the computer. Only downloaded models can be selected.",
+
+    "translation": "Translation",
+
+    "streaming": "Real-time",
+
+    "notDownloaded": "Not downloaded",
+
+    "empty": "No models found.",
+
+    "loadError": "Could not load models.",
+
+    "notDownloadedHint": "Download this model on the computer to use it.",
+
+    "searchPlaceholder": "Search models by name...",
+
+    "allLanguages": "All languages",
+
+    "filterLanguages": "Languages",
+
+    "sortDefault": "Default",
+
+    "sortAccuracy": "Accuracy",
+
+    "sortSpeed": "Speed",
+
+    "accuracy": "Accuracy",
+
+    "speed": "Speed",
+
+    "languagesCount": "{{count}} languages",
+
+    "languageOnly": "{{language}}",
+
+    "languageFilter": "Language",
+
+    "sortBy": "Sort",
+
+    "languageCount_one": "{{count}} language",
+
+    "languageCount_other": "{{count}} languages"
+  },
+
+  "offlineQueue": {
+    "title": "Offline queue",
+
+    "subtitle": "Recordings waiting to upload when the connection is restored.",
+
+    "empty": "No recordings in the queue.",
+
+    "pending": "{{count}} pending",
+
+    "pendingSize": "{{count}} pending · {{size}}",
+
+    "computerOffline": "{{name}} is offline",
+
+    "retry": "Retry",
+
+    "pendingCount": "{{count}} pending",
+
+    "deleteItem": "Delete recording",
+
+    "deleteTitle": "Delete recording?",
+
+    "deleteBody": "This recording and its audio will be deleted from the phone.",
+
+    "status": {
+      "pending": "Pending",
+
+      "uploading": "Uploading",
+
+      "failed": "Failed"
+    }
+  },
+
+  "settings": {
+    "title": "Settings",
+
+    "onThisPhone": "On this phone",
+
+    "computers": "Computers",
+
+    "offlineQueue": "Offline queue",
+
+    "language": "Language",
+
+    "languageValue": "Portuguese (Brazil)",
+
+    "backgroundRecord": "Record in background",
+
+    "deleteAudio": "Delete audio",
+
+    "deleteAudioValue": "After 24 hours",
+
+    "biometrics": "Biometrics",
+
+    "biometricsUnavailable": "No biometrics enrolled on this device.",
+
+    "darkMode": "Dark mode",
+
+    "diagnostics": "Diagnostics",
+
+    "microphone": "Microphone",
+
+    "about": "About",
+
+    "version": "Version {{version}}",
+
+    "disconnect": "Disconnect",
+
+    "audioRetention": "Delete audio",
+
+    "audioRetentionTitle": "When to delete audio",
+
+    "retention1h": "After 1 hour",
+
+    "retention24h": "After 24 hours",
+
+    "retention7d": "After 7 days",
+
+    "retentionNever": "Never",
+
+    "microphoneHint": "Open system settings",
+
+    "recordingSounds": "Recording sounds",
+
+    "recordingSoundsHint": "Play start and stop sounds while recording",
+
+    "postProcessing": "Post-processing",
+
+    "postProcessingHint": "Choose the cleanup prompt used by the PC"
+  },
+
+  "biometricGate": {
+    "title": "Handy Remote locked",
+
+    "subtitle": "Authenticate to continue.",
+
+    "unlock": "Unlock",
+
+    "prompt": "Authenticate to open Handy Remote"
+  },
+
+  "diagnostics": {
+    "title": "Diagnostics",
+
+    "subtitle": "Connection state with the paired computer.",
+
+    "computer": "Computer",
+
+    "status": "Status",
+
+    "online": "Online",
+
+    "offline": "Offline",
+
+    "activeEndpoint": "Active endpoint",
+
+    "endpoints": "Known endpoints",
+
+    "queue": "Offline queue",
+
+    "queueItems": "{{count}} in queue",
+
+    "version": "App version",
+
+    "testConnection": "Test connection",
+
+    "testing": "Testing…",
+
+    "reachable": "Computer reachable.",
+
+    "unreachable": "Could not reach the computer.",
+
+    "none": "—",
+
+    "notPaired": "No paired computer."
+  }
+}

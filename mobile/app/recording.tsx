@@ -96,8 +96,6 @@ export default function RecordingScreen() {
     }
   };
 
-  ;
-
   const startTimer = () => {
     clearTimer();
     intervalRef.current = setInterval(() => {
@@ -142,12 +140,6 @@ export default function RecordingScreen() {
 
   // Remember this URI for the final concatenated upload. Preview uploads never
   // create a durable history entry — they only feed live text.
-  ;
-
-  ;
-
-  ;
-
   useEffect(() => {
     let cancelled = false;
 
@@ -218,7 +210,6 @@ export default function RecordingScreen() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
 
   // Android can't capture microphone audio without a foreground service, and JS
   // chunk timers are frozen while backgrounded — so anything spoken with the app
@@ -450,9 +441,7 @@ export default function RecordingScreen() {
         <View style={styles.topRow}>
           <View style={styles.livePill}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveLabel}>
-              {t("recording.title")}
-            </Text>
+            <Text style={styles.liveLabel}>{t("recording.title")}</Text>
           </View>
           {computer ? (
             <Text style={styles.computer}>{computer.name}</Text>

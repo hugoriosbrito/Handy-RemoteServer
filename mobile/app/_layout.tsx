@@ -109,7 +109,9 @@ function ThemedApp() {
   const settingsLoaded = useSettingsStore((s) => s.loaded);
 
   useEffect(() => {
-    void SystemUI.setBackgroundColorAsync(colors.background).catch(() => undefined);
+    void SystemUI.setBackgroundColorAsync(colors.background).catch(
+      () => undefined,
+    );
   }, [colors.background]);
 
   useEffect(() => {

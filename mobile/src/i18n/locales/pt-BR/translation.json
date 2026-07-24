@@ -1,259 +1,483 @@
-{
-  "common": {
-    "cancel": "Cancelar",
-    "confirm": "Confirmar",
-    "back": "Voltar",
-    "save": "Salvar",
-    "search": "Buscar",
-    "copy": "Copiar",
-    "share": "Compartilhar",
-    "more": "Mais",
-    "connected": "Conectado",
-    "disconnected": "Desconectado",
-    "offline": "Offline",
-    "online": "Online",
-    "discard": "Descartar",
-    "retry": "Tentar novamente",
-    "delete": "Excluir",
-    "loading": "Carregando…",
-    "all": "Todos"
-  },
-  "welcome": {
-    "title": "Transcreva pelo celular",
-    "subtitle": "Use o Handy do seu computador para transformar voz em texto, onde estiver.",
-    "connectComputer": "Conectar computador"
-  },
-  "pair": {
-    "scanTitle": "Escanear QR Code",
-    "scanHint": "Abra Acesso móvel no Handy e aponte a câmera.",
-    "scanPoint": "Aponte para o QR do Handy",
-    "enterCode": "Digitar código",
-    "confirmTitle": "Confirmar conexão",
-    "confirmSubtitle": "Verifique se este é o computador correto.",
-    "codeHint": "Confira se o mesmo código aparece no computador.",
-    "pairingCode": "Código de pareamento",
-    "authorize": "Autorizar",
-    "cancel": "Cancelar",
-    "invalidQr": "QR Code inválido. Escaneie o código exibido no Handy.",
-    "codeRequiresQr": "O código de 6 dígitos é para verificação no computador. Escaneie o QR Code para iniciar o pareamento.",
-    "cameraPermission": "Permissão de câmera necessária para escanear o QR Code.",
-    "allowCamera": "Permitir câmera",
-    "missingQr": "Escaneie o QR Code do Handy antes de autorizar.",
-    "claiming": "Solicitando autorização…",
-    "waitingApproval": "Aguardando aprovação no computador. Confira o código {{code}}.",
-    "waiting": "Aguardando…",
-    "timeout": "Tempo esgotado. Tente escanear novamente.",
-    "rejected": "Pareamento recusado no computador.",
-    "expired": "Sessão expirada. Gere um novo QR no Handy.",
-    "failed": "Falha ao conectar. Tente novamente.",
-    "localNetwork": "Rede local",
-    "enterCodeTitle": "Colar payload",
-    "enterCodeHint": "Cole o JSON do QR do Handy (ou o link handy-remote:// com payload=).",
-    "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
-    "paste": "Colar da área de transferência"
-  },
-  "onboarding": {
-    "microphoneTitle": "Permitir microfone",
-    "microphoneSubtitle": "O Handy precisa do microfone para gravar e enviar sua voz ao computador.",
-    "privacyNote": "Só fica ativo durante a gravação.",
-    "allow": "Permitir",
-    "notNow": "Agora não",
-    "deniedTitle": "Microfone bloqueado",
-    "deniedBody": "Você negou o acesso ao microfone. Abra as configurações do sistema para permitir e voltar a gravar.",
-    "openSettings": "Abrir configurações"
-  },
-  "tabs": {
-    "record": "Gravar",
-    "history": "Histórico",
-    "settings": "Ajustes"
-  },
-  "record": {
-    "title": "Gravar",
-    "tapToRecord": "Toque para gravar",
-    "postProcess": "Pós-processamento",
-    "postProcessHint": "Aplicar correções e formatação após a transcrição.",
-    "startRecording": "Iniciar gravação",
-    "connectedTo": "Conectado a {{name}}",
-    "notConnected": "Nenhum computador conectado",
-    "onlineLocal": "Online · Rede local",
-    "lastTranscription": "Última transcrição",
-    "modelLabel": "Whisper Turbo",
-    "modelFallback": "Nenhum modelo",
-    "modelMeta": "Toque para escolher o modelo no PC",
-    "modelStreaming": "Transcrição em tempo real",
-    "modelOffline": "Transcreve ao terminar",
-    "promptLabel": "Prompt de limpeza",
-    "promptHint": "Escolha o estilo de limpeza que o computador deve aplicar.",
-    "promptUnavailable": "Nenhum prompt configurado no computador",
-    "promptNone": "Prompt padrão",
-    "promptSelectTitle": "Escolher prompt de limpeza",
-    "promptChoose": "Escolher um prompt",
-    "promptTitle": "Prompt de pós-processamento",
-    "choosePrompt": "Escolher prompt",
-    "promptFallback": "Prompt padrão",
-    "selectPromptTitle": "Prompt de pós-processamento"
-  },
-  "recording": {
-    "title": "Gravando",
-    "reconnecting": "Reconectando…",
-    "audioSaved": "Áudio salvo no celular",
-    "tryingComputer": "Tentando {{name}}",
-    "tryingComputerAttempt": "Tentando {{name}} ({{attempt}})",
-    "sendFailedTitle": "Não foi possível enviar",
-    "sendFailed": "Falha ao enviar para {{name}}. O PC parece online — tente novamente.",
-    "uploadFailed": "Falha no envio. Tente novamente.",
-    "lastSegment": "Último segmento",
-    "finishAndSave": "Finalizar e salvar",
-    "reconnectingHint": "Tentando restaurar a conexão com o computador…",
-    "pause": "Pausar",
-    "resume": "Retomar",
-    "finish": "Finalizar",
-    "cancel": "Cancelar",
-    "livePreview": "Prévia ao vivo",
-    "backgroundPaused": "Pausado — a gravação não continua em segundo plano. Toque em retomar.",
-    "notifTitle": "Handy está gravando",
-    "notifDesc": "Toque para voltar à gravação",
-    "notifPermissionDenied": "Permissão de notificação negada — a gravação pode pausar em segundo plano.",
-    "microphoneDenied": "Microfone bloqueado",
-    "permissionRequired": "Permita o acesso ao microfone nas configurações do sistema para gravar.",
-    "openSettings": "Abrir configurações",
-    "cancelConfirmTitle": "Descartar gravação?",
-    "cancelConfirmBody": "O áudio capturado até agora será perdido.",
-    "cancelConfirmAction": "Descartar"
-  },
-  "result": {
-    "title": "Transcrição",
-    "recordAgain": "Gravar novamente",
-    "copied": "Copiado!",
-    "duration": "Duração: {{duration}}",
-    "meta": "{{duration}} · {{model}} · {{processing}}",
-    "audio": "Áudio",
-    "expiresIn": "Apaga em 24 h",
-    "noAudio": "Áudio indisponível",
-    "retranscribe": "Retranscrever",
-    "reprocess": "Reprocessar (limpeza com IA)",
-    "retranscribing": "Retranscrevendo…",
-    "reprocessing": "Reprocessando…",
-    "actionFailed": "Não foi possível concluir. Tente novamente.",
-    "noServerEntry": "Esta gravação não está mais no PC.",
-    "playbackFailed": "Não foi possível reproduzir o áudio.",
-    "empty": "Sem transcrição para mostrar.",
-    "processingPP": "pós-processado",
-    "processingRaw": "bruto"
-  },
-  "history": {
-    "title": "Histórico",
-    "searchPlaceholder": "Buscar",
-    "empty": "Nenhuma transcrição ainda.",
-    "today": "Hoje",
-    "yesterday": "Ontem",
-    "phone": "Celular",
-    "computer": "Computador"
-  },
-  "computers": {
-    "title": "Computadores",
-    "add": "Conectar computador",
-    "lastSeen": "Visto por último: {{date}}",
-    "remove": "Remover",
-    "empty": "Nenhum computador pareado.",
-    "onlineLocal": "Online · Rede local",
-    "offlineTailscale": "Offline · Tailscale"
-  },
-  "models": {
-    "title": "Modelos",
-    "subtitle": "Escolha o modelo de transcrição usado no computador. Só modelos baixados podem ser selecionados.",
-    "translation": "Tradução",
-    "streaming": "Tempo real",
-    "notDownloaded": "Não baixado",
-    "empty": "Nenhum modelo encontrado.",
-    "loadError": "Não foi possível carregar os modelos.",
-    "notDownloadedHint": "Baixe este modelo no computador para usá-lo.",
-    "searchPlaceholder": "Buscar modelos pelo nome...",
-    "allLanguages": "Todos os idiomas",
-    "filterLanguages": "Idiomas",
-    "sortDefault": "Padrão",
-    "sortAccuracy": "Precisão",
-    "sortSpeed": "Velocidade",
-    "accuracy": "Precisão",
-    "speed": "Velocidade",
-    "languagesCount": "{{count}} idiomas",
-    "languageOnly": "{{language}}",
-    "languageFilter": "Idioma",
-    "sortBy": "Ordenar",
-    "languageCount_one": "{{count}} idioma",
-    "languageCount_other": "{{count}} idiomas"
-  },
-  "offlineQueue": {
-    "title": "Fila offline",
-    "subtitle": "Gravações aguardando envio quando a conexão voltar.",
-    "empty": "Nenhuma gravação na fila.",
-    "pending": "{{count}} pendente(s)",
-    "pendingSize": "{{count}} pendente(s) · {{size}}",
-    "computerOffline": "{{name}} está offline",
-    "retry": "Tentar novamente",
-    "pendingCount": "{{count}} pendente(s)",
-    "deleteItem": "Excluir gravação",
-    "deleteTitle": "Excluir gravação?",
-    "deleteBody": "Esta gravação e seu áudio serão apagados do celular.",
-    "status": {
-      "pending": "Pendente",
-      "uploading": "Enviando",
-      "failed": "Falhou"
-    }
-  },
-  "settings": {
-    "title": "Ajustes",
-    "onThisPhone": "Neste celular",
-    "computers": "Computadores",
-    "offlineQueue": "Fila offline",
-    "language": "Idioma",
-    "languageValue": "Português (Brasil)",
-    "backgroundRecord": "Gravar em segundo plano",
-    "deleteAudio": "Apagar áudio",
-    "deleteAudioValue": "Após 24 horas",
-    "biometrics": "Biometria",
-    "biometricsUnavailable": "Nenhuma biometria cadastrada neste dispositivo.",
-    "darkMode": "Modo escuro",
-    "diagnostics": "Diagnóstico",
-    "microphone": "Microfone",
-    "about": "Sobre",
-    "version": "Versão {{version}}",
-    "disconnect": "Desconectar",
-    "audioRetention": "Apagar áudio",
-    "audioRetentionTitle": "Quando apagar o áudio",
-    "retention1h": "Após 1 hora",
-    "retention24h": "Após 24 horas",
-    "retention7d": "Após 7 dias",
-    "retentionNever": "Nunca",
-    "microphoneHint": "Abrir configurações do sistema",
-    "recordingSounds": "Sons de gravação",
-    "recordingSoundsHint": "Tocar som ao iniciar e finalizar a gravação",
-    "postProcessing": "Pós-processamento",
-    "postProcessingHint": "Escolha o prompt de limpeza usado pelo PC"
-  },
-  "biometricGate": {
-    "title": "Handy Remote bloqueado",
-    "subtitle": "Autentique-se para continuar.",
-    "unlock": "Desbloquear",
-    "prompt": "Autentique-se para abrir o Handy Remote"
-  },
-  "diagnostics": {
-    "title": "Diagnóstico",
-    "subtitle": "Estado da conexão com o computador pareado.",
-    "computer": "Computador",
-    "status": "Status",
-    "online": "Online",
-    "offline": "Offline",
-    "activeEndpoint": "Endereço ativo",
-    "endpoints": "Endereços conhecidos",
-    "queue": "Fila offline",
-    "queueItems": "{{count}} na fila",
-    "version": "Versão do app",
-    "testConnection": "Testar conexão",
-    "testing": "Testando…",
-    "reachable": "Computador acessível.",
-    "unreachable": "Não foi possível alcançar o computador.",
-    "none": "—",
-    "notPaired": "Nenhum computador pareado."
-  }
-}
+{
+  "common": {
+    "cancel": "Cancelar",
+
+    "confirm": "Confirmar",
+
+    "back": "Voltar",
+
+    "save": "Salvar",
+
+    "search": "Buscar",
+
+    "copy": "Copiar",
+
+    "share": "Compartilhar",
+
+    "more": "Mais",
+
+    "connected": "Conectado",
+
+    "disconnected": "Desconectado",
+
+    "offline": "Offline",
+
+    "online": "Online",
+
+    "discard": "Descartar",
+
+    "retry": "Tentar novamente",
+
+    "delete": "Excluir",
+
+    "loading": "Carregando…",
+
+    "all": "Todos"
+  },
+
+  "welcome": {
+    "title": "Transcreva pelo celular",
+
+    "subtitle": "Use o Handy do seu computador para transformar voz em texto, onde estiver.",
+
+    "connectComputer": "Conectar computador"
+  },
+
+  "pair": {
+    "scanTitle": "Escanear QR Code",
+
+    "scanHint": "Abra Acesso móvel no Handy e aponte a câmera.",
+
+    "scanPoint": "Aponte para o QR do Handy",
+
+    "enterCode": "Digitar código",
+
+    "confirmTitle": "Confirmar conexão",
+
+    "confirmSubtitle": "Verifique se este é o computador correto.",
+
+    "codeHint": "Confira se o mesmo código aparece no computador.",
+
+    "pairingCode": "Código de pareamento",
+
+    "authorize": "Autorizar",
+
+    "cancel": "Cancelar",
+
+    "invalidQr": "QR Code inválido. Escaneie o código exibido no Handy.",
+
+    "codeRequiresQr": "O código de 6 dígitos é para verificação no computador. Escaneie o QR Code para iniciar o pareamento.",
+
+    "cameraPermission": "Permissão de câmera necessária para escanear o QR Code.",
+
+    "allowCamera": "Permitir câmera",
+
+    "missingQr": "Escaneie o QR Code do Handy antes de autorizar.",
+
+    "claiming": "Solicitando autorização…",
+
+    "waitingApproval": "Aguardando aprovação no computador. Confira o código {{code}}.",
+
+    "waiting": "Aguardando…",
+
+    "timeout": "Tempo esgotado. Tente escanear novamente.",
+
+    "rejected": "Pareamento recusado no computador.",
+
+    "expired": "Sessão expirada. Gere um novo QR no Handy.",
+
+    "failed": "Falha ao conectar. Tente novamente.",
+
+    "localNetwork": "Rede local",
+
+    "enterCodeTitle": "Colar payload",
+
+    "enterCodeHint": "Cole o JSON do QR do Handy (ou o link handy-remote:// com payload=).",
+
+    "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
+
+    "paste": "Colar da área de transferência"
+  },
+
+  "onboarding": {
+    "microphoneTitle": "Permitir microfone",
+
+    "microphoneSubtitle": "O Handy precisa do microfone para gravar e enviar sua voz ao computador.",
+
+    "privacyNote": "Só fica ativo durante a gravação.",
+
+    "allow": "Permitir",
+
+    "notNow": "Agora não",
+
+    "deniedTitle": "Microfone bloqueado",
+
+    "deniedBody": "Você negou o acesso ao microfone. Abra as configurações do sistema para permitir e voltar a gravar.",
+
+    "openSettings": "Abrir configurações"
+  },
+
+  "tabs": {
+    "record": "Gravar",
+
+    "history": "Histórico",
+
+    "settings": "Ajustes"
+  },
+
+  "record": {
+    "title": "Gravar",
+
+    "tapToRecord": "Toque para gravar",
+
+    "postProcess": "Pós-processamento",
+
+    "postProcessHint": "Aplicar correções e formatação após a transcrição.",
+
+    "startRecording": "Iniciar gravação",
+
+    "connectedTo": "Conectado a {{name}}",
+
+    "notConnected": "Nenhum computador conectado",
+
+    "onlineLocal": "Online · Rede local",
+
+    "lastTranscription": "Última transcrição",
+
+    "modelLabel": "Whisper Turbo",
+
+    "modelFallback": "Nenhum modelo",
+
+    "modelMeta": "Toque para escolher o modelo no PC",
+
+    "modelStreaming": "Transcrição em tempo real",
+
+    "modelOffline": "Transcreve ao terminar",
+
+    "promptLabel": "Prompt de limpeza",
+
+    "promptHint": "Escolha o estilo de limpeza que o computador deve aplicar.",
+
+    "promptUnavailable": "Nenhum prompt configurado no computador",
+
+    "promptNone": "Prompt padrão",
+
+    "promptSelectTitle": "Escolher prompt de limpeza",
+
+    "promptChoose": "Escolher um prompt",
+
+    "promptTitle": "Prompt de pós-processamento",
+
+    "choosePrompt": "Escolher prompt",
+
+    "promptFallback": "Prompt padrão",
+
+    "selectPromptTitle": "Prompt de pós-processamento"
+  },
+
+  "recording": {
+    "title": "Gravando",
+
+    "reconnecting": "Reconectando…",
+
+    "audioSaved": "Áudio salvo no celular",
+
+    "tryingComputer": "Tentando {{name}}",
+
+    "tryingComputerAttempt": "Tentando {{name}} ({{attempt}})",
+
+    "sendFailedTitle": "Não foi possível enviar",
+
+    "sendFailed": "Falha ao enviar para {{name}}. O PC parece online — tente novamente.",
+
+    "uploadFailed": "Falha no envio. Tente novamente.",
+
+    "lastSegment": "Último segmento",
+
+    "finishAndSave": "Finalizar e salvar",
+
+    "reconnectingHint": "Tentando restaurar a conexão com o computador…",
+
+    "pause": "Pausar",
+
+    "resume": "Retomar",
+
+    "finish": "Finalizar",
+
+    "cancel": "Cancelar",
+
+    "livePreview": "Prévia ao vivo",
+
+    "backgroundPaused": "Pausado — a gravação não continua em segundo plano. Toque em retomar.",
+
+    "notifTitle": "Handy está gravando",
+
+    "notifDesc": "Toque para voltar à gravação",
+
+    "notifPermissionDenied": "Permissão de notificação negada — a gravação pode pausar em segundo plano.",
+
+    "microphoneDenied": "Microfone bloqueado",
+
+    "permissionRequired": "Permita o acesso ao microfone nas configurações do sistema para gravar.",
+
+    "openSettings": "Abrir configurações",
+
+    "cancelConfirmTitle": "Descartar gravação?",
+
+    "cancelConfirmBody": "O áudio capturado até agora será perdido.",
+
+    "cancelConfirmAction": "Descartar"
+  },
+
+  "result": {
+    "title": "Transcrição",
+
+    "recordAgain": "Gravar novamente",
+
+    "copied": "Copiado!",
+
+    "duration": "Duração: {{duration}}",
+
+    "meta": "{{duration}} · {{model}} · {{processing}}",
+
+    "audio": "Áudio",
+
+    "expiresIn": "Apaga em 24 h",
+
+    "noAudio": "Áudio indisponível",
+
+    "retranscribe": "Retranscrever",
+
+    "reprocess": "Reprocessar (limpeza com IA)",
+
+    "retranscribing": "Retranscrevendo…",
+
+    "reprocessing": "Reprocessando…",
+
+    "actionFailed": "Não foi possível concluir. Tente novamente.",
+
+    "noServerEntry": "Esta gravação não está mais no PC.",
+
+    "playbackFailed": "Não foi possível reproduzir o áudio.",
+
+    "empty": "Sem transcrição para mostrar.",
+
+    "processingPP": "pós-processado",
+
+    "processingRaw": "bruto"
+  },
+
+  "history": {
+    "title": "Histórico",
+
+    "searchPlaceholder": "Buscar",
+
+    "empty": "Nenhuma transcrição ainda.",
+
+    "today": "Hoje",
+
+    "yesterday": "Ontem",
+
+    "phone": "Celular",
+
+    "computer": "Computador"
+  },
+
+  "computers": {
+    "title": "Computadores",
+
+    "add": "Conectar computador",
+
+    "lastSeen": "Visto por último: {{date}}",
+
+    "remove": "Remover",
+
+    "empty": "Nenhum computador pareado.",
+
+    "onlineLocal": "Online · Rede local",
+
+    "offlineTailscale": "Offline · Tailscale"
+  },
+
+  "models": {
+    "title": "Modelos",
+
+    "subtitle": "Escolha o modelo de transcrição usado no computador. Só modelos baixados podem ser selecionados.",
+
+    "translation": "Tradução",
+
+    "streaming": "Tempo real",
+
+    "notDownloaded": "Não baixado",
+
+    "empty": "Nenhum modelo encontrado.",
+
+    "loadError": "Não foi possível carregar os modelos.",
+
+    "notDownloadedHint": "Baixe este modelo no computador para usá-lo.",
+
+    "searchPlaceholder": "Buscar modelos pelo nome...",
+
+    "allLanguages": "Todos os idiomas",
+
+    "filterLanguages": "Idiomas",
+
+    "sortDefault": "Padrão",
+
+    "sortAccuracy": "Precisão",
+
+    "sortSpeed": "Velocidade",
+
+    "accuracy": "Precisão",
+
+    "speed": "Velocidade",
+
+    "languagesCount": "{{count}} idiomas",
+
+    "languageOnly": "{{language}}",
+
+    "languageFilter": "Idioma",
+
+    "sortBy": "Ordenar",
+
+    "languageCount_one": "{{count}} idioma",
+
+    "languageCount_other": "{{count}} idiomas"
+  },
+
+  "offlineQueue": {
+    "title": "Fila offline",
+
+    "subtitle": "Gravações aguardando envio quando a conexão voltar.",
+
+    "empty": "Nenhuma gravação na fila.",
+
+    "pending": "{{count}} pendente(s)",
+
+    "pendingSize": "{{count}} pendente(s) · {{size}}",
+
+    "computerOffline": "{{name}} está offline",
+
+    "retry": "Tentar novamente",
+
+    "pendingCount": "{{count}} pendente(s)",
+
+    "deleteItem": "Excluir gravação",
+
+    "deleteTitle": "Excluir gravação?",
+
+    "deleteBody": "Esta gravação e seu áudio serão apagados do celular.",
+
+    "status": {
+      "pending": "Pendente",
+
+      "uploading": "Enviando",
+
+      "failed": "Falhou"
+    }
+  },
+
+  "settings": {
+    "title": "Ajustes",
+
+    "onThisPhone": "Neste celular",
+
+    "computers": "Computadores",
+
+    "offlineQueue": "Fila offline",
+
+    "language": "Idioma",
+
+    "languageValue": "Português (Brasil)",
+
+    "backgroundRecord": "Gravar em segundo plano",
+
+    "deleteAudio": "Apagar áudio",
+
+    "deleteAudioValue": "Após 24 horas",
+
+    "biometrics": "Biometria",
+
+    "biometricsUnavailable": "Nenhuma biometria cadastrada neste dispositivo.",
+
+    "darkMode": "Modo escuro",
+
+    "diagnostics": "Diagnóstico",
+
+    "microphone": "Microfone",
+
+    "about": "Sobre",
+
+    "version": "Versão {{version}}",
+
+    "disconnect": "Desconectar",
+
+    "audioRetention": "Apagar áudio",
+
+    "audioRetentionTitle": "Quando apagar o áudio",
+
+    "retention1h": "Após 1 hora",
+
+    "retention24h": "Após 24 horas",
+
+    "retention7d": "Após 7 dias",
+
+    "retentionNever": "Nunca",
+
+    "microphoneHint": "Abrir configurações do sistema",
+
+    "recordingSounds": "Sons de gravação",
+
+    "recordingSoundsHint": "Tocar som ao iniciar e finalizar a gravação",
+
+    "postProcessing": "Pós-processamento",
+
+    "postProcessingHint": "Escolha o prompt de limpeza usado pelo PC"
+  },
+
+  "biometricGate": {
+    "title": "Handy Remote bloqueado",
+
+    "subtitle": "Autentique-se para continuar.",
+
+    "unlock": "Desbloquear",
+
+    "prompt": "Autentique-se para abrir o Handy Remote"
+  },
+
+  "diagnostics": {
+    "title": "Diagnóstico",
+
+    "subtitle": "Estado da conexão com o computador pareado.",
+
+    "computer": "Computador",
+
+    "status": "Status",
+
+    "online": "Online",
+
+    "offline": "Offline",
+
+    "activeEndpoint": "Endereço ativo",
+
+    "endpoints": "Endereços conhecidos",
+
+    "queue": "Fila offline",
+
+    "queueItems": "{{count}} na fila",
+
+    "version": "Versão do app",
+
+    "testConnection": "Testar conexão",
+
+    "testing": "Testando…",
+
+    "reachable": "Computador acessível.",
+
+    "unreachable": "Não foi possível alcançar o computador.",
+
+    "none": "—",
+
+    "notPaired": "Nenhum computador pareado."
+  }
+}
