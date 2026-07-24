@@ -5,6 +5,8 @@ on:
     branches: [main]
     paths:
       - "src/**"
+      - "mobile/**"
+      - "packages/**"
       - "package.json"
       - "bun.lock"
       - ".eslintrc*"
@@ -16,6 +18,8 @@ on:
   pull_request:
     paths:
       - "src/**"
+      - "mobile/**"
+      - "packages/**"
       - "package.json"
       - "bun.lock"
       - ".eslintrc*"
