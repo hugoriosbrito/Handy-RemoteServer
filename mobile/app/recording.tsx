@@ -40,6 +40,10 @@ import {
   stopBackgroundRecording,
   isBackgroundRecordingActive,
 } from "@/lib/backgroundRecording";
+import {
+  loadDesktopFeedbackSettings,
+  playFeedbackSound,
+} from "@/lib/soundFeedback";
 
 /** How often to rotate + upload a chunk when the active model supports streaming. */
 const STREAM_CHUNK_MS = 4000;
@@ -243,6 +247,8 @@ export default function RecordingScreen() {
         });
         const recording = await prepareAndStartRecording();
         bindMetering(recording);
+        void loadDesktopFeedbackSettings(token, baseUrl ?? undefined);
+        void playFeedbackSound("start");
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         void activateKeepAwakeAsync("recording");
         if (cancelled) {
@@ -389,6 +395,7 @@ export default function RecordingScreen() {
     clearTimer();
     clearChunkTimer();
     setStatus("processing");
+    void playFeedbackSound("stop");
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     void deactivateKeepAwake("recording");
     void stopBackgroundRecording();
