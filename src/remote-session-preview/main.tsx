@@ -1,12 +1,7 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { QRCodeSVG } from "qrcode.react";
-import {
-  MonitorSmartphone,
-  RefreshCw,
-  Smartphone,
-  Wifi,
-} from "lucide-react";
+import { MonitorSmartphone, RefreshCw, Smartphone, Wifi } from "lucide-react";
 import "../App.css";
 
 const mockQr = {
@@ -47,8 +42,7 @@ function Preview() {
         <div className="px-1 space-y-1">
           <h1 className="text-xl font-semibold">Sessão remota</h1>
           <p className="text-sm text-mid-gray">
-            Mostre o QR Code do Handy Remote e gerencie os celulares
-            conectados.
+            Mostre o QR Code do Handy Remote e gerencie os celulares conectados.
           </p>
         </div>
 
@@ -97,7 +91,9 @@ function Preview() {
                     <p className="text-xs uppercase tracking-wide text-mid-gray mb-1">
                       Código de verificação
                     </p>
-                    <p className="text-3xl font-bold tracking-[0.2em]">482 913</p>
+                    <p className="text-3xl font-bold tracking-[0.2em]">
+                      482 913
+                    </p>
                   </div>
                   <p className="text-[11px] font-mono text-mid-gray break-all">
                     {mockQr.fingerprint}

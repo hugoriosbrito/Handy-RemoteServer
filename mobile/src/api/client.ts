@@ -1,10 +1,10 @@
-import { Platform } from 'react-native';
-import { z } from 'zod';
+import { Platform } from "react-native";
+import { z } from "zod";
 
-const DEFAULT_API_URL = 'http://127.0.0.1:8765';
+const DEFAULT_API_URL = "http://127.0.0.1:8765";
 
 export const API_BASE_URL =
-  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, '') ?? DEFAULT_API_URL;
+  process.env.EXPO_PUBLIC_API_URL?.replace(/\/$/, "") ?? DEFAULT_API_URL;
 
 export class ApiError extends Error {
   constructor(
@@ -13,7 +13,7 @@ export class ApiError extends Error {
     public body?: unknown,
   ) {
     super(message);
-    this.name = 'ApiError';
+    this.name = "ApiError";
   }
 }
 
@@ -163,7 +163,10 @@ async function fetchWithTimeout(
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   if (signal) {
     if (signal.aborted) controller.abort();
-    else signal.addEventListener('abort', () => controller.abort(), { once: true });
+    else
+      signal.addEventListener("abort", () => controller.abort(), {
+        once: true,
+      });
   }
   try {
     return await fetch(url, { ...rest, signal: controller.signal });
@@ -173,17 +176,17 @@ async function fetchWithTimeout(
 }
 
 function resolveBaseUrl(override?: string): string {
-  return rewriteLoopback(override ?? API_BASE_URL).replace(/\/$/, '');
+  return rewriteLoopback(override ?? API_BASE_URL).replace(/\/$/, "");
 }
 
 /** On Android emulator, host loopback is 10.0.2.2 — not 127.0.0.1. */
 function rewriteLoopback(url: string): string {
-  if (Platform.OS !== 'android') return url;
+  if (Platform.OS !== "android") return url;
   try {
-    const parsed = new URL(url.includes('://') ? url : `http://${url}`);
-    if (parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost') {
-      parsed.hostname = '10.0.2.2';
-      return parsed.toString().replace(/\/$/, '');
+    const parsed = new URL(url.includes("://") ? url : `http://${url}`);
+    if (parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost") {
+      parsed.hostname = "10.0.2.2";
+      return parsed.toString().replace(/\/$/, "");
     }
   } catch {
     // keep original
@@ -193,8 +196,8 @@ function rewriteLoopback(url: string): string {
 
 function isLoopbackBaseUrl(url: string): boolean {
   try {
-    const parsed = new URL(url.includes('://') ? url : `http://${url}`);
-    return parsed.hostname === '127.0.0.1' || parsed.hostname === 'localhost';
+    const parsed = new URL(url.includes("://") ? url : `http://${url}`);
+    return parsed.hostname === "127.0.0.1" || parsed.hostname === "localhost";
   } catch {
     return false;
   }
@@ -202,13 +205,16 @@ function isLoopbackBaseUrl(url: string): boolean {
 
 function networkErrorMessage(url: string, cause: unknown): string {
   const detail = cause instanceof Error ? cause.message : String(cause);
-  if (/network request failed/i.test(detail) || /failed to fetch/i.test(detail)) {
-    if (isLoopbackBaseUrl(url) && Platform.OS !== 'web') {
+  if (
+    /network request failed/i.test(detail) ||
+    /failed to fetch/i.test(detail)
+  ) {
+    if (isLoopbackBaseUrl(url) && Platform.OS !== "web") {
       return `Não foi possível alcançar ${url}. No celular físico use o IP da rede local do PC (não 127.0.0.1). Confira Wi‑Fi, firewall e se o Acesso móvel está ativo.`;
     }
     return `Falha de rede ao contatar ${url}. Celular e PC precisam estar na mesma Wi‑Fi; no Windows, permita a porta do Handy no Firewall.`;
   }
-  return detail || 'Falha de rede';
+  return detail || "Falha de rede";
 }
 
 async function request<T>(
@@ -225,7 +231,7 @@ async function request<T>(
       ...rest,
       timeoutMs,
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
         ...headers,
       },
@@ -249,10 +255,10 @@ async function request<T>(
 
 function endpointToBaseUrl(endpoint: string | null | undefined): string | null {
   if (!endpoint) return null;
-  if (endpoint.startsWith('http://') || endpoint.startsWith('https://')) {
-    return rewriteLoopback(endpoint.replace(/\/$/, ''));
+  if (endpoint.startsWith("http://") || endpoint.startsWith("https://")) {
+    return rewriteLoopback(endpoint.replace(/\/$/, ""));
   }
-  return rewriteLoopback(`http://${endpoint}`.replace(/\/$/, ''));
+  return rewriteLoopback(`http://${endpoint}`.replace(/\/$/, ""));
 }
 
 /**
@@ -278,12 +284,12 @@ export function baseUrlFromQr(qr: QrPayload): string {
 
 function extractQrJson(raw: string): string {
   const trimmed = raw.trim();
-  if (trimmed.startsWith('{')) return trimmed;
+  if (trimmed.startsWith("{")) return trimmed;
 
   // Deep link: handy-remote://pair/inject?payload=<urlencoded json>
   try {
     const asUrl = new URL(trimmed);
-    const payload = asUrl.searchParams.get('payload');
+    const payload = asUrl.searchParams.get("payload");
     if (payload) return decodeURIComponent(payload);
   } catch {
     // not a URL
@@ -300,10 +306,10 @@ function extractQrJson(raw: string): string {
 
 export const api = {
   health: (baseUrl?: string) =>
-    request('/v1/health', HealthSchema, { baseUrl, timeoutMs: 4000 }),
+    request("/v1/health", HealthSchema, { baseUrl, timeoutMs: 4000 }),
 
   getServerInfo: (baseUrl?: string) =>
-    request('/v1/server', ServerInfoSchema, { baseUrl }),
+    request("/v1/server", ServerInfoSchema, { baseUrl }),
 
   claimPairing: (
     data: {
@@ -314,8 +320,8 @@ export const api = {
     },
     baseUrl?: string,
   ) =>
-    request('/v1/pairing/claim', PairingClaimResponseSchema, {
-      method: 'POST',
+    request("/v1/pairing/claim", PairingClaimResponseSchema, {
+      method: "POST",
       body: JSON.stringify(data),
       baseUrl,
     }),
@@ -327,8 +333,11 @@ export const api = {
       { baseUrl },
     ),
 
-  getHistory: async (token: string, baseUrl?: string): Promise<{ items: Transcription[] }> => {
-    const entries = await request('/v1/history', z.array(HistoryEntrySchema), {
+  getHistory: async (
+    token: string,
+    baseUrl?: string,
+  ): Promise<{ items: Transcription[] }> => {
+    const entries = await request("/v1/history", z.array(HistoryEntrySchema), {
       token,
       baseUrl,
     });
@@ -358,32 +367,35 @@ export const api = {
   ) => {
     const form = new FormData();
     const uris = Array.isArray(uriOrUris) ? uriOrUris : [uriOrUris];
-    const filename = opts?.filename ?? 'recording.m4a';
-    const mime = filename.endsWith('.wav') ? 'audio/wav' : 'audio/m4a';
+    const filename = opts?.filename ?? "recording.m4a";
+    const mime = filename.endsWith(".wav") ? "audio/wav" : "audio/m4a";
 
     uris.forEach((uri, index) => {
       const partName =
         uris.length === 1
           ? filename
-          : filename.replace(/(\.[^.]+)?$/, (ext) => `-part${index + 1}${ext || '.m4a'}`);
-      form.append('file', {
+          : filename.replace(
+              /(\.[^.]+)?$/,
+              (ext) => `-part${index + 1}${ext || ".m4a"}`,
+            );
+      form.append("file", {
         uri,
         name: partName,
         type: mime,
       } as unknown as Blob);
     });
     if (opts?.postProcess) {
-      form.append('postProcess', 'true');
+      form.append("postProcess", "true");
     }
     if (opts?.preview) {
-      form.append('preview', 'true');
+      form.append("preview", "true");
     }
 
     const url = `${resolveBaseUrl(opts?.baseUrl)}/v1/transcriptions`;
     let response: Response;
     try {
       response = await fetchWithTimeout(url, {
-        method: 'POST',
+        method: "POST",
         // Audio uploads can be large / slow on the LAN — allow generous headroom.
         // Multi-file finals need even more room to decode + concatenate + transcribe.
         timeoutMs: uris.length > 1 ? 90000 : 45000,
@@ -417,7 +429,7 @@ export const api = {
     request(
       `/v1/transcriptions/${encodeURIComponent(id)}/retranscribe`,
       TranscriptionResponseSchema,
-      { method: 'POST', token, baseUrl, timeoutMs: 45000 },
+      { method: "POST", token, baseUrl, timeoutMs: 45000 },
     ),
 
   /** Re-run AI post-processing on the text the PC already stored for this entry. */
@@ -425,11 +437,14 @@ export const api = {
     request(
       `/v1/transcriptions/${encodeURIComponent(id)}/reprocess`,
       TranscriptionResponseSchema,
-      { method: 'POST', token, baseUrl, timeoutMs: 45000 },
+      { method: "POST", token, baseUrl, timeoutMs: 45000 },
     ),
 
   getModels: async (token: string, baseUrl?: string): Promise<ModelsInfo> => {
-    const data = await request('/v1/models', ModelsInfoSchema, { token, baseUrl });
+    const data = await request("/v1/models", ModelsInfoSchema, {
+      token,
+      baseUrl,
+    });
     return {
       activeModelId: data.activeModelId,
       models: data.models.map((m) => ({
@@ -439,9 +454,13 @@ export const api = {
     };
   },
 
-  selectModel: async (token: string, modelId: string, baseUrl?: string): Promise<ModelsInfo> => {
-    const data = await request('/v1/models/select', ModelsInfoSchema, {
-      method: 'POST',
+  selectModel: async (
+    token: string,
+    modelId: string,
+    baseUrl?: string,
+  ): Promise<ModelsInfo> => {
+    const data = await request("/v1/models/select", ModelsInfoSchema, {
+      method: "POST",
       body: JSON.stringify({ modelId }),
       token,
       baseUrl,
@@ -457,7 +476,7 @@ export const api = {
 
   listDevices: (token: string, baseUrl?: string) =>
     request(
-      '/v1/devices',
+      "/v1/devices",
       z.array(
         z.object({
           id: z.string(),
@@ -479,7 +498,7 @@ export const api = {
           id: z.string().optional(),
         })
         .passthrough(),
-      { method: 'DELETE', token, baseUrl },
+      { method: "DELETE", token, baseUrl },
     ),
 
   parseQrPayload: (raw: string): QrPayload => {

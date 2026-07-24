@@ -1,6 +1,11 @@
 import { z } from "zod";
 
-export const HistorySourceSchema = z.enum(["desktop", "mobile", "remote", "import"]);
+export const HistorySourceSchema = z.enum([
+  "desktop",
+  "mobile",
+  "remote",
+  "import",
+]);
 export type HistorySource = z.infer<typeof HistorySourceSchema>;
 
 export const HistoryEntrySchema = z.object({

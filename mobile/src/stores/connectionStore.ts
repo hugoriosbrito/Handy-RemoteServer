@@ -1,12 +1,16 @@
-import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
-import { baseUrlCandidatesFromQr, baseUrlFromQr, type QrPayload } from '@/api/client';
+import { create } from "zustand";
+import * as SecureStore from "expo-secure-store";
+import {
+  baseUrlCandidatesFromQr,
+  baseUrlFromQr,
+  type QrPayload,
+} from "@/api/client";
 
-const TOKEN_KEY = 'handy_auth_token';
-const REFRESH_KEY = 'handy_refresh_token';
-const COMPUTER_KEY = 'handy_computer';
-const BASE_URL_KEY = 'handy_base_url';
-const ENDPOINTS_KEY = 'handy_endpoints';
+const TOKEN_KEY = "handy_auth_token";
+const REFRESH_KEY = "handy_refresh_token";
+const COMPUTER_KEY = "handy_computer";
+const BASE_URL_KEY = "handy_base_url";
+const ENDPOINTS_KEY = "handy_endpoints";
 
 export interface Computer {
   id: string;
@@ -84,7 +88,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   endpoints: [],
   computer: null,
   computers: [],
-  pairingCode: '',
+  pairingCode: "",
   pendingPairing: null,
   isConnecting: false,
   isReconnecting: false,
@@ -104,7 +108,7 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
       pendingPairing: {
         sessionId: qr.sessionId,
         secret: qr.secret,
-        code: code ?? '',
+        code: code ?? "",
         serverName: qr.serverName,
         fingerprint: qr.fingerprint,
         baseUrl: resolvedBaseUrl,
@@ -128,7 +132,11 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
   setComputerOnline: (online) =>
     set((s) => {
       if (!s.computer) return {};
-      const computer = { ...s.computer, isOnline: online, lastSeen: new Date().toISOString() };
+      const computer = {
+        ...s.computer,
+        isOnline: online,
+        lastSeen: new Date().toISOString(),
+      };
       void persist(COMPUTER_KEY, JSON.stringify(computer));
       return {
         computer,
@@ -194,12 +202,15 @@ export const useConnectionStore = create<ConnectionState>((set, get) => ({
         const computer = JSON.parse(computerJson) as Computer;
         let endpoints: string[] = [];
         try {
-          endpoints = endpointsJson ? (JSON.parse(endpointsJson) as string[]) : [];
+          endpoints = endpointsJson
+            ? (JSON.parse(endpointsJson) as string[])
+            : [];
         } catch {
           endpoints = [];
         }
         // Ensure the active URL is always among the failover candidates.
-        if (baseUrl && !endpoints.includes(baseUrl)) endpoints = [baseUrl, ...endpoints];
+        if (baseUrl && !endpoints.includes(baseUrl))
+          endpoints = [baseUrl, ...endpoints];
         // Assume online until a health probe says otherwise — stale isOnline:false
         // from a previous session was falsely showing "PC offline".
         set({

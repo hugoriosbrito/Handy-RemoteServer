@@ -1,18 +1,18 @@
-import 'react-native-gesture-handler';
-import { useEffect, useRef } from 'react';
-import { AppState, type AppStateStatus } from 'react-native';
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-import '@/i18n';
-import { useConnectionStore } from '@/stores/connectionStore';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { useRecordingStore } from '@/stores/recordingStore';
-import { BiometricGate } from '@/components/BiometricGate';
-import { ThemeProvider, useThemeInfo } from '@/theme/ThemeProvider';
-import { probeServerHealth, reconnectBestEndpoint } from '@/lib/connection';
-import i18n from '@/i18n';
+import "react-native-gesture-handler";
+import { useEffect, useRef } from "react";
+import { AppState, type AppStateStatus } from "react-native";
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import "@/i18n";
+import { useConnectionStore } from "@/stores/connectionStore";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { useRecordingStore } from "@/stores/recordingStore";
+import { BiometricGate } from "@/components/BiometricGate";
+import { ThemeProvider, useThemeInfo } from "@/theme/ThemeProvider";
+import { probeServerHealth, reconnectBestEndpoint } from "@/lib/connection";
+import i18n from "@/i18n";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -59,7 +59,11 @@ function AppBootstrap() {
       if (cancelled) return;
       // Don't hammer health while actively recording.
       const status = useRecordingStore.getState().status;
-      if (status === 'recording' || status === 'paused' || status === 'processing') {
+      if (
+        status === "recording" ||
+        status === "paused" ||
+        status === "processing"
+      ) {
         return;
       }
       // If the active URL is unreachable, fail over to other advertised
@@ -76,15 +80,15 @@ function AppBootstrap() {
     }, HEALTH_POLL_MS);
 
     const onAppState = (next: AppStateStatus) => {
-      if (appState.current.match(/inactive|background/) && next === 'active') {
+      if (appState.current.match(/inactive|background/) && next === "active") {
         // Coming back to the foreground: actively re-probe every endpoint so a
         // PC that moved to a new IP while we were away reconnects on its own.
         void reconnectBestEndpoint();
-        void queryClient.invalidateQueries({ queryKey: ['history'] });
+        void queryClient.invalidateQueries({ queryKey: ["history"] });
       }
       appState.current = next;
     };
-    const sub = AppState.addEventListener('change', onAppState);
+    const sub = AppState.addEventListener("change", onAppState);
 
     return () => {
       cancelled = true;
@@ -100,34 +104,37 @@ function ThemedApp() {
   const { colors, scheme } = useThemeInfo();
   return (
     <>
-      <StatusBar style={scheme === 'dark' ? 'light' : 'dark'} />
+      <StatusBar style={scheme === "dark" ? "light" : "dark"} />
       <BiometricGate>
         <Stack
           screenOptions={{
             headerShown: false,
             contentStyle: { backgroundColor: colors.background },
-            animation: 'slide_from_right',
+            animation: "slide_from_right",
           }}
         >
-            <Stack.Screen name="index" />
-            <Stack.Screen name="pair/scan" />
-            <Stack.Screen name="pair/confirm" />
-            <Stack.Screen name="pair/inject" />
-            <Stack.Screen name="onboarding/microphone" />
-            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen
-              name="recording"
-              options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom' }}
-            />
-            <Stack.Screen
-              name="recording-reconnect"
-              options={{ presentation: 'fullScreenModal' }}
-            />
-            <Stack.Screen name="result" />
-            <Stack.Screen name="computers" />
-            <Stack.Screen name="models" />
-            <Stack.Screen name="offline-queue" />
-            <Stack.Screen name="diagnostics" />
+          <Stack.Screen name="index" />
+          <Stack.Screen name="pair/scan" />
+          <Stack.Screen name="pair/confirm" />
+          <Stack.Screen name="pair/inject" />
+          <Stack.Screen name="onboarding/microphone" />
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="recording"
+            options={{
+              presentation: "fullScreenModal",
+              animation: "slide_from_bottom",
+            }}
+          />
+          <Stack.Screen
+            name="recording-reconnect"
+            options={{ presentation: "fullScreenModal" }}
+          />
+          <Stack.Screen name="result" />
+          <Stack.Screen name="computers" />
+          <Stack.Screen name="models" />
+          <Stack.Screen name="offline-queue" />
+          <Stack.Screen name="diagnostics" />
         </Stack>
       </BiometricGate>
     </>

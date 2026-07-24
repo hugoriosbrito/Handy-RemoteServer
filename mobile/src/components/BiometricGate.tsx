@@ -1,12 +1,19 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, AppState, type AppStateStatus } from 'react-native';
-import { useTranslation } from 'react-i18next';
-import { Ionicons } from '@expo/vector-icons';
-import * as LocalAuthentication from 'expo-local-authentication';
-import { spacing, typography, radius, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
-import { useSettingsStore } from '@/stores/settingsStore';
-import { useRecordingStore } from '@/stores/recordingStore';
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  AppState,
+  type AppStateStatus,
+} from "react-native";
+import { useTranslation } from "react-i18next";
+import { Ionicons } from "@expo/vector-icons";
+import * as LocalAuthentication from "expo-local-authentication";
+import { spacing, typography, radius, type ThemeColors } from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
+import { useSettingsStore } from "@/stores/settingsStore";
+import { useRecordingStore } from "@/stores/recordingStore";
 
 /** Only re-lock after the app was truly away — not for brief OS overlays. */
 const BACKGROUND_LOCK_MS = 3000;
@@ -41,8 +48,8 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
         return;
       }
       const result = await LocalAuthentication.authenticateAsync({
-        promptMessage: t('biometricGate.prompt'),
-        cancelLabel: t('common.cancel'),
+        promptMessage: t("biometricGate.prompt"),
+        cancelLabel: t("common.cancel"),
         disableDeviceFallback: false,
       });
       if (result.success) setUnlocked(true);
@@ -86,21 +93,23 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
 
       // Only count real background (leaving the app). "inactive" covers
       // permission sheets, share sheets, and the biometric prompt itself.
-      if (next === 'background') {
+      if (next === "background") {
         backgroundedAt.current = Date.now();
         return;
       }
 
-      if (next === 'active' && prev === 'background') {
+      if (next === "active" && prev === "background") {
         const recordingStatus = useRecordingStore.getState().status;
         const awayMs =
-          backgroundedAt.current != null ? Date.now() - backgroundedAt.current : 0;
+          backgroundedAt.current != null
+            ? Date.now() - backgroundedAt.current
+            : 0;
         backgroundedAt.current = null;
 
         if (
-          recordingStatus === 'recording' ||
-          recordingStatus === 'paused' ||
-          recordingStatus === 'processing'
+          recordingStatus === "recording" ||
+          recordingStatus === "paused" ||
+          recordingStatus === "processing"
         ) {
           return;
         }
@@ -114,7 +123,7 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
       }
     };
 
-    const sub = AppState.addEventListener('change', onChange);
+    const sub = AppState.addEventListener("change", onChange);
     return () => sub.remove();
   }, [biometrics, authenticate]);
 
@@ -128,11 +137,14 @@ export function BiometricGate({ children }: { children: React.ReactNode }) {
           <View style={styles.iconWrap}>
             <Ionicons name="lock-closed" size={40} color={colors.primary} />
           </View>
-          <Text style={styles.title}>{t('biometricGate.title')}</Text>
-          <Text style={styles.subtitle}>{t('biometricGate.subtitle')}</Text>
-          <TouchableOpacity style={styles.button} onPress={() => void authenticate()}>
+          <Text style={styles.title}>{t("biometricGate.title")}</Text>
+          <Text style={styles.subtitle}>{t("biometricGate.subtitle")}</Text>
+          <TouchableOpacity
+            style={styles.button}
+            onPress={() => void authenticate()}
+          >
             <Ionicons name="finger-print" size={22} color={colors.white} />
-            <Text style={styles.buttonText}>{t('biometricGate.unlock')}</Text>
+            <Text style={styles.buttonText}>{t("biometricGate.unlock")}</Text>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -146,8 +158,8 @@ const makeStyles = (colors: ThemeColors) =>
     lock: {
       ...StyleSheet.absoluteFillObject,
       backgroundColor: colors.background,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       padding: spacing.xl,
       gap: spacing.md,
       zIndex: 1000,
@@ -157,26 +169,26 @@ const makeStyles = (colors: ThemeColors) =>
       height: 88,
       borderRadius: 44,
       backgroundColor: colors.primarySoft,
-      alignItems: 'center',
-      justifyContent: 'center',
+      alignItems: "center",
+      justifyContent: "center",
       marginBottom: spacing.sm,
     },
     title: {
       fontSize: typography.sizes.xl,
       fontWeight: typography.weights.bold,
       color: colors.text,
-      textAlign: 'center',
+      textAlign: "center",
     },
     subtitle: {
       fontSize: typography.sizes.md,
       color: colors.textSecondary,
-      textAlign: 'center',
+      textAlign: "center",
       lineHeight: 22,
       marginBottom: spacing.md,
     },
     button: {
-      flexDirection: 'row',
-      alignItems: 'center',
+      flexDirection: "row",
+      alignItems: "center",
       gap: spacing.sm,
       backgroundColor: colors.primary,
       paddingHorizontal: spacing.xl,

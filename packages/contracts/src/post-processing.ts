@@ -25,4 +25,6 @@ export const PostProcessingProviderSchema = z.object({
   label: z.string(),
   configured: z.boolean(),
 });
-export type PostProcessingProvider = z.infer<typeof PostProcessingProviderSchema>;
+export type PostProcessingProvider = z.infer<
+  typeof PostProcessingProviderSchema
+>;

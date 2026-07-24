@@ -32,12 +32,10 @@ pub async fn create_session(
         tailscale: None,
     };
 
-    let (session, qr) = state.pairing.create_session(
-        &state.server_name,
-        &state.fingerprint,
-        endpoints,
-        5 * 60,
-    );
+    let (session, qr) =
+        state
+            .pairing
+            .create_session(&state.server_name, &state.fingerprint, endpoints, 5 * 60);
 
     Ok(Json(PairingSessionResponse {
         session_id: session.session_id,
@@ -89,14 +87,16 @@ pub async fn approve(
             .pairing
             .get(&body.session_id)
             .ok_or_else(|| json_error(StatusCode::NOT_FOUND, "not_found", "session not found"))?;
-        Some(state.auth.issue_device(
-            session_preview
-                .device_name
-                .clone()
-                .unwrap_or_else(|| "Mobile".to_string()),
-            session_preview.device_platform.clone(),
-            &state.fingerprint,
-        ))
+        Some(
+            state.auth.issue_device(
+                session_preview
+                    .device_name
+                    .clone()
+                    .unwrap_or_else(|| "Mobile".to_string()),
+                session_preview.device_platform.clone(),
+                &state.fingerprint,
+            ),
+        )
     } else {
         None
     };

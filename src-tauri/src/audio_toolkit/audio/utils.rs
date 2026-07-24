@@ -54,8 +54,7 @@ pub fn decode_audio_to_samples(bytes: Vec<u8>) -> Result<Vec<f32>> {
 
     // Resample to 16 kHz. FrameResampler emits fixed-length frames and
     // zero-pads the tail, which is harmless for transcription.
-    let mut resampler =
-        FrameResampler::new(in_rate, TARGET_SAMPLE_RATE, Duration::from_millis(30));
+    let mut resampler = FrameResampler::new(in_rate, TARGET_SAMPLE_RATE, Duration::from_millis(30));
     let mut out = Vec::with_capacity(mono.len() * TARGET_SAMPLE_RATE / in_rate + 1);
     resampler.push(&mono, |frame| out.extend_from_slice(frame));
     resampler.finish(|frame| out.extend_from_slice(frame));

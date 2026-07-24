@@ -1,10 +1,10 @@
-import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
-import * as FileSystem from 'expo-file-system';
+import { create } from "zustand";
+import * as SecureStore from "expo-secure-store";
+import * as FileSystem from "expo-file-system";
 
-const QUEUE_KEY = 'handy_offline_queue';
+const QUEUE_KEY = "handy_offline_queue";
 
-export type RecordingStatus = 'idle' | 'recording' | 'paused' | 'processing';
+export type RecordingStatus = "idle" | "recording" | "paused" | "processing";
 
 export interface OfflineQueueItem {
   id: string;
@@ -12,7 +12,7 @@ export interface OfflineQueueItem {
   durationMs: number;
   uri: string;
   sizeBytes?: number;
-  status: 'pending' | 'uploading' | 'failed';
+  status: "pending" | "uploading" | "failed";
   error?: string;
 }
 
@@ -64,9 +64,9 @@ async function writeQueue(items: OfflineQueueItem[]) {
 }
 
 export const useRecordingStore = create<RecordingState>((set, get) => ({
-  status: 'idle',
+  status: "idle",
   elapsedMs: 0,
-  liveText: '',
+  liveText: "",
   lastTranscription: null,
   lastDurationMs: 0,
   lastAudioUri: null,
@@ -81,14 +81,14 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
 
   setResult: ({ text, durationMs, audioUri, model, postProcessed, id }) =>
     set({
-      status: 'idle',
+      status: "idle",
       lastTranscription: text,
       lastDurationMs: durationMs,
       lastAudioUri: audioUri ?? null,
       lastModel: model ?? null,
       lastPostProcessed: Boolean(postProcessed),
       lastId: id ?? null,
-      liveText: '',
+      liveText: "",
       elapsedMs: 0,
     }),
 
@@ -102,9 +102,9 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
 
   resetSession: () =>
     set({
-      status: 'idle',
+      status: "idle",
       elapsedMs: 0,
-      liveText: '',
+      liveText: "",
     }),
 
   loadQueue: async () => {
@@ -141,7 +141,9 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   removeFromOfflineQueue: (id) => {
     const item = get().offlineQueue.find((q) => q.id === id);
     if (item?.uri) {
-      void FileSystem.deleteAsync(item.uri, { idempotent: true }).catch(() => undefined);
+      void FileSystem.deleteAsync(item.uri, { idempotent: true }).catch(
+        () => undefined,
+      );
     }
     const offlineQueue = get().offlineQueue.filter((q) => q.id !== id);
     set({ offlineQueue });
@@ -153,12 +155,16 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
     if (!retentionHours || retentionHours < 0) return;
     const cutoff = Date.now() - retentionHours * 3600_000;
     const current = get().offlineQueue;
-    const expired = current.filter((q) => new Date(q.createdAt).getTime() < cutoff);
+    const expired = current.filter(
+      (q) => new Date(q.createdAt).getTime() < cutoff,
+    );
     if (expired.length === 0) return;
     await Promise.all(
       expired.map((q) =>
         q.uri
-          ? FileSystem.deleteAsync(q.uri, { idempotent: true }).catch(() => undefined)
+          ? FileSystem.deleteAsync(q.uri, { idempotent: true }).catch(
+              () => undefined,
+            )
           : Promise.resolve(),
       ),
     );
@@ -174,7 +180,7 @@ export function formatDuration(ms: number): string {
   const totalSec = Math.floor(ms / 1000);
   const min = Math.floor(totalSec / 60);
   const sec = totalSec % 60;
-  return `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+  return `${min.toString().padStart(2, "0")}:${sec.toString().padStart(2, "0")}`;
 }
 
 export function formatBytes(bytes: number): string {

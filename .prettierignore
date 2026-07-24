@@ -8,6 +8,14 @@ dist
 target
 *.bundle.*
 
+# Mobile generated / build trees (Expo prebuild + Gradle)
+mobile/android
+mobile/ios
+mobile/.expo
+
+# Local video experiments (not part of the app)
+videos
+
 # Tauri
 src-tauri/target
 src-tauri/gen

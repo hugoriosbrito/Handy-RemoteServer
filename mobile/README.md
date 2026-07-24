@@ -19,14 +19,14 @@ React Native mobile companion for [Handy](https://github.com/cjpais/Handy) deskt
 
 Matches the Handy desktop palette:
 
-| Token | Value |
-|-------|-------|
-| Primary | `#da5893` |
-| Logo light | `#faa2ca` |
-| Logo stroke | `#382731` |
-| Text | `#0f0f0f` |
-| Background | `#FFFFFF` / `#fbfbfb` |
-| Soft pink | `#FDF2F7` |
+| Token       | Value                 |
+| ----------- | --------------------- |
+| Primary     | `#da5893`             |
+| Logo light  | `#faa2ca`             |
+| Logo stroke | `#382731`             |
+| Text        | `#0f0f0f`             |
+| Background  | `#FFFFFF` / `#fbfbfb` |
+| Soft pink   | `#FDF2F7`             |
 
 ## Getting started
 
@@ -47,18 +47,18 @@ EXPO_PUBLIC_API_URL=https://api.handy.remote
 
 ## Navigation map
 
-| Route | Screen |
-|-------|--------|
-| `/` | Welcome — "Transcreva pelo celular" |
-| `/pair/scan` | QR scanner |
-| `/pair/confirm` | Pairing confirmation |
-| `/onboarding/microphone` | Microphone permission |
-| `/(tabs)` | Main tabs (Gravar, Histórico, Ajustes) |
-| `/recording` | Active recording UI |
-| `/recording-reconnect` | Reconnecting state |
-| `/result` | Transcription result |
-| `/computers` | Paired computers |
-| `/offline-queue` | Offline upload queue |
+| Route                    | Screen                                 |
+| ------------------------ | -------------------------------------- |
+| `/`                      | Welcome — "Transcreva pelo celular"    |
+| `/pair/scan`             | QR scanner                             |
+| `/pair/confirm`          | Pairing confirmation                   |
+| `/onboarding/microphone` | Microphone permission                  |
+| `/(tabs)`                | Main tabs (Gravar, Histórico, Ajustes) |
+| `/recording`             | Active recording UI                    |
+| `/recording-reconnect`   | Reconnecting state                     |
+| `/result`                | Transcription result                   |
+| `/computers`             | Paired computers                       |
+| `/offline-queue`         | Offline upload queue                   |
 
 ## Project structure
 

@@ -1,8 +1,10 @@
-import { api } from '@/api/client';
-import { useConnectionStore } from '@/stores/connectionStore';
+import { api } from "@/api/client";
+import { useConnectionStore } from "@/stores/connectionStore";
 
 /** Probe the paired Handy server. Returns true when reachable. */
-export async function probeServerHealth(baseUrl?: string | null): Promise<boolean> {
+export async function probeServerHealth(
+  baseUrl?: string | null,
+): Promise<boolean> {
   const url = baseUrl ?? useConnectionStore.getState().baseUrl;
   if (!url) return false;
 
@@ -81,5 +83,5 @@ export async function uploadWithRetry(
   }
   // Distinguish "PC down" from a one-off upload error.
   await probeServerHealth(opts.baseUrl);
-  throw lastError instanceof Error ? lastError : new Error('upload_failed');
+  throw lastError instanceof Error ? lastError : new Error("upload_failed");
 }

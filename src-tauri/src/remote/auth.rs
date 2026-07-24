@@ -53,7 +53,10 @@ impl AuthStore {
             .lock()
             .unwrap()
             .insert(device.access_token_hash.clone(), device_id.clone());
-        self.devices.lock().unwrap().insert(device_id.clone(), device);
+        self.devices
+            .lock()
+            .unwrap()
+            .insert(device_id.clone(), device);
 
         DeviceCredentials {
             device_id,

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -6,23 +6,34 @@ import {
   SectionList,
   TouchableOpacity,
   RefreshControl,
-} from 'react-native';
-import { useFocusEffect, useRouter } from 'expo-router';
-import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { Input } from '@/components/ui';
-import { spacing, typography, radius, shadows, type ThemeColors } from '@/theme/tokens';
-import { useTheme } from '@/theme/ThemeProvider';
-import { api, Transcription } from '@/api/client';
-import { formatDuration, useRecordingStore } from '@/stores/recordingStore';
-import { useConnectionStore } from '@/stores/connectionStore';
+} from "react-native";
+import { useFocusEffect, useRouter } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { useQuery } from "@tanstack/react-query";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { Ionicons } from "@expo/vector-icons";
+import { Input } from "@/components/ui";
+import {
+  spacing,
+  typography,
+  radius,
+  shadows,
+  type ThemeColors,
+} from "@/theme/tokens";
+import { useTheme } from "@/theme/ThemeProvider";
+import { api, Transcription } from "@/api/client";
+import { formatDuration, useRecordingStore } from "@/stores/recordingStore";
+import { useConnectionStore } from "@/stores/connectionStore";
 
 function isPhoneSource(name?: string | null): boolean {
   if (!name) return false;
   const n = name.toLowerCase();
-  return n.includes('mobile') || n.includes('phone') || n.includes('android') || n.includes('ios');
+  return (
+    n.includes("mobile") ||
+    n.includes("phone") ||
+    n.includes("android") ||
+    n.includes("ios")
+  );
 }
 
 function dayKey(dateStr: string): string {
@@ -34,16 +45,19 @@ function formatDateLabel(dateStr: string, t: (k: string) => string): string {
   const today = new Date();
   const yesterday = new Date();
   yesterday.setDate(today.getDate() - 1);
-  if (date.toDateString() === today.toDateString()) return t('history.today');
-  if (date.toDateString() === yesterday.toDateString()) return t('history.yesterday');
+  if (date.toDateString() === today.toDateString()) return t("history.today");
+  if (date.toDateString() === yesterday.toDateString())
+    return t("history.yesterday");
   return date.toLocaleDateString();
 }
 
 export default function HistoryScreen() {
   const { t } = useTranslation();
   const router = useRouter();
-  const [search, setSearch] = useState('');
-  const [sourceFilter, setSourceFilter] = useState<'all' | 'phone' | 'computer'>('all');
+  const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<
+    "all" | "phone" | "computer"
+  >("all");
 
   const token = useConnectionStore((s) => s.token);
   const baseUrl = useConnectionStore((s) => s.baseUrl);
@@ -51,7 +65,7 @@ export default function HistoryScreen() {
   const styles = useMemo(() => makeStyles(colors), [colors]);
 
   const { data, isLoading, isRefetching, refetch } = useQuery({
-    queryKey: ['history', token, baseUrl],
+    queryKey: ["history", token, baseUrl],
     queryFn: async () => {
       if (!token) return { items: [] as Transcription[] };
       try {
@@ -61,7 +75,7 @@ export default function HistoryScreen() {
       }
     },
     enabled: Boolean(token),
-    refetchOnMount: 'always',
+    refetchOnMount: "always",
     refetchInterval: 30_000,
     refetchIntervalInBackground: false,
   });
@@ -77,10 +91,10 @@ export default function HistoryScreen() {
       if (search && !item.text.toLowerCase().includes(search.toLowerCase())) {
         return false;
       }
-      if (sourceFilter === 'phone') {
+      if (sourceFilter === "phone") {
         return isPhoneSource(item.computerName);
       }
-      if (sourceFilter === 'computer') {
+      if (sourceFilter === "computer") {
         return !isPhoneSource(item.computerName);
       }
       return true;
@@ -107,26 +121,28 @@ export default function HistoryScreen() {
       lastDurationMs: item.durationMs,
       lastAudioUri: null,
     });
-    router.push('/result');
+    router.push("/result");
   };
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.container}>
-        <Text style={styles.title}>{t('history.title')}</Text>
+        <Text style={styles.title}>{t("history.title")}</Text>
         <Input
           value={search}
           onChangeText={setSearch}
-          placeholder={t('history.searchPlaceholder')}
+          placeholder={t("history.searchPlaceholder")}
           style={styles.search}
         />
 
         <View style={styles.filters}>
-          {([
-            ['all', t('common.all')],
-            ['phone', t('history.phone')],
-            ['computer', t('history.computer')],
-          ] as const).map(([key, label]) => (
+          {(
+            [
+              ["all", t("common.all")],
+              ["phone", t("history.phone")],
+              ["computer", t("history.computer")],
+            ] as const
+          ).map(([key, label]) => (
             <TouchableOpacity
               key={key}
               style={[styles.chip, sourceFilter === key && styles.chipActive]}
@@ -145,11 +161,15 @@ export default function HistoryScreen() {
         </View>
 
         {isLoading ? (
-          <Text style={styles.empty}>{t('common.loading')}</Text>
+          <Text style={styles.empty}>{t("common.loading")}</Text>
         ) : sections.length === 0 ? (
           <View style={styles.emptyBox}>
-            <Ionicons name="document-text-outline" size={48} color={colors.midGray} />
-            <Text style={styles.empty}>{t('history.empty')}</Text>
+            <Ionicons
+              name="document-text-outline"
+              size={48}
+              color={colors.midGray}
+            />
+            <Text style={styles.empty}>{t("history.empty")}</Text>
           </View>
         ) : (
           <SectionList
@@ -180,8 +200,8 @@ export default function HistoryScreen() {
                   <Ionicons
                     name={
                       isPhoneSource(item.computerName)
-                        ? 'phone-portrait-outline'
-                        : 'desktop-outline'
+                        ? "phone-portrait-outline"
+                        : "desktop-outline"
                     }
                     size={16}
                     color={colors.midGray}
@@ -203,83 +223,83 @@ export default function HistoryScreen() {
 
 const makeStyles = (colors: ThemeColors) =>
   StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.backgroundAlt },
-  container: {
-    flex: 1,
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.md,
-  },
-  title: {
-    fontSize: typography.sizes.xxl,
-    fontWeight: typography.weights.bold,
-    color: colors.text,
-    marginBottom: spacing.md,
-  },
-  search: { marginBottom: spacing.sm },
-  filters: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    marginBottom: spacing.md,
-  },
-  chip: {
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs,
-    borderRadius: radius.full,
-    backgroundColor: colors.surface,
-    borderWidth: 1,
-    borderColor: colors.border,
-  },
-  chipActive: {
-    backgroundColor: colors.codeBg,
-    borderColor: colors.primary,
-  },
-  chipText: {
-    fontSize: typography.sizes.sm,
-    color: colors.midGray,
-  },
-  chipTextActive: {
-    color: colors.primary,
-    fontWeight: typography.weights.semibold,
-  },
-  list: { paddingBottom: spacing.xl },
-  sectionTitle: {
-    fontSize: typography.sizes.sm,
-    fontWeight: typography.weights.semibold,
-    color: colors.midGray,
-    marginBottom: spacing.sm,
-    marginTop: spacing.sm,
-  },
-  item: {
-    backgroundColor: colors.surface,
-    borderRadius: radius.lg,
-    padding: spacing.md,
-    marginBottom: spacing.sm,
-    ...shadows.card,
-  },
-  itemHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: spacing.xs,
-  },
-  itemDuration: {
-    fontSize: typography.sizes.sm,
-    color: colors.primary,
-    fontVariant: ['tabular-nums'],
-  },
-  itemText: {
-    fontSize: typography.sizes.md,
-    color: colors.text,
-    lineHeight: 22,
-  },
-  emptyBox: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing.md,
-  },
-  empty: {
-    fontSize: typography.sizes.md,
-    color: colors.midGray,
-    textAlign: 'center',
-  },
-});
+    safe: { flex: 1, backgroundColor: colors.backgroundAlt },
+    container: {
+      flex: 1,
+      paddingHorizontal: spacing.lg,
+      paddingTop: spacing.md,
+    },
+    title: {
+      fontSize: typography.sizes.xxl,
+      fontWeight: typography.weights.bold,
+      color: colors.text,
+      marginBottom: spacing.md,
+    },
+    search: { marginBottom: spacing.sm },
+    filters: {
+      flexDirection: "row",
+      gap: spacing.sm,
+      marginBottom: spacing.md,
+    },
+    chip: {
+      paddingHorizontal: spacing.md,
+      paddingVertical: spacing.xs,
+      borderRadius: radius.full,
+      backgroundColor: colors.surface,
+      borderWidth: 1,
+      borderColor: colors.border,
+    },
+    chipActive: {
+      backgroundColor: colors.codeBg,
+      borderColor: colors.primary,
+    },
+    chipText: {
+      fontSize: typography.sizes.sm,
+      color: colors.midGray,
+    },
+    chipTextActive: {
+      color: colors.primary,
+      fontWeight: typography.weights.semibold,
+    },
+    list: { paddingBottom: spacing.xl },
+    sectionTitle: {
+      fontSize: typography.sizes.sm,
+      fontWeight: typography.weights.semibold,
+      color: colors.midGray,
+      marginBottom: spacing.sm,
+      marginTop: spacing.sm,
+    },
+    item: {
+      backgroundColor: colors.surface,
+      borderRadius: radius.lg,
+      padding: spacing.md,
+      marginBottom: spacing.sm,
+      ...shadows.card,
+    },
+    itemHeader: {
+      flexDirection: "row",
+      justifyContent: "space-between",
+      marginBottom: spacing.xs,
+    },
+    itemDuration: {
+      fontSize: typography.sizes.sm,
+      color: colors.primary,
+      fontVariant: ["tabular-nums"],
+    },
+    itemText: {
+      fontSize: typography.sizes.md,
+      color: colors.text,
+      lineHeight: 22,
+    },
+    emptyBox: {
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      gap: spacing.md,
+    },
+    empty: {
+      fontSize: typography.sizes.md,
+      color: colors.midGray,
+      textAlign: "center",
+    },
+  });

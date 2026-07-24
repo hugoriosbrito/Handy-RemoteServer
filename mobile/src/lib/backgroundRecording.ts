@@ -1,5 +1,5 @@
-import { PermissionsAndroid, Platform } from 'react-native';
-import BackgroundService from 'react-native-background-actions';
+import { PermissionsAndroid, Platform } from "react-native";
+import BackgroundService from "react-native-background-actions";
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -25,12 +25,14 @@ export async function startBackgroundRecording(
   title: string,
   desc: string,
 ): Promise<boolean> {
-  if (Platform.OS !== 'android') return true;
+  if (Platform.OS !== "android") return true;
   try {
     if (BackgroundService.isRunning()) return true;
     // Android 13+ requires an explicit runtime grant before a foreground-service
     // notification can appear. Without it, start() fails silently / is blocked.
-    if (typeof PermissionsAndroid?.PERMISSIONS?.POST_NOTIFICATIONS === 'string') {
+    if (
+      typeof PermissionsAndroid?.PERMISSIONS?.POST_NOTIFICATIONS === "string"
+    ) {
       const current = await PermissionsAndroid.check(
         PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
       );
@@ -39,29 +41,29 @@ export async function startBackgroundRecording(
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
         );
         if (asked !== PermissionsAndroid.RESULTS.GRANTED) {
-          console.warn('[backgroundRecording] POST_NOTIFICATIONS denied');
+          console.warn("[backgroundRecording] POST_NOTIFICATIONS denied");
           return false;
         }
       }
     }
     await BackgroundService.start(keepAliveTask, {
-      taskName: 'HandyRecording',
+      taskName: "HandyRecording",
       taskTitle: title,
       taskDesc: desc,
-      taskIcon: { name: 'ic_launcher', type: 'mipmap' },
-      color: '#da5893',
-      linkingURI: 'handy-remote://recording',
-      foregroundServiceType: ['microphone'],
+      taskIcon: { name: "ic_launcher", type: "mipmap" },
+      color: "#da5893",
+      linkingURI: "handy-remote://recording",
+      foregroundServiceType: ["microphone"],
     });
     return true;
   } catch (e) {
-    console.warn('[backgroundRecording] failed to start FGS', e);
+    console.warn("[backgroundRecording] failed to start FGS", e);
     return false;
   }
 }
 
 export async function stopBackgroundRecording(): Promise<void> {
-  if (Platform.OS !== 'android') return;
+  if (Platform.OS !== "android") return;
   try {
     if (BackgroundService.isRunning()) await BackgroundService.stop();
   } catch {
@@ -71,7 +73,7 @@ export async function stopBackgroundRecording(): Promise<void> {
 
 /** Whether the background recording service is currently keeping us alive. */
 export function isBackgroundRecordingActive(): boolean {
-  if (Platform.OS !== 'android') return true;
+  if (Platform.OS !== "android") return true;
   try {
     return BackgroundService.isRunning();
   } catch {

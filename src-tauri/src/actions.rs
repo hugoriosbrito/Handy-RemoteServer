@@ -75,10 +75,9 @@ fn should_use_streaming_overlay(style: OverlayStyle, is_streaming: bool) -> bool
     style == OverlayStyle::Live && is_streaming
 }
 
-
-pub(crate) use crate::post_processing::process_transcription_output;
 #[allow(unused_imports)] // used by unit tests in this module
 pub(crate) use crate::post_processing::is_blank_transcription;
+pub(crate) use crate::post_processing::process_transcription_output;
 
 impl ShortcutAction for TranscribeAction {
     fn start(&self, app: &AppHandle, binding_id: &str, _shortcut_str: &str) {

@@ -151,15 +151,10 @@ export class RemoteApiClient {
     );
   }
 
-  async refreshCredentials(
-    refreshToken: string,
-  ): Promise<DeviceCredentials> {
-    return this.request(
-      "POST",
-      "/v1/auth/refresh",
-      DeviceCredentialsSchema,
-      { json: { refreshToken } },
-    );
+  async refreshCredentials(refreshToken: string): Promise<DeviceCredentials> {
+    return this.request("POST", "/v1/auth/refresh", DeviceCredentialsSchema, {
+      json: { refreshToken },
+    });
   }
 
   private async request<T>(
