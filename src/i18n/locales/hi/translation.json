@@ -15,7 +15,8 @@
     "postProcessing": "पोस्ट प्रोसेस",
     "history": "इतिहास",
     "debug": "डिबग",
-    "about": "के बारे में"
+    "about": "के बारे में",
+    "mobileAccess": "Remote Session"
   },
   "onboarding": {
     "subtitle": "शुरू करने के लिए, एक ट्रांसक्रिप्शन मॉडल चुनें",
@@ -567,6 +568,66 @@
           "description": "डिवाइस पर ही मशीन लर्निंग इन्फ़रेंस के लिए हाई-परफ़ॉर्मेंस टेंसर लाइब्रेरी",
           "details": "Handy का लोकल स्पीच-टू-टेक्स्ट transcribe.cpp और ggml पर आधारित है. Georgi Gerganov और योगदान देने वालों के शानदार काम के लिए धन्यवाद."
         }
+      }
+    },
+    "mobileAccess": {
+      "title": "Mobile Access",
+      "enable": {
+        "label": "Enable mobile access",
+        "shortLabel": "Enabled",
+        "description": "Start the Handy Remote server so phones can connect on your network."
+      },
+      "localNetwork": {
+        "label": "Allow local network",
+        "description": "Include LAN endpoints in pairing QR codes."
+      },
+      "remoteAccess": {
+        "label": "Allow remote access",
+        "description": "Include Tailscale or other remote endpoints when available."
+      },
+      "approval": {
+        "label": "Require device approval",
+        "description": "New phones must be approved on this computer before they can transcribe."
+      },
+      "status": {
+        "title": "Server status",
+        "running": "Status",
+        "online": "Running",
+        "offline": "Stopped",
+        "port": "Port",
+        "name": "Computer name"
+      },
+      "pairing": {
+        "title": "Pair with phone",
+        "description": "Open Handy Remote on your phone and scan this QR code. Confirm the same verification code on both devices.",
+        "connect": "Connect new phone",
+        "refreshQr": "Refresh QR",
+        "code": "Verification code",
+        "waitingServer": "Starting remote server…",
+        "enableFirst": "Enable remote session to show the QR code.",
+        "confirmHint": "Check that this code matches the one on your phone before authorizing.",
+        "claimedToast": "Phone is waiting for approval",
+        "pending": "{{device}} is waiting for approval",
+        "authorize": "Authorize",
+        "cancel": "Cancel",
+        "approved": "Phone authorized",
+        "rejected": "Pairing cancelled"
+      },
+      "devices": {
+        "title": "Active sessions",
+        "subtitle": "Phones currently authorized on this computer.",
+        "empty": "No phones signed in yet. Scan the QR code above to connect one.",
+        "revoke": "Sign out",
+        "revoked": "Session revoked",
+        "unknownPlatform": "Unknown device",
+        "lastSeen": "Last seen {{time}}"
+      },
+      "sessionTitle": "Remote session",
+      "sessionSubtitle": "Show a QR code for Handy Remote and manage phones currently signed in.",
+      "advanced": {
+        "title": "Network options",
+        "show": "Show network options",
+        "hide": "Hide network options"
       }
     }
   },
