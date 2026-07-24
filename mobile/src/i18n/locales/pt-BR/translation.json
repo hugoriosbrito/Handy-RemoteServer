@@ -103,6 +103,7 @@
     "backgroundPaused": "Pausado — a gravação não continua em segundo plano. Toque em retomar.",
     "notifTitle": "Handy está gravando",
     "notifDesc": "Toque para voltar à gravação",
+    "notifPermissionDenied": "Sem permissão de notificação — a gravação pode pausar em segundo plano.",
     "microphoneDenied": "Microfone bloqueado",
     "permissionRequired": "Permita o acesso ao microfone nas configura??es do sistema para gravar.",
     "openSettings": "Abrir configura??es",

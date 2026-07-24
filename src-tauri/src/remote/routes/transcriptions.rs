@@ -36,9 +36,12 @@ pub async fn create_transcription(
 ) -> Result<Json<TranscriptionResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
     let device = require_auth(&state, &headers)?;
 
-    let mut audio_bytes: Option<Vec<u8>> = None;
+    // Live preview chunks and the final recording can arrive as one or many
+    // multipart audio parts. Preview uploads must never write history.
+    let mut audio_parts: Vec<Vec<u8>> = Vec::new();
     let mut filename = "upload.wav".to_string();
     let mut post_process = false;
+    let mut preview = false;
 
     while let Some(field) = multipart
         .next_field()
@@ -51,15 +54,14 @@ pub async fn create_transcription(
                 if let Some(fname) = field.file_name().map(|s| s.to_string()) {
                     filename = fname;
                 }
-                audio_bytes = Some(
-                    field
-                        .bytes()
-                        .await
-                        .map_err(|e| {
-                            json_error(StatusCode::BAD_REQUEST, "read_file", e.to_string())
-                        })?
-                        .to_vec(),
-                );
+                let bytes = field
+                    .bytes()
+                    .await
+                    .map_err(|e| json_error(StatusCode::BAD_REQUEST, "read_file", e.to_string()))?
+                    .to_vec();
+                if !bytes.is_empty() {
+                    audio_parts.push(bytes);
+                }
             }
             "postProcess" | "post_process" => {
                 let text = field
@@ -68,20 +70,28 @@ pub async fn create_transcription(
                     .map_err(|e| json_error(StatusCode::BAD_REQUEST, "field", e.to_string()))?;
                 post_process = matches!(text.as_str(), "1" | "true" | "True" | "yes");
             }
+            "preview" => {
+                let text = field
+                    .text()
+                    .await
+                    .map_err(|e| json_error(StatusCode::BAD_REQUEST, "field", e.to_string()))?;
+                preview = matches!(text.as_str(), "1" | "true" | "True" | "yes");
+            }
             _ => {}
         }
     }
 
     let _ = &filename;
-    let bytes = audio_bytes.ok_or_else(|| {
-        json_error(
+    if audio_parts.is_empty() {
+        return Err(json_error(
             StatusCode::BAD_REQUEST,
             "missing_file",
             "audio file is required",
-        )
-    })?;
+        ));
+    }
 
-    if bytes.len() > 25 * 1024 * 1024 {
+    let total_bytes: usize = audio_parts.iter().map(|p| p.len()).sum();
+    if total_bytes > 25 * 1024 * 1024 {
         return Err(json_error(
             StatusCode::PAYLOAD_TOO_LARGE,
             "too_large",
@@ -89,15 +99,58 @@ pub async fn create_transcription(
         ));
     }
 
-    // Decode whatever the client recorded (Android/iOS emit AAC in an m4a
-    // container; desktop clients may send WAV) into 16 kHz mono f32 samples.
-    let samples = crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(|e| {
-        json_error(
+    // Decode each uploaded fragment and stitch them into one PCM stream. Live
+    // preview rotates m4a chunks; the final upload reuses those same files so
+    // history/reprocess get the full session rather than the last 4s fragment.
+    let mut samples: Vec<f32> = Vec::new();
+    for (idx, bytes) in audio_parts.into_iter().enumerate() {
+        let part = crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(|e| {
+            json_error(
+                StatusCode::BAD_REQUEST,
+            "invalid_audio",
+                format!("could not decode uploaded audio part {}: {}", idx + 1, e),
+            )
+        })?;
+        samples.extend(part);
+    }
+
+    if samples.is_empty() {
+        return Err(json_error(
             StatusCode::BAD_REQUEST,
             "invalid_audio",
-            format!("could not decode uploaded audio: {}", e),
+            "uploaded audio produced no samples",
+        ));
+    }
+
+    info!(
+        "Remote transcription from device {} ({} samples, preview={})",
+        device.id,
+        samples.len(),
+        preview
+    );
+
+    let raw_text = state.transcription.transcribe(samples.clone()).map_err(|e| {
+        error!("Remote transcription failed: {}", e);
+        json_error(
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "transcription_failed",
+            e.to_string(),
         )
     })?;
+
+    let settings = get_settings(&state.app);
+
+    // Preview chunks are for live UI only. Never persist WAV/history for them.
+    if preview {
+        return Ok(Json(TranscriptionResponse {
+            id: "preview".to_string(),
+            raw_text: raw_text.clone(),
+            final_text: raw_text,
+            post_processed: false,
+            prompt_name: None,
+            model: Some(settings.selected_model.clone()),
+        }));
+    }
 
     // Persist a 16 kHz WAV into the recordings dir for history retention.
     let file_name = format!(
@@ -109,22 +162,6 @@ pub async fn create_transcription(
     crate::audio_toolkit::save_wav_file(&wav_path, &samples)
         .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "save_wav", e.to_string()))?;
 
-    info!(
-        "Remote transcription from device {} ({} samples)",
-        device.id,
-        samples.len()
-    );
-
-    let raw_text = state.transcription.transcribe(samples).map_err(|e| {
-        error!("Remote transcription failed: {}", e);
-        json_error(
-            StatusCode::INTERNAL_SERVER_ERROR,
-            "transcription_failed",
-            e.to_string(),
-        )
-    })?;
-
-    let settings = get_settings(&state.app);
     let should_post = post_process && settings.post_process_enabled;
     let processed = process_transcription_output(&state.app, &raw_text, should_post).await;
 

@@ -103,6 +103,7 @@
     "backgroundPaused": "Paused — recording can't continue in the background. Tap resume.",
     "notifTitle": "Handy is recording",
     "notifDesc": "Tap to return to the recording",
+    "notifPermissionDenied": "Notification permission denied — recording may pause in the background.",
     "microphoneDenied": "Microphone blocked",
     "permissionRequired": "Allow microphone access in system settings to record.",
     "openSettings": "Open settings",

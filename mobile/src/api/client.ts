@@ -347,18 +347,36 @@ export const api = {
 
   uploadTranscription: async (
     token: string,
-    uri: string,
-    opts?: { postProcess?: boolean; baseUrl?: string; filename?: string },
+    uriOrUris: string | string[],
+    opts?: {
+      postProcess?: boolean;
+      /** Live preview only — do not save history / durable audio on the PC. */
+      preview?: boolean;
+      baseUrl?: string;
+      filename?: string;
+    },
   ) => {
     const form = new FormData();
+    const uris = Array.isArray(uriOrUris) ? uriOrUris : [uriOrUris];
     const filename = opts?.filename ?? 'recording.m4a';
-    form.append('file', {
-      uri,
-      name: filename,
-      type: filename.endsWith('.wav') ? 'audio/wav' : 'audio/m4a',
-    } as unknown as Blob);
+    const mime = filename.endsWith('.wav') ? 'audio/wav' : 'audio/m4a';
+
+    uris.forEach((uri, index) => {
+      const partName =
+        uris.length === 1
+          ? filename
+          : filename.replace(/(\.[^.]+)?$/, (ext) => `-part${index + 1}${ext || '.m4a'}`);
+      form.append('file', {
+        uri,
+        name: partName,
+        type: mime,
+      } as unknown as Blob);
+    });
     if (opts?.postProcess) {
       form.append('postProcess', 'true');
+    }
+    if (opts?.preview) {
+      form.append('preview', 'true');
     }
 
     const url = `${resolveBaseUrl(opts?.baseUrl)}/v1/transcriptions`;
@@ -367,7 +385,8 @@ export const api = {
       response = await fetchWithTimeout(url, {
         method: 'POST',
         // Audio uploads can be large / slow on the LAN — allow generous headroom.
-        timeoutMs: 45000,
+        // Multi-file finals need even more room to decode + concatenate + transcribe.
+        timeoutMs: uris.length > 1 ? 90000 : 45000,
         headers: {
           Authorization: `Bearer ${token}`,
         },
