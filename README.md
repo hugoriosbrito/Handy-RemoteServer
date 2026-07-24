@@ -6,6 +6,8 @@
 
 Handy is a cross-platform desktop application that provides simple, privacy-focused speech transcription. Press a shortcut, speak, and have your words appear in any text field. This happens on your own computer without sending any information to the cloud.
 
+This fork (Handy Remote) keeps the desktop app and adds an in-process remote server plus a mobile client so your phone can record into the same local models and history.
+
 ## Why Handy?
 
 Handy was created to fill the gap for a truly open source, extensible speech-to-text tool. As stated on [handy.computer](https://handy.computer):
@@ -36,14 +38,19 @@ The process is entirely local:
 
 ### Installation
 
-1. Download the latest release from the [releases page](https://github.com/cjpais/Handy/releases) or the [website](https://handy.computer)
-   - **macOS**: Also available via [Homebrew cask](https://formulae.brew.sh/cask/handy): `brew install --cask handy`
-   - **Windows**: Also available via [winget](https://github.com/microsoft/winget-pkgs): `winget install cjpais.Handy` \
-     **Note:** The Homebrew cask and winget package are not maintained by the Handy developers.
+This repository is a fork of Handy with remote/mobile support. Download builds from this fork's [releases page](https://github.com/hugoriosbrito/Handy-RemoteServer/releases).
+
+1. Grab the latest `vX.Y.Z` release assets for your platform
+   - Windows: `Handy_*_x64-setup.exe` or `Handy_*_x64_en-US.msi`
+   - Linux: `Handy_*_amd64.deb`, `Handy_*_amd64.AppImage`, or `Handy-*-1.x86_64.rpm`
+   - Android remote client: `Handy_*_android.apk`
+   - Upstream macOS / Homebrew / winget packages still come from [cjpais/Handy](https://github.com/cjpais/Handy/releases) — this fork currently ships unsigned Windows/Linux desktop builds only
 2. Install the application
 3. Launch Handy and grant necessary system permissions (microphone, accessibility)
 4. Configure your preferred keyboard shortcuts in Settings
 5. Start transcribing!
+
+Fork release notes stay short and casual, matching upstream Handy. Asset names follow the Tauri bundler filenames so they look familiar next to upstream releases.
 
 ### Development Setup
 
