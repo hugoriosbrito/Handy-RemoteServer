@@ -777,6 +777,17 @@ impl AudioRecordingManager {
         )
     }
 
+    /// True only while desktop microphone samples are still being captured.
+    /// A completed desktop recording may remain in `Stopping` while trailing
+    /// audio flushes or inference begins; that must not reject a new remote
+    /// session as if the desktop were still recording.
+    pub fn is_actively_capturing(&self) -> bool {
+        matches!(
+            *self.state.lock().unwrap(),
+            RecordingState::Recording { .. }
+        )
+    }
+
     /// Cancel any ongoing recording without returning audio samples
     pub fn cancel_recording(&self) {
         self.cancel_generation.fetch_add(1, Ordering::AcqRel);

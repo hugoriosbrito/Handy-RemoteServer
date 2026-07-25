@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { Button } from "@/components/ui";
-import { HandyLogo } from "@/components/HandyLogo";
+import { RemoteCompanionBrand } from "@/components/RemoteCompanionBrand";
 import { spacing, typography, radius, type ThemeColors } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
 import { useConnectionStore } from "@/stores/connectionStore";
@@ -181,7 +181,7 @@ export default function ConfirmPairScreen() {
       </View>
 
       <View style={styles.content}>
-        <HandyLogo size={88} showWordmark={false} />
+        <RemoteCompanionBrand compact />
         <Text style={styles.heading}>{t("pair.confirmSubtitle")}</Text>
         <Text style={styles.body}>{t("pair.codeHint")}</Text>
 

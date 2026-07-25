@@ -2,17 +2,17 @@ import { ExpoConfig, ConfigContext } from "expo/config";
 
 export default ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
-  name: "Handy Remote",
-  slug: "handy-remote",
+  name: "Remote Companion",
+  slug: "remote-companion",
   version: "0.1.0",
   orientation: "portrait",
-  icon: "./assets/icon.png",
+  icon: "./assets/remote-companion-icon.png",
   scheme: "handy-remote",
   userInterfaceStyle: "automatic",
   newArchEnabled: true,
   backgroundColor: "#0F0F11",
   splash: {
-    image: "./assets/splash-icon.png",
+    image: "./assets/remote-companion-icon.png",
     resizeMode: "contain",
     backgroundColor: "#0F0F11",
   },
@@ -21,11 +21,11 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     bundleIdentifier: "com.handy.remote",
     infoPlist: {
       NSCameraUsageDescription:
-        "Handy Remote precisa da câmera para escanear o QR Code do computador.",
+        "Remote Companion precisa da câmera para escanear o QR Code do computador.",
       NSMicrophoneUsageDescription:
-        "Handy Remote precisa do microfone para gravar e transcrever áudio.",
+        "Remote Companion precisa do microfone para gravar e transcrever áudio.",
       NSLocalNetworkUsageDescription:
-        "Handy Remote precisa da rede local para conectar ao computador na mesma Wi‑Fi.",
+        "Remote Companion precisa da rede local para conectar ao computador na mesma Wi‑Fi.",
       // Remote server speaks HTTP on the LAN — allow local cleartext.
       NSAppTransportSecurity: {
         NSAllowsLocalNetworking: true,
@@ -36,7 +36,7 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   },
   android: {
     adaptiveIcon: {
-      foregroundImage: "./assets/adaptive-icon.png",
+      foregroundImage: "./assets/remote-companion-icon.png",
       backgroundColor: "#0F0F11",
     },
     package: "com.handy.remote",
@@ -57,14 +57,14 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
       "expo-camera",
       {
         cameraPermission:
-          "Handy Remote precisa da câmera para escanear o QR Code do computador.",
+          "Remote Companion precisa da câmera para escanear o QR Code do computador.",
       },
     ],
     [
       "expo-av",
       {
         microphonePermission:
-          "Handy Remote precisa do microfone para gravar e transcrever áudio.",
+          "Remote Companion precisa do microfone para gravar e transcrever áudio.",
       },
     ],
     [

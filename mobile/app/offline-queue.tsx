@@ -68,7 +68,7 @@ export default function OfflineQueueScreen() {
     setBusyId(id);
     updateQueueItem(id, { status: "uploading", error: undefined });
     try {
-      const result = await uploadWithRetry(token, item.uri, {
+      const result = await uploadWithRetry(token, item.uris?.length ? item.uris : item.uri, {
         postProcess: postProcessEnabled,
         baseUrl: baseUrl ?? undefined,
         attempts: 3,

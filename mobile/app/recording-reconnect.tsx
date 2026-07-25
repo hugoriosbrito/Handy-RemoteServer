@@ -80,12 +80,16 @@ export default function RecordingReconnectScreen() {
 
       try {
         setAttempt((a) => a + 1);
-        const result = await uploadWithRetry(token, pending.uri, {
-          postProcess: postProcessEnabled,
-          baseUrl: baseUrl ?? undefined,
-          attempts: 3,
-          recordingId: pending.recordingId ?? pending.id,
-        });
+        const result = await uploadWithRetry(
+          token,
+          pending.uris?.length ? pending.uris : pending.uri,
+          {
+            postProcess: postProcessEnabled,
+            baseUrl: baseUrl ?? undefined,
+            attempts: 3,
+            recordingId: pending.recordingId ?? pending.id,
+          },
+        );
         if (cancelled) return;
         removeFromOfflineQueue(pending.id);
         setResult({
@@ -127,14 +131,14 @@ export default function RecordingReconnectScreen() {
 
   const subtitle = failed
     ? failReason === "upload"
-      ? t("recording.sendFailed", { name: computer?.name ?? "Handy" })
-      : t("offlineQueue.computerOffline", { name: computer?.name ?? "Handy" })
+      ? t("recording.sendFailed", { name: computer?.name ?? "Remote Companion" })
+      : t("offlineQueue.computerOffline", { name: computer?.name ?? "Remote Companion" })
     : attempt > 0
       ? t("recording.tryingComputerAttempt", {
-          name: computer?.name ?? "Handy",
+          name: computer?.name ?? "Remote Companion",
           attempt,
         })
-      : t("recording.tryingComputer", { name: computer?.name ?? "Handy" });
+      : t("recording.tryingComputer", { name: computer?.name ?? "Remote Companion" });
 
   return (
     <SafeAreaView style={styles.safe}>

@@ -6,7 +6,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Ionicons } from "@expo/vector-icons";
 import { ActionSheet, Toggle } from "@/components/ui";
-import { HandyIcon } from "@/components/HandyLogo";
+import { RemoteCompanionBrand } from "@/components/RemoteCompanionBrand";
 import {
   spacing,
   typography,
@@ -89,7 +89,7 @@ export default function RecordTabScreen() {
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <View style={styles.container}>
         <View style={styles.header}>
-          <HandyIcon size={36} />
+          <RemoteCompanionBrand compact />
           <Text style={styles.headerTitle}>{t("record.title")}</Text>
         </View>
 

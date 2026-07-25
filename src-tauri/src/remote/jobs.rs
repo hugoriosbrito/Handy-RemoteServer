@@ -33,6 +33,10 @@ pub struct RemoteJob {
     pub device_id: String,
     pub recording_id: String,
     pub file_name: String,
+    /// Original capture segments. Older single-file jobs deserialize with an
+    /// empty vector and transparently fall back to `file_name`.
+    #[serde(default)]
+    pub file_names: Vec<String>,
     #[serde(default)]
     pub post_process: bool,
     pub status: RemoteJobStatus,
@@ -134,7 +138,7 @@ impl RemoteJobStore {
         &self,
         device_id: impl Into<String>,
         recording_id: impl Into<String>,
-        file_name: impl Into<String>,
+        file_names: Vec<String>,
         post_process: bool,
     ) -> RemoteJob {
         let device_id = device_id.into();
@@ -149,11 +153,16 @@ impl RemoteJobStore {
         }
 
         let now = now_secs();
+        let file_name = file_names
+            .first()
+            .cloned()
+            .unwrap_or_else(|| "upload.audio".to_string());
         let job = RemoteJob {
             id: format!("job_{}", uuid_simple()),
             device_id,
             recording_id,
-            file_name: file_name.into(),
+            file_name,
+            file_names,
             post_process,
             status: RemoteJobStatus::Queued,
             created_at: now,
@@ -268,8 +277,18 @@ mod tests {
     fn creating_the_same_recording_twice_reuses_the_original_job() {
         let store = RemoteJobStore::new();
 
-        let first = store.create_or_get("device_a", "recording_123", "audio.m4a", false);
-        let second = store.create_or_get("device_a", "recording_123", "audio.m4a", false);
+        let first = store.create_or_get(
+            "device_a",
+            "recording_123",
+            vec!["audio.m4a".to_string()],
+            false,
+        );
+        let second = store.create_or_get(
+            "device_a",
+            "recording_123",
+            vec!["audio.m4a".to_string()],
+            false,
+        );
 
         assert_eq!(first.id, second.id);
         assert_eq!(store.len(), 1);
@@ -279,7 +298,12 @@ mod tests {
     #[test]
     fn failed_job_exposes_a_sanitized_error_without_audio_details() {
         let store = RemoteJobStore::new();
-        let job = store.create_or_get("device_a", "recording_123", "audio.m4a", false);
+        let job = store.create_or_get(
+            "device_a",
+            "recording_123",
+            vec!["audio.m4a".to_string()],
+            false,
+        );
 
         store.fail(&job.id, "invalid_audio", "could not decode audio");
 

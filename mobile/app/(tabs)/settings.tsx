@@ -23,7 +23,7 @@ import * as LocalAuthentication from "expo-local-authentication";
 
 import { Toggle, ActionSheet } from "@/components/ui";
 
-import { HandyLogo } from "@/components/HandyLogo";
+import { RemoteCompanionBrand } from "@/components/RemoteCompanionBrand";
 
 import {
   spacing,
@@ -162,7 +162,7 @@ export default function SettingsScreen() {
         contentContainerStyle={styles.container}
       >
         <View style={styles.brandRow}>
-          <HandyLogo size={48} />
+          <RemoteCompanionBrand />
         </View>
 
         <Text style={styles.title}>{t("settings.title")}</Text>
@@ -313,7 +313,7 @@ export default function SettingsScreen() {
           <View style={styles.row}>
             <Text style={styles.rowLabel}>{t("settings.about")}</Text>
 
-            <Text style={styles.rowValue}>Handy Remote</Text>
+            <Text style={styles.rowValue}>Remote Companion</Text>
           </View>
 
           <View style={styles.divider} />

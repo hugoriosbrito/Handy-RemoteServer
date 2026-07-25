@@ -281,7 +281,7 @@ function networkErrorMessage(url: string, cause: unknown): string {
     if (isLoopbackBaseUrl(url) && Platform.OS !== "web") {
       return `Não foi possível alcançar ${url}. No celular físico use o IP da rede local do PC (não 127.0.0.1). Confira Wi‑Fi, firewall e se o Acesso móvel está ativo.`;
     }
-    return `Falha de rede ao contatar ${url}. Celular e PC precisam estar na mesma Wi‑Fi; no Windows, permita a porta do Handy no Firewall.`;
+    return `Falha de rede ao contatar ${url}. Celular e PC precisam estar na mesma Wi‑Fi; no Windows, permita a porta do Remote Companion no Firewall.`;
   }
   return detail || "Falha de rede";
 }

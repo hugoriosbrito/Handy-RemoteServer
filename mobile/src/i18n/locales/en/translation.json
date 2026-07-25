@@ -38,7 +38,7 @@
   "welcome": {
     "title": "Transcribe from your phone",
 
-    "subtitle": "Use Handy on your computer to turn voice into text, wherever you are.",
+    "subtitle": "Use Remote Companion on your computer to turn voice into text, wherever you are.",
 
     "connectComputer": "Connect computer"
   },
@@ -46,9 +46,9 @@
   "pair": {
     "scanTitle": "Scan QR Code",
 
-    "scanHint": "Open Mobile Access in Handy and point the camera.",
+    "scanHint": "Open Mobile Access in Remote Companion and point the camera.",
 
-    "scanPoint": "Point at the Handy QR",
+    "scanPoint": "Point at the Remote Companion QR",
 
     "enterCode": "Enter code",
 
@@ -64,7 +64,7 @@
 
     "cancel": "Cancel",
 
-    "invalidQr": "Invalid QR code. Scan the code shown in Handy.",
+    "invalidQr": "Invalid QR code. Scan the code shown in Remote Companion.",
 
     "codeRequiresQr": "The 6-digit code is for verification on the computer. Scan the QR code to start pairing.",
 
@@ -72,7 +72,7 @@
 
     "allowCamera": "Allow camera",
 
-    "missingQr": "Scan the Handy QR code before authorizing.",
+    "missingQr": "Scan the Remote Companion QR code before authorizing.",
 
     "claiming": "Requesting authorization…",
 
@@ -84,7 +84,7 @@
 
     "rejected": "Pairing was rejected on the computer.",
 
-    "expired": "Session expired. Generate a new QR in Handy.",
+    "expired": "Session expired. Generate a new QR in Remote Companion.",
 
     "failed": "Failed to connect. Try again.",
 
@@ -92,7 +92,7 @@
 
     "enterCodeTitle": "Paste payload",
 
-    "enterCodeHint": "Paste the Handy QR JSON (or a handy-remote:// link with payload=).",
+    "enterCodeHint": "Paste the Remote Companion QR JSON (or a pairing link with payload=).",
 
     "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
 
@@ -102,7 +102,7 @@
   "onboarding": {
     "microphoneTitle": "Allow microphone",
 
-    "microphoneSubtitle": "Handy needs the microphone to record and send your voice to the computer.",
+    "microphoneSubtitle": "Remote Companion needs the microphone to record and send your voice to the computer.",
 
     "privacyNote": "Only active while recording.",
 
@@ -212,7 +212,7 @@
 
     "backgroundPaused": "Paused — recording can't continue in the background. Tap resume.",
 
-    "notifTitle": "Handy is recording",
+    "notifTitle": "Remote Companion is recording",
 
     "notifDesc": "Tap to return to the recording",
 
@@ -438,13 +438,13 @@
   },
 
   "biometricGate": {
-    "title": "Handy Remote locked",
+    "title": "Remote Companion locked",
 
     "subtitle": "Authenticate to continue.",
 
     "unlock": "Unlock",
 
-    "prompt": "Authenticate to open Handy Remote"
+    "prompt": "Authenticate to open Remote Companion"
   },
 
   "diagnostics": {

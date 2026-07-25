@@ -848,7 +848,7 @@ impl TranscriptionManager {
         if self
             .app_handle
             .try_state::<Arc<AudioRecordingManager>>()
-            .is_some_and(|audio| audio.is_recording())
+            .is_some_and(|audio| audio.is_actively_capturing())
         {
             warn!("Rejecting remote stream while desktop recording is active");
             return false;

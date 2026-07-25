@@ -35,6 +35,7 @@ import { useSettingsStore } from "@/stores/settingsStore";
 import { api, apiErrorCode } from "@/api/client";
 import { uploadWithRetry, probeServerHealth } from "@/lib/connection";
 import { RemoteStreamingSession } from "@/lib/remoteStreaming";
+import { RecordingSession } from "@/lib/recordingSession";
 import * as FileSystem from "expo-file-system";
 import {
   startBackgroundRecording,
@@ -48,6 +49,7 @@ import {
 
 /** How often to rotate + upload a chunk when the active model supports streaming. */
 const STREAM_CHUNK_MS = 4000;
+const mobileRecordingSession = new RecordingSession<Audio.Recording>();
 
 export default function RecordingScreen() {
   const { t } = useTranslation();
@@ -80,6 +82,7 @@ export default function RecordingScreen() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamSessionRef = useRef<RemoteStreamingSession | null>(null);
+  const streamedChunkUrisRef = useRef<string[]>([]);
   const streamingActiveRef = useRef(false);
   const rotatingChunkRef = useRef(false);
   const startTimeRef = useRef(0);
@@ -153,12 +156,17 @@ export default function RecordingScreen() {
     if (!session || !recording) return;
     rotatingChunkRef.current = true;
     try {
-      await recording.stopAndUnloadAsync();
+      await mobileRecordingSession.stop(recording);
       const chunkUri = recording.getURI();
-      const nextRecording = await prepareAndStartRecording();
+      const nextRecording = await mobileRecordingSession.prepare(
+        prepareAndStartRecording,
+      );
       bindMetering(nextRecording);
       recordingRef.current = nextRecording;
-      if (chunkUri) await session.sendAudioFile(chunkUri);
+      if (chunkUri) {
+        streamedChunkUrisRef.current.push(chunkUri);
+        await session.sendAudioFile(chunkUri);
+      }
     } catch (streamError) {
       // Keep the recorder usable for a final durable upload if streaming drops.
       streamingActiveRef.current = false;
@@ -179,6 +187,7 @@ export default function RecordingScreen() {
       setStatus("recording");
       liveTextRef.current = "";
       setLiveText("");
+      streamedChunkUrisRef.current = [];
       // Soft health check — don't block recording start.
       if (baseUrl) void probeServerHealth(baseUrl);
       try {
@@ -198,14 +207,16 @@ export default function RecordingScreen() {
           playsInSilentModeIOS: true,
           staysActiveInBackground: true,
         });
-        const recording = await prepareAndStartRecording();
+        const recording = await mobileRecordingSession.prepare(
+          prepareAndStartRecording,
+        );
         bindMetering(recording);
         void loadDesktopFeedbackSettings(token, baseUrl ?? undefined);
         void playFeedbackSound("start");
         void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
         void activateKeepAwakeAsync("recording");
         if (cancelled) {
-          await recording.stopAndUnloadAsync();
+          await mobileRecordingSession.stop(recording);
           return;
         }
         recordingRef.current = recording;
@@ -267,7 +278,7 @@ export default function RecordingScreen() {
       const rec = recordingRef.current;
       recordingRef.current = null;
       if (rec) {
-        void rec.stopAndUnloadAsync().catch(() => undefined);
+        void mobileRecordingSession.stop(rec).catch(() => undefined);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -295,6 +306,7 @@ export default function RecordingScreen() {
       // Couldn't cleanly pause (recording likely interrupted). Drop the
       // handle so resume recreates a fresh recorder instead of failing.
       recordingRef.current = null;
+      await mobileRecordingSession.stop(rec).catch(() => undefined);
     }
   };
 
@@ -331,7 +343,7 @@ export default function RecordingScreen() {
         if (rec) {
           await rec.startAsync();
         } else {
-          rec = await prepareAndStartRecording();
+          rec = await mobileRecordingSession.prepare(prepareAndStartRecording);
           recordingRef.current = rec;
         }
         bindMetering(rec);
@@ -363,7 +375,7 @@ export default function RecordingScreen() {
       let uri: string | null = null;
       if (rec) {
         try {
-          await rec.stopAndUnloadAsync();
+          await mobileRecordingSession.stop(rec);
           uri = rec.getURI();
         } catch {
           // The recorder was interrupted (e.g. app backgrounded / screen off on
@@ -375,6 +387,10 @@ export default function RecordingScreen() {
       }
       const durationMs = elapsedMs || pausedAccumRef.current;
       const recordingId = `recording-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      const recordingUris = [
+        ...streamedChunkUrisRef.current,
+        ...(uri ? [uri] : []),
+      ];
 
       if (!token) {
         if (uri) {
@@ -390,6 +406,7 @@ export default function RecordingScreen() {
             createdAt: new Date().toISOString(),
             durationMs,
             uri,
+            uris: recordingUris,
             sizeBytes,
             status: "pending",
             recordingId,
@@ -413,6 +430,15 @@ export default function RecordingScreen() {
           const result = await streamSession.finish(postProcessEnabled);
           streamSessionRef.current = null;
           streamingActiveRef.current = false;
+          const completedUris = [...streamedChunkUrisRef.current, uri];
+          streamedChunkUrisRef.current = [];
+          void Promise.all(
+            completedUris.map((path) =>
+              FileSystem.deleteAsync(path, { idempotent: true }).catch(
+                () => undefined,
+              ),
+            ),
+          );
           const finalText = (
             result.finalText ||
             result.rawText ||
@@ -428,7 +454,7 @@ export default function RecordingScreen() {
             id: result.id,
           });
         } else if (uri) {
-          const result = await uploadWithRetry(token, uri, {
+          const result = await uploadWithRetry(token, recordingUris, {
             postProcess: postProcessEnabled,
             baseUrl: baseUrl ?? undefined,
             filename: "recording.m4a",
@@ -462,25 +488,16 @@ export default function RecordingScreen() {
         void queryClient.invalidateQueries({ queryKey: ["history"] });
         router.replace("/result");
       } catch (uploadError) {
-        // Prefer showing whatever live text we already have instead of a false "offline".
-        if (liveTextRef.current) {
-          setResult({
-            text: liveTextRef.current,
-            durationMs,
-            audioUri: uri,
-            model: activeModel?.name,
-            postProcessed: false,
-          });
-          void queryClient.invalidateQueries({ queryKey: ["history"] });
-          router.replace("/result");
-          return;
-        }
+        // A partial WebSocket preview is not a completed transcription. Showing
+        // it as one drops the server history id and makes playback/reprocess
+        // look broken. Keep the captured audio queued until the PC confirms it.
         if (uri) {
           addToOfflineQueue({
             id: `q-${Date.now()}`,
             createdAt: new Date().toISOString(),
             durationMs,
             uri,
+            uris: recordingUris,
             status: "pending",
             recordingId,
             errorCode: apiErrorCode(uploadError) ?? undefined,
@@ -520,7 +537,7 @@ export default function RecordingScreen() {
     recordingRef.current = null;
     if (rec) {
       try {
-        await rec.stopAndUnloadAsync();
+        await mobileRecordingSession.stop(rec);
       } catch {
         // ignore
       }

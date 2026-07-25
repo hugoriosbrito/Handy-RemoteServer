@@ -33,8 +33,7 @@ pub async fn create_transcription(
 > {
     let device = require_auth(&state, &headers)?;
 
-    let mut audio: Option<Vec<u8>> = None;
-    let mut filename = "upload.wav".to_string();
+    let mut audios: Vec<(String, Vec<u8>)> = Vec::new();
     let mut post_process = false;
     let mut recording_id: Option<String> = None;
 
@@ -46,9 +45,10 @@ pub async fn create_transcription(
         let name = field.name().unwrap_or("").to_string();
         match name.as_str() {
             "file" | "audio" => {
-                if let Some(fname) = field.file_name().map(|s| s.to_string()) {
-                    filename = fname;
-                }
+                let filename = field
+                    .file_name()
+                    .map(|value| value.to_string())
+                    .unwrap_or_else(|| format!("upload-{}.audio", audios.len() + 1));
                 let bytes = field
                     .bytes()
                     .await
@@ -61,13 +61,7 @@ pub async fn create_transcription(
                         "audio file is empty",
                     ));
                 }
-                if audio.replace(bytes).is_some() {
-                    return Err(json_error(
-                        StatusCode::BAD_REQUEST,
-                        "multiple_files",
-                        "final uploads must contain exactly one audio file",
-                    ));
-                }
+                audios.push((filename, bytes));
             }
             "postProcess" | "post_process" => {
                 let text = field
@@ -89,15 +83,16 @@ pub async fn create_transcription(
         }
     }
 
-    let Some(audio) = audio else {
+    if audios.is_empty() {
         return Err(json_error(
             StatusCode::BAD_REQUEST,
             "missing_file",
             "audio file is required",
         ));
-    };
+    }
 
-    if audio.len() > 25 * 1024 * 1024 {
+    let upload_bytes = audios.iter().map(|(_, bytes)| bytes.len()).sum::<usize>();
+    if upload_bytes > 25 * 1024 * 1024 {
         return Err(json_error(
             StatusCode::PAYLOAD_TOO_LARGE,
             "too_large",
@@ -107,21 +102,36 @@ pub async fn create_transcription(
 
     let recording_id =
         recording_id.unwrap_or_else(|| format!("recording_{}", crate::remote::auth::uuid_simple()));
-    let upload_bytes = audio.len();
+    let file_names = audios
+        .iter()
+        .map(|(filename, _)| filename.clone())
+        .collect::<Vec<_>>();
     let job = state
         .jobs
-        .create_or_get(&device.id, recording_id, filename.clone(), post_process);
-    let raw_path = job_audio_path(&state, &job.id, &filename);
+        .create_or_get(&device.id, recording_id, file_names, post_process);
+    if job.status != RemoteJobStatus::Queued {
+        return Ok((StatusCode::ACCEPTED, Json(job_response(job))));
+    }
+    let raw_paths = job_audio_paths(&state, &job);
 
-    if !raw_path.exists() {
-        std::fs::write(&raw_path, audio).map_err(|e| {
-            json_error(
-                StatusCode::INTERNAL_SERVER_ERROR,
-                "save_upload",
-                e.to_string(),
-            )
-        })?;
-        spawn_job(state.clone(), job.id.clone(), raw_path, post_process);
+    if raw_paths.iter().any(|path| !path.exists()) {
+        if raw_paths.len() != audios.len() {
+            return Err(json_error(
+                StatusCode::CONFLICT,
+                "idempotency_conflict",
+                "recording id was already accepted with different audio segments",
+            ));
+        }
+        for ((_, bytes), raw_path) in audios.into_iter().zip(&raw_paths) {
+            std::fs::write(raw_path, bytes).map_err(|e| {
+                json_error(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "save_upload",
+                    e.to_string(),
+                )
+            })?;
+        }
+        spawn_job(state.clone(), job.id.clone(), raw_paths, post_process);
     }
 
     info!(
@@ -138,10 +148,10 @@ pub async fn create_transcription(
 /// query the same idempotent job id while recovery is underway.
 pub(crate) fn resume_pending_jobs(state: Arc<RemoteServerState>) {
     for job in state.jobs.resumable() {
-        let raw_path = job_audio_path(&state, &job.id, &job.file_name);
-        if raw_path.exists() {
+        let raw_paths = job_audio_paths(&state, &job);
+        if raw_paths.iter().all(|path| path.exists()) {
             info!("Remote job {}: resuming after restart", job.id);
-            spawn_job(state.clone(), job.id, raw_path, job.post_process);
+            spawn_job(state.clone(), job.id, raw_paths, job.post_process);
         } else {
             state.jobs.fail(
                 &job.id,
@@ -185,27 +195,69 @@ fn job_response(job: crate::remote::jobs::RemoteJob) -> TranscriptionJobResponse
     }
 }
 
-fn job_audio_path(state: &RemoteServerState, job_id: &str, filename: &str) -> PathBuf {
-    let extension = std::path::Path::new(filename)
-        .extension()
-        .and_then(|value| value.to_str())
-        .filter(|value| value.len() <= 8 && value.chars().all(|c| c.is_ascii_alphanumeric()))
-        .unwrap_or("audio");
+fn job_audio_paths(
+    state: &RemoteServerState,
+    job: &crate::remote::jobs::RemoteJob,
+) -> Vec<PathBuf> {
+    if job.file_names.is_empty() {
+        return vec![legacy_job_audio_path(state, &job.id, &job.file_name)];
+    }
+    job.file_names
+        .clone()
+        .into_iter()
+        .enumerate()
+        .map(|(index, filename)| job_audio_path(state, &job.id, &filename, index))
+        .collect()
+}
+
+fn legacy_job_audio_path(state: &RemoteServerState, job_id: &str, filename: &str) -> PathBuf {
+    let extension = file_extension(filename);
     state
         .history
         .recordings_dir()
         .join(format!("handy-remote-job-{job_id}.{extension}"))
 }
 
-fn spawn_job(state: Arc<RemoteServerState>, job_id: String, raw_path: PathBuf, post_process: bool) {
+fn job_audio_path(
+    state: &RemoteServerState,
+    job_id: &str,
+    filename: &str,
+    index: usize,
+) -> PathBuf {
+    let extension = file_extension(filename);
+    state
+        .history
+        .recordings_dir()
+        .join(format!("handy-remote-job-{job_id}-{index}.{extension}"))
+}
+
+fn file_extension(filename: &str) -> &str {
+    std::path::Path::new(filename)
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| value.len() <= 8 && value.chars().all(|c| c.is_ascii_alphanumeric()))
+        .unwrap_or("audio")
+}
+
+fn spawn_job(
+    state: Arc<RemoteServerState>,
+    job_id: String,
+    raw_paths: Vec<PathBuf>,
+    post_process: bool,
+) {
     tauri::async_runtime::spawn(async move {
         state.jobs.set_status(&job_id, RemoteJobStatus::Decoding);
         let decode_started = std::time::Instant::now();
-        let decode_path = raw_path.clone();
+        let decode_paths = raw_paths.clone();
         let samples = match tokio::task::spawn_blocking(move || {
-            std::fs::read(decode_path).and_then(|bytes| {
-                crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(std::io::Error::other)
-            })
+            let mut samples = Vec::new();
+            for path in decode_paths {
+                let bytes = std::fs::read(path)?;
+                let decoded = crate::audio_toolkit::decode_audio_to_samples(bytes)
+                    .map_err(std::io::Error::other)?;
+                samples.extend(decoded);
+            }
+            Ok::<_, std::io::Error>(samples)
         })
         .await
         {
@@ -310,7 +362,9 @@ fn spawn_job(state: Arc<RemoteServerState>, job_id: String, raw_path: PathBuf, p
         };
         TRANSCRIPTION_CACHE.insert(response.id.clone(), response.clone());
         state.jobs.complete(&job_id, response);
-        let _ = std::fs::remove_file(raw_path);
+        for raw_path in raw_paths {
+            let _ = std::fs::remove_file(raw_path);
+        }
     });
 }
 

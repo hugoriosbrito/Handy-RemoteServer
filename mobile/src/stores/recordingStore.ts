@@ -11,6 +11,8 @@ export interface OfflineQueueItem {
   createdAt: string;
   durationMs: number;
   uri: string;
+  /** Rotated streaming segments, including `uri` as the final segment. */
+  uris?: string[];
   sizeBytes?: number;
   status: "pending" | "uploading" | "failed";
   /** Stable server idempotency key preserved across reconnects. */
@@ -145,8 +147,11 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
   removeFromOfflineQueue: (id) => {
     const item = get().offlineQueue.find((q) => q.id === id);
     if (item?.uri) {
-      void FileSystem.deleteAsync(item.uri, { idempotent: true }).catch(
-        () => undefined,
+      const paths = Array.from(new Set(item.uris?.length ? item.uris : [item.uri]));
+      void Promise.all(
+        paths.map((path) =>
+          FileSystem.deleteAsync(path, { idempotent: true }).catch(() => undefined),
+        ),
       );
     }
     const offlineQueue = get().offlineQueue.filter((q) => q.id !== id);
@@ -166,8 +171,12 @@ export const useRecordingStore = create<RecordingState>((set, get) => ({
     await Promise.all(
       expired.map((q) =>
         q.uri
-          ? FileSystem.deleteAsync(q.uri, { idempotent: true }).catch(
-              () => undefined,
+          ? Promise.all(
+              Array.from(new Set(q.uris?.length ? q.uris : [q.uri])).map((path) =>
+                FileSystem.deleteAsync(path, { idempotent: true }).catch(
+                  () => undefined,
+                ),
+              ),
             )
           : Promise.resolve(),
       ),

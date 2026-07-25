@@ -38,7 +38,7 @@
   "welcome": {
     "title": "Transcreva pelo celular",
 
-    "subtitle": "Use o Handy do seu computador para transformar voz em texto, onde estiver.",
+    "subtitle": "Use o Remote Companion do seu computador para transformar voz em texto, onde estiver.",
 
     "connectComputer": "Conectar computador"
   },
@@ -46,9 +46,9 @@
   "pair": {
     "scanTitle": "Escanear QR Code",
 
-    "scanHint": "Abra Acesso móvel no Handy e aponte a câmera.",
+    "scanHint": "Abra Acesso móvel no Remote Companion e aponte a câmera.",
 
-    "scanPoint": "Aponte para o QR do Handy",
+    "scanPoint": "Aponte para o QR do Remote Companion",
 
     "enterCode": "Digitar código",
 
@@ -64,7 +64,7 @@
 
     "cancel": "Cancelar",
 
-    "invalidQr": "QR Code inválido. Escaneie o código exibido no Handy.",
+    "invalidQr": "QR Code inválido. Escaneie o código exibido no Remote Companion.",
 
     "codeRequiresQr": "O código de 6 dígitos é para verificação no computador. Escaneie o QR Code para iniciar o pareamento.",
 
@@ -72,7 +72,7 @@
 
     "allowCamera": "Permitir câmera",
 
-    "missingQr": "Escaneie o QR Code do Handy antes de autorizar.",
+    "missingQr": "Escaneie o QR Code do Remote Companion antes de autorizar.",
 
     "claiming": "Solicitando autorização…",
 
@@ -84,7 +84,7 @@
 
     "rejected": "Pareamento recusado no computador.",
 
-    "expired": "Sessão expirada. Gere um novo QR no Handy.",
+    "expired": "Sessão expirada. Gere um novo QR no Remote Companion.",
 
     "failed": "Falha ao conectar. Tente novamente.",
 
@@ -92,7 +92,7 @@
 
     "enterCodeTitle": "Colar payload",
 
-    "enterCodeHint": "Cole o JSON do QR do Handy (ou o link handy-remote:// com payload=).",
+    "enterCodeHint": "Cole o JSON do QR do Remote Companion (ou um link de pareamento com payload=).",
 
     "manualEndpoint": "{\"version\":1,\"sessionId\":...}",
 
@@ -102,7 +102,7 @@
   "onboarding": {
     "microphoneTitle": "Permitir microfone",
 
-    "microphoneSubtitle": "O Handy precisa do microfone para gravar e enviar sua voz ao computador.",
+    "microphoneSubtitle": "O Remote Companion precisa do microfone para gravar e enviar sua voz ao computador.",
 
     "privacyNote": "Só fica ativo durante a gravação.",
 
@@ -212,7 +212,7 @@
 
     "backgroundPaused": "Pausado — a gravação não continua em segundo plano. Toque em retomar.",
 
-    "notifTitle": "Handy está gravando",
+    "notifTitle": "Remote Companion está gravando",
 
     "notifDesc": "Toque para voltar à gravação",
 
@@ -438,13 +438,13 @@
   },
 
   "biometricGate": {
-    "title": "Handy Remote bloqueado",
+    "title": "Remote Companion bloqueado",
 
     "subtitle": "Autentique-se para continuar.",
 
     "unlock": "Desbloquear",
 
-    "prompt": "Autentique-se para abrir o Handy Remote"
+    "prompt": "Autentique-se para abrir o Remote Companion"
   },
 
   "diagnostics": {

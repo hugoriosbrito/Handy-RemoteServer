@@ -3,7 +3,7 @@ import { View, Text, StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { HandyLogo } from "@/components/HandyLogo";
+import { RemoteCompanionBrand } from "@/components/RemoteCompanionBrand";
 import { Button } from "@/components/ui";
 import { spacing, typography, type ThemeColors } from "@/theme/tokens";
 import { useTheme } from "@/theme/ThemeProvider";
@@ -36,7 +36,7 @@ export default function WelcomeScreen() {
     <SafeAreaView style={styles.safe}>
       <View style={styles.container}>
         <View style={styles.hero}>
-          <HandyLogo size={110} />
+          <RemoteCompanionBrand />
           <Text style={styles.title}>{t("welcome.title")}</Text>
           <Text style={styles.subtitle}>{t("welcome.subtitle")}</Text>
         </View>
