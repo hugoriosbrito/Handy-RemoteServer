@@ -37,20 +37,10 @@ export const PairingClaimResponseSchema = z.object({
 });
 export type PairingClaimResponse = z.infer<typeof PairingClaimResponseSchema>;
 
-export const PairingApproveRequestSchema = z.object({
-  sessionId: z.string().min(1),
-  approve: z.boolean(),
-});
-export type PairingApproveRequest = z.infer<typeof PairingApproveRequestSchema>;
-
-export const PairingApproveResponseSchema = z.object({
-  status: z.string(),
-  sessionId: z.string().min(1),
-  credentials: DeviceCredentialsSchema.optional().nullable(),
-});
-export type PairingApproveResponse = z.infer<
-  typeof PairingApproveResponseSchema
->;
+// Approving a claimed session is a desktop-only operation, exposed as the
+// `approve_remote_pairing_session` Tauri command rather than an HTTP route, so
+// no approve request/response contract belongs here. Clients learn the outcome
+// from `PairingStatusResponseSchema`.
 
 export const PairingStatusResponseSchema = z.object({
   sessionId: z.string().min(1),

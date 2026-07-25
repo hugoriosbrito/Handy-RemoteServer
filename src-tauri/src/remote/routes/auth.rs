@@ -1,11 +1,12 @@
 use crate::remote::dto::{ApiError, DeviceCredentials, RefreshRequest};
-use crate::remote::routes::health::json_error;
+use crate::remote::routes::{enforce_rate_limit, health::json_error};
 use crate::remote::state::RemoteServerState;
-use axum::extract::State;
+use axum::extract::{ConnectInfo, State};
 use axum::http::{HeaderMap, StatusCode};
 use axum::Json;
 use log::{info, warn};
 use serde_json::{json, Value};
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 /// Exchange a refresh token for a rotated credential pair.
@@ -14,8 +15,12 @@ use std::sync::Arc;
 /// every upload failed with 401 while the UI still reported "connected".
 pub async fn refresh(
     State(state): State<Arc<RemoteServerState>>,
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
     Json(body): Json<RefreshRequest>,
 ) -> Result<Json<DeviceCredentials>, (StatusCode, Json<ApiError>)> {
+    // Unauthenticated by nature: a refresh token is the credential, so the route
+    // gets the same guessing budget as pairing.
+    enforce_rate_limit(&state.pairing_limiter, client.ip())?;
     match state.auth.refresh(&body.refresh_token, &state.fingerprint) {
         Ok(credentials) => {
             info!(

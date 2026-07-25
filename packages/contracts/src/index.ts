@@ -22,15 +22,11 @@ export {
 } from "./history.js";
 
 export {
-  PairingApproveRequestSchema,
-  PairingApproveResponseSchema,
   PairingClaimRequestSchema,
   PairingClaimResponseSchema,
   PairingSessionSchema,
   PairingSessionStatusSchema,
   PairingStatusResponseSchema,
-  type PairingApproveRequest,
-  type PairingApproveResponse,
   type PairingClaimRequest,
   type PairingClaimResponse,
   type PairingSession,

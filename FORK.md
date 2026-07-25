@@ -28,7 +28,7 @@ setting that is off by default.
 | Area | Divergence | Reason |
 | --- | --- | --- |
 | `src/components/UpdateChecker.tsx` | Checks fork releases, not upstream ones | The fork ships its own binaries; pointing at upstream would offer users a downgrade |
-| `src-tauri/tauri.conf.json`, `Cargo.toml` | Version `0.9.6` against upstream `0.9.4` | The fork keeps its own version line |
+| `src-tauri/tauri.conf.json`, `Cargo.toml` | Version `0.9.7` against upstream `0.9.4` | The fork keeps its own version line |
 | `.github/workflows/` | New `ci-build.yml`; `mobile/**` and `packages/**` paths in `main-build.yml` | Upstream has neither a mobile app nor workspaces to build |
 | `src-tauri/src/actions.rs` | ~399 post-processing lines extracted into `post_processing/service.rs` | The remote server has to reuse the pipeline without going through the UI path. Upstream tests still live in `actions.rs` via re-export, so no coverage was lost. **Largest source of rebase conflict** — an upstream PR candidate, since it is a behavior-neutral refactor |
 | `src/components/settings/HistorySettings.tsx` | History audio always served through a blob URL; `convertFileSrc`/`useOsType` removed | Fix for a real bug: the asset protocol served stale audio when switching between history rows. **Do not revert** without reproducing that bug first |
@@ -36,6 +36,31 @@ setting that is off by default.
 | `src-tauri/src/audio_toolkit/audio/utils.rs` | +`decode_audio_to_samples`, `wav_duration_ms` | Additive; upstream PR candidate |
 | `src-tauri/src/model_capabilities.rs` | +`"moss"` in `KNOWN_ARCHES` | Additive; upstream PR candidate |
 | `src-tauri/Cargo.toml` | +axum, tower-http, uuid, qrcode | Remote server dependencies |
+
+## Security posture
+
+The remote server is designed for a LAN or a private tunnel, and that assumption is
+load-bearing:
+
+- **Plain HTTP, no TLS.** Bearer tokens and transcription payloads cross the wire in the
+  clear. On a trusted LAN that is the intended trade-off, and over Tailscale the tunnel
+  supplies the encryption. **Do not expose the port to an untrusted network.** The
+  "allow local network" toggle, off by default, is what binds the listener to `0.0.0.0`
+  instead of loopback.
+- **Approval never travels over HTTP.** Device credentials are only minted by the desktop
+  (`approve_remote_pairing_session`), or automatically on a valid claim when the user has
+  explicitly turned "require device approval" off. There is deliberately no
+  `POST /v1/pairing/approve`; an earlier revision had one and it let any LAN client
+  approve a claimed session for itself.
+- **Tokens are stored hashed and expire.** `remote_auth_store.json` only ever holds
+  SHA-256 hashes. Access tokens carry an expiry and the phone rotates transparently
+  through `POST /v1/auth/refresh`, which also rotates the refresh token so a leaked one
+  cannot be replayed.
+- **Unauthenticated routes are rate limited** per peer address: pairing session creation,
+  claim and token refresh share a guessing budget, and the status endpoint the phone polls
+  has its own larger one.
+- **No live streaming channel.** The WebSocket preview sketch was removed rather than
+  shipped half-wired; the `ws` axum feature is off.
 
 ## What should go back upstream
 

@@ -1,20 +1,22 @@
 use crate::remote::dto::{
-    DeviceCredentials, PairingApproveRequest, PairingClaimRequest, PairingClaimResponse,
-    PairingSessionResponse, QrEndpoints,
+    PairingClaimRequest, PairingClaimResponse, PairingSessionResponse, QrEndpoints,
 };
 use crate::remote::pairing::PairingStatus;
-use crate::remote::routes::health::json_error;
+use crate::remote::routes::{enforce_rate_limit, health::json_error};
 use crate::remote::state::RemoteServerState;
 use crate::settings::get_settings;
-use axum::extract::{Path, State};
+use axum::extract::{ConnectInfo, Path, State};
 use axum::http::StatusCode;
 use axum::Json;
 use serde_json::{json, Value};
+use std::net::SocketAddr;
 use std::sync::Arc;
 
 pub async fn create_session(
     State(state): State<Arc<RemoteServerState>>,
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
 ) -> Result<Json<PairingSessionResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    enforce_rate_limit(&state.pairing_limiter, client.ip())?;
     let settings = get_settings(&state.app);
     if !settings.remote_server_enabled {
         return Err(json_error(
@@ -42,8 +44,12 @@ pub async fn create_session(
 
 pub async fn claim(
     State(state): State<Arc<RemoteServerState>>,
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
     Json(body): Json<PairingClaimRequest>,
 ) -> Result<Json<PairingClaimResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    // The claim secret is the only thing standing between a LAN client and a
+    // credential pair, so guessing attempts get a budget.
+    enforce_rate_limit(&state.pairing_limiter, client.ip())?;
     let session = state
         .pairing
         .claim(
@@ -107,60 +113,20 @@ pub async fn claim(
     }))
 }
 
-pub async fn approve(
-    State(state): State<Arc<RemoteServerState>>,
-    Json(body): Json<PairingApproveRequest>,
-) -> Result<Json<Value>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
-    let credentials: Option<DeviceCredentials> = if body.approve {
-        let session_preview = state
-            .pairing
-            .get(&body.session_id)
-            .ok_or_else(|| json_error(StatusCode::NOT_FOUND, "not_found", "session not found"))?;
-        Some(
-            state.auth.issue_device(
-                session_preview
-                    .device_name
-                    .clone()
-                    .unwrap_or_else(|| "Mobile".to_string()),
-                session_preview.device_platform.clone(),
-                &state.fingerprint,
-            ),
-        )
-    } else {
-        None
-    };
-
-    let session = state
-        .pairing
-        .approve(&body.session_id, body.approve, credentials.clone())
-        .map_err(|e| json_error(StatusCode::BAD_REQUEST, "approve_failed", e))?;
-
-    if !body.approve {
-        return Ok(Json(json!({
-            "status": "rejected",
-            "sessionId": session.session_id,
-        })));
-    }
-
-    let _ = state.app.emit(
-        "remote-pairing-approved",
-        json!({
-            "sessionId": session.session_id,
-            "deviceId": credentials.as_ref().map(|c| c.device_id.clone()),
-        }),
-    );
-
-    Ok(Json(json!({
-        "status": "approved",
-        "sessionId": session.session_id,
-        "credentials": credentials,
-    })))
-}
-
+/// Poll the outcome of a pairing session.
+///
+/// Approval itself is deliberately *not* exposed over HTTP: minting device
+/// credentials is a desktop-only decision, taken by the person in front of the
+/// computer through the `approve_remote_pairing_session` Tauri command. An HTTP
+/// approve route would let anyone who can reach the port hand themselves a
+/// credential pair for a claimed session, bypassing the "require device
+/// approval" toggle entirely.
 pub async fn session_status(
     State(state): State<Arc<RemoteServerState>>,
+    ConnectInfo(client): ConnectInfo<SocketAddr>,
     Path(id): Path<String>,
 ) -> Result<Json<Value>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    enforce_rate_limit(&state.pairing_poll_limiter, client.ip())?;
     let session = state
         .pairing
         .get(&id)

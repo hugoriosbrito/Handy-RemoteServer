@@ -3,6 +3,7 @@ use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
 use crate::remote::auth::{random_token, AuthStore};
 use crate::remote::pairing::PairingStore;
+use crate::remote::rate_limit::RateLimiter;
 use sha2::{Digest, Sha256};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -18,6 +19,10 @@ pub struct RemoteServerState {
     pub history: Arc<HistoryManager>,
     pub auth: Arc<AuthStore>,
     pub pairing: Arc<PairingStore>,
+    /// Guards the unauthenticated pairing/refresh routes against brute force.
+    pub pairing_limiter: Arc<RateLimiter>,
+    /// Separate, roomier budget for the status endpoint the phone polls.
+    pub pairing_poll_limiter: Arc<RateLimiter>,
     pub fingerprint: String,
     pub server_name: String,
     pub started_at: Instant,
@@ -43,6 +48,8 @@ impl RemoteServerState {
             models,
             history,
             pairing: Arc::new(PairingStore::new()),
+            pairing_limiter: Arc::new(RateLimiter::new()),
+            pairing_poll_limiter: Arc::new(RateLimiter::for_polling()),
             fingerprint,
             server_name,
             started_at: Instant::now(),

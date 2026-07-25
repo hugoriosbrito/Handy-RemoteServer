@@ -3,8 +3,6 @@ import {
   HealthResponseSchema,
   HistoryEntrySchema,
   HistoryListResponseSchema,
-  PairingApproveRequestSchema,
-  PairingApproveResponseSchema,
   PairingClaimRequestSchema,
   PairingClaimResponseSchema,
   PairingSessionSchema,
@@ -17,8 +15,6 @@ import {
   type HealthResponse,
   type HistoryEntry,
   type HistoryListResponse,
-  type PairingApproveRequest,
-  type PairingApproveResponse,
   type PairingClaimRequest,
   type PairingClaimResponse,
   type PairingSession,
@@ -81,18 +77,11 @@ export class RemoteApiClient {
     );
   }
 
-  async approvePairing(
-    payload: PairingApproveRequest,
-  ): Promise<PairingApproveResponse> {
-    const body = PairingApproveRequestSchema.parse(payload);
-    return this.request(
-      "POST",
-      "/v1/pairing/approve",
-      PairingApproveResponseSchema,
-      { json: body },
-    );
-  }
-
+  /**
+   * Approval is desktop-only and has no HTTP route: the person in front of the
+   * computer approves a claimed session through the Handy UI, and the phone
+   * observes the outcome by polling {@link getPairingStatus}.
+   */
   async getPairingStatus(sessionId: string): Promise<PairingStatusResponse> {
     return this.request(
       "GET",

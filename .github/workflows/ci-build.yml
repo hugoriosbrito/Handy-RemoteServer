@@ -21,7 +21,59 @@ concurrency:
 
 jobs:
   # ---------------------------------------------------------------------------
-  # Desktop (Tauri) ??? reuse the battle-tested build.yml. Unsigned so it needs no
+  # Backend unit tests. The desktop job below proves the app *builds*; nothing
+  # was running `cargo test`, so a broken remote-server invariant (auth, pairing,
+  # rate limiting, response cache) could only be caught by hand.
+  # ---------------------------------------------------------------------------
+  backend-tests:
+    name: Backend tests (cargo test)
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
+      - name: Rust cache
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: "./src-tauri -> target"
+          key: ubuntu-22.04-tests
+
+      - name: install dependencies (ubuntu 22.04)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf libasound2-dev libopenblas-dev libx11-dev libxtst-dev libxrandr-dev libgtk-layer-shell0 libgtk-layer-shell-dev
+
+      # Linux links transcribe-cpp with the `vulkan` feature (see
+      # src-tauri/Cargo.toml), so ggml-vulkan's shader generator needs the SDK
+      # even for a test build.
+      - name: Prepare Vulkan SDK
+        run: |
+          wget -qO- https://packages.lunarg.com/lunarg-signing-key-pub.asc | sudo tee /etc/apt/trusted.gpg.d/lunarg.asc
+          sudo wget -qO /etc/apt/sources.list.d/lunarg-vulkan-1.3.290-jammy.list https://packages.lunarg.com/vulkan/1.3.290/lunarg-vulkan-1.3.290-jammy.list
+          sudo apt update
+          sudo apt install vulkan-sdk -y
+
+      # Bundled as a Tauri resource, so the crate expects it to exist.
+      - name: Fetch Silero VAD model
+        run: |
+          mkdir -p src-tauri/resources/models
+          curl -fSL -o src-tauri/resources/models/silero_vad_v4.onnx https://blob.handy.computer/silero_vad_v4.onnx
+
+      - name: Check Rust formatting
+        working-directory: src-tauri
+        run: cargo fmt --check
+
+      - name: Run backend unit tests
+        working-directory: src-tauri
+        run: cargo test --lib
+
+  # ---------------------------------------------------------------------------
+  # Desktop (Tauri) — reuse the battle-tested build.yml. Unsigned so it needs no
   # signing secrets; a representative subset keeps CI time reasonable.
   # ---------------------------------------------------------------------------
   desktop:
@@ -58,7 +110,7 @@ jobs:
     secrets: inherit
 
   # ---------------------------------------------------------------------------
-  # Mobile (Expo / React Native) ??? produce an installable Android APK.
+  # Mobile (Expo / React Native) — produce an installable Android APK.
   # ---------------------------------------------------------------------------
   mobile-apk:
     name: Mobile Android APK

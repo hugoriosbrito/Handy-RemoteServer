@@ -3,6 +3,15 @@ use crate::remote::dto::{QrEndpoints, QrPayload};
 use std::collections::HashMap;
 use std::sync::Mutex;
 
+/// Grace period kept after a session expires.
+///
+/// A session reaches `Approved` moments before the phone polls
+/// `/v1/pairing/sessions/{id}` for its credentials, so dropping entries the
+/// instant they expire would occasionally lose a pairing that actually
+/// succeeded. The window is short because an expired entry may still hold the
+/// credential pair it handed over.
+const RETENTION_AFTER_EXPIRY_SECS: u64 = 60;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PairingStatus {
     Pending,
@@ -57,10 +66,13 @@ impl PairingStore {
             claimed_at: None,
             credentials: None,
         };
-        self.sessions
-            .lock()
-            .unwrap_or_else(|e| e.into_inner())
-            .insert(session_id.clone(), session.clone());
+        {
+            // Every QR code the user asks for used to leave an entry behind for
+            // the lifetime of the process, credentials included.
+            let mut sessions = self.sessions.lock().unwrap_or_else(|e| e.into_inner());
+            prune_expired(&mut sessions);
+            sessions.insert(session_id.clone(), session.clone());
+        }
 
         let qr = QrPayload {
             version: 1,
@@ -139,6 +151,21 @@ impl PairingStore {
             .get(session_id)
             .cloned()
     }
+
+    /// Number of retained sessions, expired ones included.
+    #[cfg(test)]
+    fn len(&self) -> usize {
+        self.sessions
+            .lock()
+            .unwrap_or_else(|e| e.into_inner())
+            .len()
+    }
+}
+
+/// Drop sessions whose grace period is over.
+fn prune_expired(sessions: &mut HashMap<String, PairingSession>) {
+    let cutoff = now_secs().saturating_sub(RETENTION_AFTER_EXPIRY_SECS);
+    sessions.retain(|_, session| session.expires_at >= cutoff);
 }
 
 #[cfg(test)]
@@ -309,6 +336,61 @@ mod tests {
         assert!(
             rejected.credentials.is_none(),
             "a rejected device must never receive tokens"
+        );
+    }
+
+    /// Backdate a session past its grace period, standing in for one abandoned
+    /// long ago without making the test wait.
+    fn backdate(store: &PairingStore, session_id: &str) {
+        let mut sessions = store.sessions.lock().unwrap();
+        let session = sessions.get_mut(session_id).expect("session exists");
+        session.expires_at = now_secs() - RETENTION_AFTER_EXPIRY_SECS - 1;
+    }
+
+    #[test]
+    fn creating_a_session_collects_long_expired_ones() {
+        let store = PairingStore::new();
+        let stale = new_session(&store, 300);
+        backdate(&store, &stale.session_id);
+
+        let fresh = new_session(&store, 300);
+
+        assert!(
+            store.get(&stale.session_id).is_none(),
+            "an abandoned session must not be retained forever"
+        );
+        assert!(store.get(&fresh.session_id).is_some());
+        assert_eq!(store.len(), 1);
+    }
+
+    #[test]
+    fn a_just_approved_session_survives_the_next_qr_code() {
+        let store = PairingStore::new();
+        // Barely alive: the claim/approve pair must still be accepted, and the
+        // entry must survive the prune that the next QR code triggers.
+        let session = new_session(&store, 1);
+        store
+            .claim(
+                &session.session_id,
+                &session.secret,
+                "Phone".to_string(),
+                None,
+            )
+            .expect("claim");
+        store
+            .approve(&session.session_id, true, Some(credentials()))
+            .expect("approve");
+
+        // The phone has not polled for its credentials yet, so an expired but
+        // recently approved session must still be readable.
+        new_session(&store, 300);
+
+        assert!(
+            store
+                .get(&session.session_id)
+                .and_then(|s| s.credentials)
+                .is_some(),
+            "credentials must stay available long enough for the phone to fetch them"
         );
     }
 }

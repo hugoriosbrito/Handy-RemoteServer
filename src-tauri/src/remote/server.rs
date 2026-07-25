@@ -51,7 +51,14 @@ impl RemoteServer {
         let state = self.state.clone();
         tauri::async_runtime::spawn(async move {
             info!("Handy Remote server listening on http://{}", addr);
-            let server = axum::serve(listener, app).with_graceful_shutdown(async {
+            // `into_make_service_with_connect_info` is what makes the peer
+            // address visible to the handlers, which the rate limiter on the
+            // unauthenticated pairing/refresh routes keys on.
+            let server = axum::serve(
+                listener,
+                app.into_make_service_with_connect_info::<SocketAddr>(),
+            )
+            .with_graceful_shutdown(async {
                 let _ = rx.await;
             });
             if let Err(err) = server.await {

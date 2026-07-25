@@ -59,6 +59,38 @@ extraction lost no coverage. `post_processing/service.rs` still has no tests of 
 - **`AuthStore` is testable and tested.** Persistence sits behind a `DeviceStorage`
   trait (`InMemoryStorage` for tests, `TauriStorage` for production), so the token
   logic no longer drags an `AppHandle` into the test binary.
+- **`POST /v1/pairing/approve` removed.** The route minted device credentials and
+  returned them with no authentication at all, so anyone who could reach the port and
+  learn a claimed `session_id` could hand themselves a credential pair and bypass the
+  "require device approval" toggle. Approval is now exclusively the desktop
+  `approve_remote_pairing_session` Tauri command, the path the UI already used. The
+  phone still learns the outcome by polling `GET /v1/pairing/sessions/{id}`, so the
+  mobile flow is unchanged; the unused `approvePairing` helper and the
+  `PairingApprove*` contracts were dropped along with it.
+- **Access tokens expire.** `AuthorizedDevice` carries an `accessTokenExpiresAt`,
+  refreshed on every issue and rotation, and `authorize()` rejects a token past it. The
+  field is `#[serde(default)]` and falls back to `created_at + TTL`, so a
+  `remote_auth_store.json` written by an earlier build keeps every device paired. The
+  mobile client already rotates on 401 via `uploadWithRetry`, so this is invisible in
+  normal use.
+- **Pairing sessions are collected.** `PairingStore` pruned nothing, so every QR code
+  ever generated left an entry behind, with the issued credentials inside, for the
+  lifetime of the desktop process. Creating a session now drops sessions whose expiry is
+  more than a minute old; the grace period is what keeps a just-approved session
+  readable until the phone polls for its credentials.
+- **Unauthenticated routes are rate limited.** Pairing claim, session creation and token
+  refresh are the only routes answering without a credential, which made a six digit code
+  or a refresh token guessable at whatever rate the desktop could answer. A fixed-window
+  `RateLimiter` keyed by peer address now bounds them; the status endpoint the phone
+  polls every 1.5s gets its own, roomier budget so a legitimate pairing is never cut
+  short.
+- **`ws.rs` resolved.** The streaming preview sketch was dead code: no `mod ws;`, no
+  client, no tests, and it takes the transcription engine lease. It was removed from the
+  worktree (it remains in history at commit `6d6fd16`) and the `ws` feature was dropped
+  from the axum dependency.
+- **CI runs the backend tests.** `ci-build.yml` gained a `backend-tests` job running
+  `cargo fmt --check` and `cargo test --lib` on Ubuntu 22.04, so a broken remote-server
+  invariant fails CI instead of waiting for a manual run.
 
 ## 4. Open items, ordered by risk
 
@@ -74,8 +106,14 @@ the asset protocol served stale audio when switching history rows. It is recorde
    outcomes: (a) propose the extraction as an upstream PR (it is a clean, neutral
    refactor), or (b) shrink the footprint by keeping the functions in `actions.rs` and
    making `post_processing/service.rs` a thin wrapper consumed by the remote module.
-2. **Orphan `ws.rs`**: untracked, no `mod ws;` in `routes/mod.rs`, no mobile client.
-   Commit it as WIP behind a flag, or drop it from the worktree.
+2. **No transport security.** The server speaks plain HTTP, so on a LAN every bearer
+   token and every transcription crosses the wire in the clear. This is a conscious scope
+   decision (LAN and Tailscale, where the tunnel provides the encryption) recorded in
+   `FORK.md`, not an oversight — but it is the reason this fork should not be exposed to
+   an untrusted network.
+3. **Manual E2E never executed.** Pairing → upload → transcription → history with a real
+   phone, including a desktop restart mid-flow, has never been run. Everything marked
+   resolved above is verified by unit tests and local builds only.
 
 ### P2 — quality and code standards
 
@@ -83,8 +121,9 @@ the asset protocol served stale audio when switching history rows. It is recorde
    pairing state machine, the transcription cache, the QR endpoint builder, the
    credential primitives (`hash_token`, `random_token`, `six_digit_code`) and the full
    `AuthStore` lifecycle: issue, authorize, refresh rotation, refresh replay rejection,
-   revocation and cross-restart persistence. The backend suite went from 140 to **161**
-   tests.
+   revocation, cross-restart persistence, access-token expiry and the pre-expiry store
+   upgrade path. Session collection and the rate limiter are covered too. The backend
+   suite went from 140 to **171** tests.
 
    Historical note: `AuthStore` used to own an `AppHandle`, and any test that merely
    instantiated it made the test binary abort at load time on Windows with
@@ -119,8 +158,11 @@ the asset protocol served stale audio when switching history rows. It is recorde
 
 - `cargo fmt --check`, `cargo clippy`, `cargo test --lib` (backend).
 - `bun run lint`, `bun run build`, `npx tsc --noEmit` in `mobile/`.
-- Unit tests in place: `AuthStore` (issue/refresh/rotate/revoke/persistence), pairing
-  (claim → approve → TTL expiry), transcription cache (cap/TTL).
+- `tsc --noEmit` for `packages/contracts` and `packages/api-client`.
+- Unit tests in place: `AuthStore` (issue/refresh/rotate/revoke/persistence/expiry),
+  pairing (claim → approve → TTL expiry → collection), transcription cache (cap/TTL),
+  rate limiter (budget/per-client isolation/window reset).
+- `cargo fmt --check` and `cargo test --lib` also run in CI (`backend-tests` job).
 - Manual E2E still pending: pairing → upload → transcription → history, restarting the
   desktop mid-flow to validate credential persistence.
 - Original-flow regression: global shortcut recording, post-processing and history with
@@ -136,8 +178,9 @@ the asset protocol served stale audio when switching history rows. It is recorde
 ## 8. Suggested execution order
 
 1. Decide the fate of the `actions.rs` extraction (upstream PR or thin wrapper).
-2. Resolve `ws.rs`: commit as WIP behind a flag, or remove it.
-3. Run the manual E2E pass (pairing → upload → transcription → history, with a desktop
+2. Run the manual E2E pass (pairing → upload → transcription → history, with a desktop
    restart mid-flow).
+3. Decide whether the LAN-only, plaintext-HTTP posture is acceptable for the intended
+   deployment, or whether TLS is required.
 4. Work down the i18n debt.
 5. Rebase on upstream and re-check every row of the `FORK.md` table.

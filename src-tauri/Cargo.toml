@@ -96,8 +96,11 @@ tauri-plugin-dialog = "2.6"
 hf-hub = { git = "https://github.com/cjpais/hf-hub", branch = "cancellable-downloads", features = [
   "tokio",
 ] }
-# Handy Remote in-process HTTP server
-axum = { version = "0.8", features = ["multipart", "ws"] }
+# Handy Remote in-process HTTP server. `ws` is not enabled: the streaming
+# preview channel is a WIP sketch kept in history (commit 6d6fd16), not part of
+# the shipped surface, and nothing in the desktop or mobile client speaks
+# WebSocket today.
+axum = { version = "0.8", features = ["multipart"] }
 tower-http = { version = "0.6", features = ["cors", "limit"] }
 uuid = { version = "1", features = ["v4", "serde"] }
 

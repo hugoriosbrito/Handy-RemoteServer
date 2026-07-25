@@ -14,6 +14,7 @@ use axum::response::Response;
 use axum::routing::{delete, get, post};
 use axum::Router;
 use log::{info, warn};
+use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::Instant;
 use tower_http::cors::{Any, CorsLayer};
@@ -48,6 +49,31 @@ pub(crate) fn require_auth(
         .map_err(|e| health::json_error(axum::http::StatusCode::UNAUTHORIZED, "unauthorized", e))
 }
 
+/// Charge one attempt from `client` against `limiter`.
+///
+/// Shared by the routes that answer without a credential, so the pairing and
+/// refresh endpoints cannot drift apart on how they throttle.
+pub(crate) fn enforce_rate_limit(
+    limiter: &crate::remote::rate_limit::RateLimiter,
+    client: IpAddr,
+) -> Result<
+    (),
+    (
+        axum::http::StatusCode,
+        axum::Json<crate::remote::dto::ApiError>,
+    ),
+> {
+    if limiter.check(client) {
+        return Ok(());
+    }
+    warn!("Remote: rate limited {client}");
+    Err(health::json_error(
+        axum::http::StatusCode::TOO_MANY_REQUESTS,
+        "rate_limited",
+        "Too many requests, try again shortly",
+    ))
+}
+
 /// Log every remote request with its status. Auth rejections and malformed
 /// uploads used to be returned as JSON without leaving any trace in the desktop
 /// log, which made "send fails while connected" impossible to diagnose.
@@ -79,7 +105,6 @@ pub fn router(state: Arc<RemoteServerState>) -> Router {
         .route("/v1/auth/session", get(auth::session))
         .route("/v1/pairing/sessions", post(pairing::create_session))
         .route("/v1/pairing/claim", post(pairing::claim))
-        .route("/v1/pairing/approve", post(pairing::approve))
         .route("/v1/pairing/sessions/{id}", get(pairing::session_status))
         .route("/v1/devices", get(devices::list_devices))
         .route("/v1/devices/{id}", delete(devices::revoke_device))

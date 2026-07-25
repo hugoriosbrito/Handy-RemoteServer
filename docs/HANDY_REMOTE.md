@@ -27,18 +27,24 @@ handy-remote/
 
 Rodando dentro do processo Tauri (porta padrão `8765`):
 
-| Método     | Rota                       | Auth                                  |
-| ---------- | -------------------------- | ------------------------------------- |
-| GET        | `/v1/health`               | público                               |
-| GET        | `/v1/server`               | público                               |
-| POST       | `/v1/pairing/sessions`     | desktop / local                       |
-| POST       | `/v1/pairing/claim`        | secreto do QR                         |
-| POST       | `/v1/pairing/approve`      | desktop                               |
-| GET        | `/v1/pairing/sessions/:id` | público (credenciais só após approve) |
-| GET/DELETE | `/v1/devices`              | Bearer                                |
-| POST       | `/v1/transcriptions`       | Bearer (multipart WAV)                |
-| GET        | `/v1/post-processing`      | Bearer (sem API keys)                 |
-| GET/DELETE | `/v1/history`              | Bearer                                |
+| Método     | Rota                       | Auth                                                |
+| ---------- | -------------------------- | --------------------------------------------------- |
+| GET        | `/v1/health`               | público                                             |
+| GET        | `/v1/server`               | público                                             |
+| POST       | `/v1/pairing/sessions`     | público, rate limited                               |
+| POST       | `/v1/pairing/claim`        | secreto do QR, rate limited                         |
+| GET        | `/v1/pairing/sessions/:id` | público, rate limited (credenciais só após approve) |
+| POST       | `/v1/auth/refresh`         | refresh token, rate limited                         |
+| GET        | `/v1/auth/session`         | Bearer                                              |
+| GET/DELETE | `/v1/devices`              | Bearer                                              |
+| POST       | `/v1/transcriptions`       | Bearer (multipart WAV)                              |
+| GET        | `/v1/post-processing`      | Bearer (sem API keys)                               |
+| GET/DELETE | `/v1/history`              | Bearer                                              |
+
+Aprovar um pareamento **não** é uma rota HTTP: quem aprova é o desktop, pelo comando
+Tauri `approve_remote_pairing_session`. O celular descobre o resultado consultando
+`GET /v1/pairing/sessions/:id`. Ver a seção "Security posture" em
+[FORK.md](../FORK.md).
 
 Compartilha `TranscriptionManager`, `ModelManager` e `HistoryManager` já inicializados.
 
@@ -87,7 +93,8 @@ cd mobile && bun install && bun run start
 
 - **Agora (fundação):** servidor health/pairing/upload, UI desktop, app móvel com telas, packages
 - **MVP:** pareamento QR completo + upload WAV + histórico mínimo na LAN
-- **Beta:** streaming PCM, fila offline, Tailscale
+- **Beta:** fila offline, Tailscale. Streaming PCM ao vivo foi retirado do escopo por
+  enquanto (o esboço de WebSocket vive no histórico, no commit `6d6fd16`).
 
 ## Releases
 

@@ -7,6 +7,7 @@ pub mod auth;
 pub mod cache;
 pub mod dto;
 pub mod pairing;
+pub mod rate_limit;
 mod routes;
 pub mod server;
 pub mod state;

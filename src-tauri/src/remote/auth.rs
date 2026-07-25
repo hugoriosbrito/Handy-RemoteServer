@@ -15,6 +15,14 @@ pub const REMOTE_AUTH_STORE_PATH: &str = "remote_auth_store.json";
 const DEVICES_KEY: &str = "devices";
 const FINGERPRINT_KEY: &str = "fingerprint";
 
+/// How long an issued access token stays valid.
+///
+/// A paired phone that is only used occasionally should not have to scan a QR
+/// code again, so this is generous; the mobile client rotates transparently on
+/// the first 401 using its refresh token. The point is to bound the damage of a
+/// token that leaks out of a phone's storage, not to log the user out.
+const ACCESS_TOKEN_TTL_SECS: u64 = 14 * 24 * 60 * 60;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AuthorizedDevice {
@@ -26,6 +34,26 @@ pub struct AuthorizedDevice {
     pub created_at: u64,
     pub last_seen_at: Option<u64>,
     pub revoked: bool,
+    /// Instant after which `access_token_hash` is no longer accepted.
+    ///
+    /// Optional and defaulted so a store written by an earlier build still
+    /// deserializes instead of unpairing every device on upgrade; missing
+    /// values fall back to `created_at + ACCESS_TOKEN_TTL_SECS`.
+    #[serde(default)]
+    pub access_token_expires_at: Option<u64>,
+}
+
+impl AuthorizedDevice {
+    /// Expiry of the current access token, inferring one for devices persisted
+    /// before tokens had a lifetime.
+    pub fn access_token_expiry(&self) -> u64 {
+        self.access_token_expires_at
+            .unwrap_or_else(|| self.created_at.saturating_add(ACCESS_TOKEN_TTL_SECS))
+    }
+
+    fn access_token_is_expired(&self, now: u64) -> bool {
+        now >= self.access_token_expiry()
+    }
 }
 
 /// Where the paired-device list is kept between runs.
@@ -167,6 +195,7 @@ impl AuthStore {
             created_at: now_secs(),
             last_seen_at: Some(now_secs()),
             revoked: false,
+            access_token_expires_at: Some(now_secs().saturating_add(ACCESS_TOKEN_TTL_SECS)),
         };
 
         self.access_index
@@ -224,6 +253,7 @@ impl AuthStore {
             device.access_token_hash = hash_token(&access_token);
             device.refresh_token_hash = hash_token(&new_refresh_token);
             device.last_seen_at = Some(now_secs());
+            device.access_token_expires_at = Some(now_secs().saturating_add(ACCESS_TOKEN_TTL_SECS));
             previous
         };
 
@@ -265,6 +295,11 @@ impl AuthStore {
             .ok_or_else(|| "device not found".to_string())?;
         if device.revoked {
             return Err("device revoked".to_string());
+        }
+        if device.access_token_is_expired(now_secs()) {
+            // The phone answers this by rotating with its refresh token, so the
+            // message names the remedy instead of just failing.
+            return Err("access token expired".to_string());
         }
         device.last_seen_at = Some(now_secs());
         Ok(device.clone())
@@ -584,5 +619,87 @@ mod tests {
         let again = AuthStore::with_storage(Box::new(backend));
         assert!(again.authorize(Some(&bearer(&creds.access_token))).is_err());
         assert!(again.list_devices().is_empty());
+    }
+
+    /// Rewrite the persisted devices so their access token looks expired, the
+    /// only way to reach the expiry branch without waiting two weeks.
+    fn expire_stored_access_tokens(backend: &FakeStorage) {
+        let mut devices = backend.load();
+        for device in &mut devices {
+            device.access_token_expires_at = Some(now_secs() - 1);
+        }
+        backend.save(&devices);
+    }
+
+    #[test]
+    fn issued_tokens_carry_an_expiry() {
+        let store = store();
+        let creds = store.issue_device("Phone".into(), None, FINGERPRINT);
+        let device = store
+            .authorize(Some(&bearer(&creds.access_token)))
+            .expect("a fresh token is not expired");
+
+        assert!(
+            device.access_token_expiry() > now_secs(),
+            "a freshly issued access token must expire in the future"
+        );
+    }
+
+    #[test]
+    fn an_expired_access_token_is_rejected() {
+        let backend = FakeStorage::default();
+        let creds = {
+            let store = AuthStore::with_storage(Box::new(backend.clone()));
+            store.issue_device("Phone".into(), None, FINGERPRINT)
+        };
+        expire_stored_access_tokens(&backend);
+
+        let store = AuthStore::with_storage(Box::new(backend));
+        assert!(
+            store.authorize(Some(&bearer(&creds.access_token))).is_err(),
+            "an access token past its expiry must not authorize"
+        );
+    }
+
+    #[test]
+    fn refreshing_revives_an_expired_device() {
+        let backend = FakeStorage::default();
+        let creds = {
+            let store = AuthStore::with_storage(Box::new(backend.clone()));
+            store.issue_device("Phone".into(), None, FINGERPRINT)
+        };
+        expire_stored_access_tokens(&backend);
+
+        let store = AuthStore::with_storage(Box::new(backend));
+        // Expiry must not touch the refresh token: this is exactly the path the
+        // mobile client takes when an upload comes back 401.
+        let rotated = store
+            .refresh(&creds.refresh_token, FINGERPRINT)
+            .expect("an expired access token is still refreshable");
+        assert!(store
+            .authorize(Some(&bearer(&rotated.access_token)))
+            .is_ok());
+    }
+
+    #[test]
+    fn devices_stored_without_an_expiry_keep_working() {
+        let backend = FakeStorage::default();
+        let creds = {
+            let store = AuthStore::with_storage(Box::new(backend.clone()));
+            store.issue_device("Phone".into(), None, FINGERPRINT)
+        };
+
+        // Simulate a store written before access tokens had a lifetime.
+        let mut devices = backend.load();
+        for device in &mut devices {
+            device.access_token_expires_at = None;
+        }
+        backend.save(&devices);
+
+        let store = AuthStore::with_storage(Box::new(backend));
+        assert!(
+            store.authorize(Some(&bearer(&creds.access_token))).is_ok(),
+            "upgrading Handy must not unpair devices paired by an earlier build"
+        );
     }
 }
