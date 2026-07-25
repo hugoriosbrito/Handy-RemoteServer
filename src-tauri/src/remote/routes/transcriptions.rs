@@ -106,15 +106,26 @@ pub async fn create_transcription(
         .iter()
         .map(|(filename, _)| filename.clone())
         .collect::<Vec<_>>();
-    let job = state
+    let mut job = state
         .jobs
         .create_or_get(&device.id, recording_id, file_names, post_process);
+    let retrying_failed_job = job.status == RemoteJobStatus::Failed;
+    if retrying_failed_job {
+        info!("Remote job {}: retrying a previously failed recording", job.id);
+        job = state.jobs.requeue_failed(&job.id).ok_or_else(|| {
+            json_error(
+                StatusCode::CONFLICT,
+                "job_state_changed",
+                "the transcription job changed state; retry the request",
+            )
+        })?;
+    }
     if job.status != RemoteJobStatus::Queued {
         return Ok((StatusCode::ACCEPTED, Json(job_response(job))));
     }
     let raw_paths = job_audio_paths(&state, &job);
 
-    if raw_paths.iter().any(|path| !path.exists()) {
+    if retrying_failed_job || raw_paths.iter().any(|path| !path.exists()) {
         if raw_paths.len() != audios.len() {
             return Err(json_error(
                 StatusCode::CONFLICT,

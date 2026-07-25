@@ -216,6 +216,31 @@ impl RemoteJobStore {
         self.persist();
     }
 
+    /// Start a new attempt for an accepted recording after a transient desktop
+    /// failure. Completed and still-running work deliberately remains immutable
+    /// so normal network retries cannot duplicate a history entry.
+    pub fn requeue_failed(&self, job_id: &str) -> Option<RemoteJob> {
+        let requeued = self
+            .jobs
+            .lock()
+            .unwrap_or_else(|error| error.into_inner())
+            .get_mut(job_id)
+            .and_then(|job| {
+                if job.status != RemoteJobStatus::Failed {
+                    return None;
+                }
+                job.status = RemoteJobStatus::Queued;
+                job.updated_at = now_secs();
+                job.error_code = None;
+                job.error_message = None;
+                Some(job.clone())
+            });
+        if requeued.is_some() {
+            self.persist();
+        }
+        requeued
+    }
+
     pub fn complete(&self, job_id: &str, transcription: TranscriptionResponse) {
         if let Some(job) = self
             .jobs
@@ -314,5 +339,25 @@ mod tests {
             failed.error_message.as_deref(),
             Some("could not decode audio")
         );
+    }
+
+    #[test]
+    fn failed_recording_can_be_requeued_without_changing_its_idempotency_key() {
+        let store = RemoteJobStore::new();
+        let job = store.create_or_get(
+            "device_a",
+            "recording_123",
+            vec!["audio.m4a".to_string()],
+            false,
+        );
+        store.fail(&job.id, "transcription_failed", "desktop was busy");
+
+        let retried = store
+            .requeue_failed(&job.id)
+            .expect("failed job should be requeueable");
+
+        assert_eq!(retried.id, job.id);
+        assert_eq!(retried.status, RemoteJobStatus::Queued);
+        assert!(retried.error_code.is_none());
     }
 }
