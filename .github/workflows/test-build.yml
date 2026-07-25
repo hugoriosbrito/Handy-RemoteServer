@@ -92,7 +92,7 @@ jobs:
       - name: Build unsigned Windows installers
         shell: pwsh
         run: >-
-          bun run tauri build -- --bundles nsis,msi -c
+          bun run tauri build --bundles nsis,msi -c
           '{"bundle":{"createUpdaterArtifacts":false,"windows":{"signCommand":null}}}'
 
       - name: Upload Windows test artifacts
