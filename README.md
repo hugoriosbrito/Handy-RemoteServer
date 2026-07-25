@@ -8,6 +8,12 @@ This repository explores whether Handy's local desktop transcription workflow ca
 
 For the complete record of intentional differences, extension architecture, compatibility decisions, security posture, and upstream synchronization policy, read [FORK.md](FORK.md).
 
+## Current demonstration
+
+The following recording shows the Remote Companion mobile client alongside the experimental desktop remote-session settings and pairing flow currently working in this proof of concept.
+
+![Remote Companion pairing demonstration](docs/assets/handy-remote/remote-companion-demo.gif)
+
 ## Project status
 
 This project is experimental and under active evaluation. It is **not production-ready**, and there is no supported stable public release.
