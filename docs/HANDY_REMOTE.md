@@ -101,9 +101,9 @@ cd mobile && bun install && bun run start
 Fork releases mirror upstream Handy conventions:
 
 - Tag and title: `vX.Y.Z` (same version as `src-tauri/tauri.conf.json`)
-- Desktop assets keep Tauri bundler names (`Handy_0.9.6_x64-setup.exe`, `Handy_0.9.6_amd64.deb`, etc.)
+- Desktop assets keep Tauri bundler names (`Handy_0.9.7_x64-setup.exe`, `Handy_0.9.7_amd64.deb`, etc.)
 - Release body: short casual English blurb + auto-generated `What's Changed`
 - Android APK is fork-only: `Handy_0.1.0_android.apk`
 - Current fork builds are unsigned Windows/Linux; macOS / `.sig` / `latest.json` need signing secrets from `release.yml`
 
-Latest: https://github.com/hugoriosbrito/Handy-RemoteServer/releases/tag/v0.9.6
+Latest: https://github.com/hugoriosbrito/Handy-RemoteServer/releases/tag/v0.9.7

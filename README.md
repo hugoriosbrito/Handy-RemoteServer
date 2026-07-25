@@ -1,5 +1,7 @@
 # Handy
 
+> **Fork notice.** This repository is an additive fork of [cjpais/Handy](https://github.com/cjpais/Handy). It keeps the original desktop speech-to-text flow and adds an in-process remote server plus a mobile client. See [FORK.md](FORK.md) for intentional divergences, security posture, and the upstream sync routine.
+
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?style=for-the-badge&logo=discord&logoColor=white)](https://discord.com/invite/WVBeWsNXK4)
 
 **A free, open source, and extensible speech-to-text application that works completely offline.**

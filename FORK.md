@@ -1,4 +1,4 @@
-# Handy Remote Server — divergences from upstream
+# Handy Remote Server: divergences from upstream
 
 This repository is a fork of [`cjpais/Handy`](https://github.com/cjpais/Handy).
 The stated intent is for it to be an **additive extension**: original Handy keeps
