@@ -20,7 +20,7 @@ bun run tauri dev
 # If cmake error on macOS:
 CMAKE_POLICY_VERSION_MINIMUM=3.5 bun run tauri dev
 
-# Build for production
+# Build a local evaluation bundle (not a supported distribution)
 bun run tauri build
 
 # Frontend only development
@@ -202,7 +202,7 @@ Access debug features: `Cmd+Shift+D` (macOS) or `Ctrl+Shift+D` (Windows/Linux)
 
 ## Troubleshooting
 
-See the [Troubleshooting](README.md#troubleshooting) section in README.md.
+See the [Troubleshooting](BUILD.md#troubleshooting) section in BUILD.md.
 
 ## GitHub workflow for AI coding assistants
 

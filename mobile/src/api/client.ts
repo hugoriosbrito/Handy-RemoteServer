@@ -165,10 +165,40 @@ export const TranscriptionResponseSchema = z.object({
 
 export type TranscriptionResponse = z.infer<typeof TranscriptionResponseSchema>;
 
+export const TranscriptionJobStatusSchema = z.enum([
+  "queued",
+  "decoding",
+  "transcribing",
+  "post_processing",
+  "completed",
+  "failed",
+]);
+
+export const TranscriptionJobResponseSchema = z.object({
+  id: z.string(),
+  status: TranscriptionJobStatusSchema,
+  errorCode: z.string().nullable().optional(),
+  errorMessage: z.string().nullable().optional(),
+  transcription: TranscriptionResponseSchema.nullable().optional(),
+});
+
+export type TranscriptionJobResponse = z.infer<
+  typeof TranscriptionJobResponseSchema
+>;
+
 export type PairingClaimResponse = z.infer<typeof PairingClaimResponseSchema>;
 export type DeviceCredentials = z.infer<typeof DeviceCredentialsSchema>;
 export type PairingStatus = z.infer<typeof PairingStatusSchema>;
 export type HistoryEntry = z.infer<typeof HistoryEntrySchema>;
+
+/** Stable machine-readable remote failure code, when the server supplied one. */
+export function apiErrorCode(error: unknown): string | null {
+  if (!(error instanceof ApiError) || !error.body || typeof error.body !== "object") {
+    return null;
+  }
+  const code = (error.body as { error?: unknown }).error;
+  return typeof code === "string" ? code : null;
+}
 
 /** UI-friendly transcription shape used by history/result screens. */
 export type Transcription = {
@@ -419,6 +449,7 @@ export const api = {
       preview?: boolean;
       baseUrl?: string;
       filename?: string;
+      recordingId?: string;
     },
   ) => {
     const form = new FormData();
@@ -446,6 +477,9 @@ export const api = {
     if (opts?.preview) {
       form.append("preview", "true");
     }
+    if (opts?.recordingId) {
+      form.append("recordingId", opts.recordingId);
+    }
 
     const url = `${resolveBaseUrl(opts?.baseUrl)}/v1/transcriptions`;
     let response: Response;
@@ -454,7 +488,7 @@ export const api = {
         method: "POST",
         // Audio uploads can be large / slow on the LAN — allow generous headroom.
         // Multi-file finals need even more room to decode + concatenate + transcribe.
-        timeoutMs: uris.length > 1 ? 90000 : 45000,
+        timeoutMs: uris.length > 1 ? 45000 : 30000,
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -473,8 +507,15 @@ export const api = {
       );
     }
 
-    return TranscriptionResponseSchema.parse(body);
+    return TranscriptionJobResponseSchema.parse(body);
   },
+
+  getTranscriptionJob: (token: string, id: string, baseUrl?: string) =>
+    request(
+      `/v1/transcription-jobs/${encodeURIComponent(id)}`,
+      TranscriptionJobResponseSchema,
+      { token, baseUrl, timeoutMs: 8000 },
+    ),
 
   /** Absolute URL of the stored audio for a transcription (streamed from the PC). */
   transcriptionAudioUrl: (id: string, baseUrl?: string): string =>

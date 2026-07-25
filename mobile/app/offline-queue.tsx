@@ -29,6 +29,7 @@ import {
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { probeServerHealth, uploadWithRetry } from "@/lib/connection";
+import { apiErrorCode } from "@/api/client";
 
 export default function OfflineQueueScreen() {
   const { t } = useTranslation();
@@ -71,6 +72,7 @@ export default function OfflineQueueScreen() {
         postProcess: postProcessEnabled,
         baseUrl: baseUrl ?? undefined,
         attempts: 3,
+        recordingId: item.recordingId ?? item.id,
       });
       removeFromOfflineQueue(id);
       setResult({
@@ -85,6 +87,7 @@ export default function OfflineQueueScreen() {
     } catch (e) {
       updateQueueItem(id, {
         status: "failed",
+        errorCode: apiErrorCode(e) ?? undefined,
         error: e instanceof Error ? e.message : "failed",
       });
     } finally {

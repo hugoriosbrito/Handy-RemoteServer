@@ -2,6 +2,7 @@ use crate::managers::history::HistoryManager;
 use crate::managers::model::ModelManager;
 use crate::managers::transcription::TranscriptionManager;
 use crate::remote::auth::{random_token, AuthStore};
+use crate::remote::jobs::RemoteJobStore;
 use crate::remote::pairing::PairingStore;
 use crate::remote::rate_limit::RateLimiter;
 use sha2::{Digest, Sha256};
@@ -18,6 +19,7 @@ pub struct RemoteServerState {
     pub models: Arc<ModelManager>,
     pub history: Arc<HistoryManager>,
     pub auth: Arc<AuthStore>,
+    pub jobs: Arc<RemoteJobStore>,
     pub pairing: Arc<PairingStore>,
     /// Guards the unauthenticated pairing/refresh routes against brute force.
     pub pairing_limiter: Arc<RateLimiter>,
@@ -43,6 +45,7 @@ impl RemoteServerState {
         let server_name = hostname_label();
         Self {
             auth: Arc::new(AuthStore::with_app(app.clone())),
+            jobs: Arc::new(RemoteJobStore::with_app(app.clone())),
             app,
             transcription,
             models,

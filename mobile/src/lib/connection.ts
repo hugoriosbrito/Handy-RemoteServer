@@ -1,4 +1,9 @@
-import { api, ApiError } from "@/api/client";
+import {
+  api,
+  apiErrorCode,
+  ApiError,
+  type TranscriptionResponse,
+} from "@/api/client";
 import { useConnectionStore } from "@/stores/connectionStore";
 
 /**
@@ -103,6 +108,44 @@ export async function reconnectBestEndpoint(): Promise<string | null> {
 }
 
 /** Upload with retries — transient LAN blips shouldn't dump the user to "offline". */
+const NON_RETRYABLE_CODES = new Set([
+  "invalid_audio",
+  "too_large",
+  "multiple_files",
+  "missing_file",
+  "desktop_busy",
+  "stream_unavailable",
+  "unauthorized",
+]);
+
+export function isRetryableUploadError(error: unknown): boolean {
+  if (!(error instanceof ApiError)) return true;
+  if (error.status === 0 || error.status >= 500 || error.status === 429) return true;
+  if (error.status === 401) return false;
+  return !NON_RETRYABLE_CODES.has(apiErrorCode(error) ?? "");
+}
+
+async function waitForTranscriptionJob(
+  token: string,
+  jobId: string,
+  baseUrl?: string,
+): Promise<TranscriptionResponse> {
+  const deadline = Date.now() + 10 * 60_000;
+  while (Date.now() < deadline) {
+    const job = await api.getTranscriptionJob(token, jobId, baseUrl);
+    if (job.status === "completed" && job.transcription) return job.transcription;
+    if (job.status === "failed") {
+      throw new ApiError(422, job.errorMessage ?? "Transcription failed", {
+        error: job.errorCode ?? "transcription_failed",
+      });
+    }
+    await new Promise((resolve) => setTimeout(resolve, 900));
+  }
+  throw new ApiError(504, "The desktop is still processing this recording", {
+    error: "job_timeout",
+  });
+}
+
 export async function uploadWithRetry(
   token: string,
   uriOrUris: string | string[],
@@ -113,6 +156,7 @@ export async function uploadWithRetry(
     attempts?: number;
     /** Live preview only — never write history / durable audio. */
     preview?: boolean;
+    recordingId?: string;
   } = {},
 ) {
   const attempts = opts.attempts ?? 3;
@@ -121,14 +165,15 @@ export async function uploadWithRetry(
   let refreshTried = false;
   for (let i = 0; i < attempts; i++) {
     try {
-      const result = await api.uploadTranscription(activeToken, uriOrUris, {
+      const job = await api.uploadTranscription(activeToken, uriOrUris, {
         postProcess: opts.postProcess,
         baseUrl: opts.baseUrl,
         filename: opts.filename,
         preview: opts.preview,
+        recordingId: opts.recordingId,
       });
       useConnectionStore.getState().setComputerOnline(true);
-      return result;
+      return await waitForTranscriptionJob(activeToken, job.id, opts.baseUrl);
     } catch (e) {
       lastError = e;
       // A rejected token never recovers by retrying the same request. Rotate
@@ -147,6 +192,7 @@ export async function uploadWithRetry(
         }
         throw e;
       }
+      if (!isRetryableUploadError(e)) throw e;
       if (i < attempts - 1) {
         await new Promise((r) => setTimeout(r, 700 * (i + 1)));
       }

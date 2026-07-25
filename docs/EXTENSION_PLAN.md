@@ -4,9 +4,14 @@
 > (`cjpais/Handy`). Stated goal: **keep the fork an additive extension, without
 > breaking Handy's original code or flow.**
 
+> **Distribution status:** this plan concerns an experimental proof of concept.
+> It does not authorize publishing or promoting a public release. The `v0.9.7`
+> tag is retained only as a historical development snapshot; its GitHub Release
+> was removed.
+
 ## 1. Where the fork stands today
 
-- Remotes: `origin` = `hugoriosbrito/Handy-RemoteServer`, `upstream` = `cjpais/Handy`.
+- Remotes: `origin` = `hugoriosbrito/Handy-RemoteServer-POC`, `upstream` = `cjpais/Handy`.
 - `merge-base` = `390729a`; the fork is **ahead of upstream and 0 commits behind** — in sync.
 - Diff `upstream/main...HEAD`, excluding `mobile/`: **110 files, +6603 / −477**.
 - Mobile app (`mobile/`): **65 new files, +11025** — 100% additive, zero conflict risk.
@@ -20,18 +25,18 @@ compatibility problem is concentrated in the few upstream files that were touche
 
 ## 2. Footprint in upstream files (conflict risk at the next sync)
 
-| Upstream file | Fork change | Risk |
-| --- | --- | --- |
-| `src-tauri/src/actions.rs` | −399 lines: post-processing extracted into `post_processing/service.rs` (+407) | **High** |
-| `src/components/settings/HistorySettings.tsx` | Dropped `convertFileSrc`/`useOsType`; always a blob URL now | Medium (intentional bug fix — see `FORK.md`) |
-| `src/components/UpdateChecker.tsx` | Releases point at the fork | Medium (intentional divergence) |
-| `src-tauri/Cargo.toml` | +axum, tower-http, uuid, qrcode; version 0.9.4 → 0.9.6 | Medium |
-| `.github/workflows/*` | +`ci-build.yml` (112 l.), `mobile/**` and `packages/**` paths, tweaks in `main-build.yml` | Medium |
-| `src-tauri/src/settings.rs` | +5 remote fields, all `#[serde(default)]`; `SoundTheme::as_str` became `pub` | Low |
-| `src-tauri/src/lib.rs` | `mod post_processing; mod remote;` + init + 10 commands | Low |
-| `src-tauri/src/audio_toolkit/audio/utils.rs` | +`decode_audio_to_samples`, `wav_duration_ms` | Low (additive) |
-| `src-tauri/src/model_capabilities.rs` | +`"moss"` in `KNOWN_ARCHES` | Low |
-| `src-tauri/src/commands/mod.rs` | +`pub mod remote;` | Low |
+| Upstream file                                 | Fork change                                                                                | Risk                                                                          |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| `src-tauri/src/actions.rs`                    | −399 lines: post-processing extracted into `post_processing/service.rs` (+407)             | **High**                                                                      |
+| `src/components/settings/HistorySettings.tsx` | Dropped `convertFileSrc`/`useOsType`; always a blob URL now                                | Medium (intentional bug fix — see `FORK.md`)                                  |
+| Update-checker configuration                  | Automatic updater remains upstream; manual fallback points to the former fork release page | Medium — neither path is a supported update channel for this proof of concept |
+| `src-tauri/Cargo.toml`                        | +axum, tower-http, uuid, qrcode; internal version 0.9.4 → 0.9.7                            | Medium                                                                        |
+| `.github/workflows/*`                         | +`ci-build.yml` (112 l.), `mobile/**` and `packages/**` paths, tweaks in `main-build.yml`  | Medium                                                                        |
+| `src-tauri/src/settings.rs`                   | +5 remote fields, all `#[serde(default)]`; `SoundTheme::as_str` became `pub`               | Low                                                                           |
+| `src-tauri/src/lib.rs`                        | `mod post_processing; mod remote;` + init + 10 commands                                    | Low                                                                           |
+| `src-tauri/src/audio_toolkit/audio/utils.rs`  | +`decode_audio_to_samples`, `wav_duration_ms`                                              | Low (additive)                                                                |
+| `src-tauri/src/model_capabilities.rs`         | +`"moss"` in `KNOWN_ARCHES`                                                                | Low                                                                           |
+| `src-tauri/src/commands/mod.rs`               | +`pub mod remote;`                                                                         | Low                                                                           |
 
 Positive note: the 5 post-processing unit tests that upstream keeps in `actions.rs` still
 live in `actions.rs` in the fork (via a re-export of
@@ -133,6 +138,7 @@ the asset protocol served stale audio when switching history rows. It is recorde
 
    `post_processing/service.rs` still has no tests of its own (covered indirectly through
    the re-export in `actions.rs`).
+
 4. **i18n debt**: all 24 locales carry `sidebar.mobileAccess` and the `settings.mobileAccess`
    block; only `pt` is translated — the others still hold English text. No keys are
    missing, so this is translation debt, not a bug.
@@ -173,7 +179,9 @@ the asset protocol served stale audio when switching history rows. It is recorde
 - Rewriting the mobile app or the shared packages.
 - Replacing axum with another framework.
 - Changing the upstream transcription pipeline.
-- Publishing a release — none of this requires a new tag.
+- Publishing or promoting a release — none of this requires a new tag. Historical
+  tags may remain for traceability, but GitHub Releases and public distribution
+  are out of scope.
 
 ## 8. Suggested execution order
 

@@ -48,6 +48,10 @@ impl RemoteServer {
         *self.shutdown_tx.lock().unwrap_or_else(|e| e.into_inner()) = Some(tx);
         self.state.set_running(true);
 
+        // Jobs persist independently from the listener. Resume any accepted
+        // work only once the server is available for status polling again.
+        crate::remote::routes::transcriptions::resume_pending_jobs(self.state.clone());
+
         let state = self.state.clone();
         tauri::async_runtime::spawn(async move {
             info!("Handy Remote server listening on http://{}", addr);

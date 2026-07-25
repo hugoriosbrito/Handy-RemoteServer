@@ -2,6 +2,11 @@
 
 Thank you for your interest in contributing to Handy! This guide will help you get started with contributing to this open source speech-to-text application.
 
+> This repository is an unofficial proof of concept. It has no supported public
+> release or independent distribution channel; use local source builds for
+> evaluation and follow [README.md](README.md) and [FORK.md](FORK.md) for the
+> project-status and upstream-compatibility rules.
+
 ## ⚠️ Feature Freeze
 
 **Handy is currently undergoing a feature freeze.** If you are submitting a PR which is a new feature that the community has not asked for, it will be rejected. If the community has asked for it, or you have explicitly gathered support, it may still be considered.
@@ -94,7 +99,7 @@ For more details, see the Architecture section in [README.md](README.md) or [AGE
 
 1. **Search existing issues** at [github.com/cjpais/Handy/issues](https://github.com/cjpais/Handy/issues)
 2. **Check discussions** at [github.com/cjpais/Handy/discussions](https://github.com/cjpais/Handy/discussions)
-3. **Try the latest release** to see if the issue has been fixed
+3. **Reproduce against a current local source build** to see whether the issue persists
 4. **Enable debug mode** (`Cmd/Ctrl+Shift+D`) to gather diagnostic information
 
 ### Submitting a Bug Report
@@ -273,13 +278,14 @@ In your PR description, please include:
 - Test with different audio devices
 - Try various transcription scenarios
 
-**Building for Production:**
+**Building a Local Evaluation Bundle:**
 
 ```bash
 bun run tauri build
 ```
 
-Test the production build to ensure it works as expected.
+Test the locally built bundle in an environment you control. A successful build
+does not make it a supported public release.
 
 ## 📝 Documentation Contributions
 

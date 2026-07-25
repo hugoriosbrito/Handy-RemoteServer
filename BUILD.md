@@ -1,6 +1,11 @@
 # Build Instructions
 
-This guide covers how to set up the development environment and build Handy from source across different platforms.
+This guide covers how to set up the development environment and build this
+experimental Handy extension from source across different platforms.
+
+> **Local development and evaluation only.** This proof of concept has no
+> supported public release. Bundles created with these instructions are not a
+> distribution channel and must not be presented as official Handy builds.
 
 ## Prerequisites
 
@@ -26,7 +31,7 @@ brew install onnxruntime
 ORT_LIB_LOCATION=$(brew --prefix onnxruntime)/lib ORT_PREFER_DYNAMIC_LINK=1 bun run tauri dev
 ```
 
-The same environment variables apply for production builds:
+The same environment variables apply when creating local bundles:
 
 ```bash
 ORT_LIB_LOCATION=$(brew --prefix onnxruntime)/lib ORT_PREFER_DYNAMIC_LINK=1 bun run tauri build
@@ -92,8 +97,8 @@ ORT_LIB_LOCATION=$(brew --prefix onnxruntime)/lib ORT_PREFER_DYNAMIC_LINK=1 bun 
 ### 1. Clone the Repository
 
 ```bash
-git clone git@github.com:cjpais/Handy.git
-cd Handy
+git clone https://github.com/hugoriosbrito/Handy-RemoteServer-POC.git
+cd Handy-RemoteServer-POC
 ```
 
 ### 2. Install Dependencies
@@ -108,13 +113,16 @@ bun install
 bun tauri dev
 ```
 
-### 4. Build for Production
+### 4. Build a Local Bundle
 
 ```bash
 bun run tauri build
 ```
 
-This compiles a release binary and generates platform-specific bundles (deb, rpm, AppImage on Linux; dmg on macOS; msi on Windows).
+This compiles a local binary and may generate platform-specific bundles (deb,
+rpm, AppImage on Linux; dmg on macOS; msi on Windows). These outputs are for
+technical evaluation only; do not upload, distribute, or describe them as a
+supported release.
 
 ## Linux Install (from source)
 

@@ -13,6 +13,10 @@ export interface OfflineQueueItem {
   uri: string;
   sizeBytes?: number;
   status: "pending" | "uploading" | "failed";
+  /** Stable server idempotency key preserved across reconnects. */
+  recordingId?: string;
+  /** Sanitized server failure code for support and retry UI. */
+  errorCode?: string;
   error?: string;
 }
 

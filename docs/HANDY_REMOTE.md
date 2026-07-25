@@ -1,109 +1,109 @@
-# Handy Remote — Visão de Arquitetura
+# Handy Remote: Experimental Architecture
 
-Fork do Handy que mantém o desktop original e adiciona acesso móvel remoto.
+> **Unofficial proof of concept.** This document describes an experimental
+> extension of [Handy](https://github.com/cjpais/Handy), not a supported mobile
+> product or a public distribution.
 
-## Princípio
+## Principle
 
-> O Handy desktop continua sendo o produto principal. O app móvel é uma nova interface remota para o mesmo processo, os mesmos modelos, as mesmas configurações e o mesmo histórico.
+The original Handy desktop application remains the primary workflow. The mobile
+client is an experimental remote interface to the same desktop process, local
+models, settings, and history; it does not replace the desktop application.
 
-## Estrutura
+## Structure
 
+```text
+src/                         Original desktop UI
+src-tauri/src/
+  post_processing/           Shared post-processing pipeline
+  remote/                    Experimental in-process Axum server
+mobile/                      Experimental Expo/React Native client
+packages/
+  contracts/                 Zod API schemas
+  api-client/                Typed HTTP client
+  design-tokens/             Shared design tokens
+  i18n/                      Shared translations
 ```
-handy-remote/
-├── src/                    # UI desktop original
-├── src-tauri/src/
-│   ├── post_processing/    # Pipeline LLM compartilhado
-│   └── remote/             # Servidor Axum in-process
-├── mobile/                 # App React Native + Expo
-├── packages/
-│   ├── contracts/          # Schemas Zod da API
-│   ├── api-client/         # Cliente HTTP tipado
-│   ├── design-tokens/      # Tokens do design system Handy
-│   └── i18n/               # Traduções compartilhadas
-└── docs/HANDY_REMOTE.md
-```
 
-## Servidor remoto (`src-tauri/src/remote`)
+## Remote server (`src-tauri/src/remote`)
 
-Rodando dentro do processo Tauri (porta padrão `8765`):
+The server runs inside the Tauri desktop process. Its development default port
+is `8765`.
 
-| Método     | Rota                       | Auth                                                |
-| ---------- | -------------------------- | --------------------------------------------------- |
-| GET        | `/v1/health`               | público                                             |
-| GET        | `/v1/server`               | público                                             |
-| POST       | `/v1/pairing/sessions`     | público, rate limited                               |
-| POST       | `/v1/pairing/claim`        | secreto do QR, rate limited                         |
-| GET        | `/v1/pairing/sessions/:id` | público, rate limited (credenciais só após approve) |
-| POST       | `/v1/auth/refresh`         | refresh token, rate limited                         |
-| GET        | `/v1/auth/session`         | Bearer                                              |
-| GET/DELETE | `/v1/devices`              | Bearer                                              |
-| POST       | `/v1/transcriptions`       | Bearer (multipart WAV)                              |
-| GET        | `/v1/post-processing`      | Bearer (sem API keys)                               |
-| GET/DELETE | `/v1/history`              | Bearer                                              |
+| Method           | Route                      | Access                                                               |
+| ---------------- | -------------------------- | -------------------------------------------------------------------- |
+| `GET`            | `/v1/health`               | Public                                                               |
+| `GET`            | `/v1/server`               | Public                                                               |
+| `POST`           | `/v1/pairing/sessions`     | Public, rate limited                                                 |
+| `POST`           | `/v1/pairing/claim`        | QR secret, rate limited                                              |
+| `GET`            | `/v1/pairing/sessions/:id` | Public, rate limited; credentials appear only after desktop approval |
+| `POST`           | `/v1/auth/refresh`         | Refresh token, rate limited                                          |
+| `GET`            | `/v1/auth/session`         | Bearer token                                                         |
+| `GET` / `DELETE` | `/v1/devices`              | Bearer token                                                         |
+| `POST`           | `/v1/transcriptions`       | Bearer token, multipart WAV                                          |
+| `GET`            | `/v1/post-processing`      | Bearer token; API keys are never sent to the phone                   |
+| `GET` / `DELETE` | `/v1/history`              | Bearer token                                                         |
 
-Aprovar um pareamento **não** é uma rota HTTP: quem aprova é o desktop, pelo comando
-Tauri `approve_remote_pairing_session`. O celular descobre o resultado consultando
-`GET /v1/pairing/sessions/:id`. Ver a seção "Security posture" em
-[FORK.md](../FORK.md).
+Pairing approval is not an HTTP endpoint. The desktop performs it through the
+`approve_remote_pairing_session` Tauri command, while the phone polls
+`GET /v1/pairing/sessions/:id` for the result. The server shares the initialized
+`TranscriptionManager`, `ModelManager`, and `HistoryManager` with the desktop.
 
-Compartilha `TranscriptionManager`, `ModelManager` e `HistoryManager` já inicializados.
+## Desktop settings
 
-## Desktop — Acesso móvel
+The **Mobile Access** desktop settings expose these experimental options:
 
-Nova seção na sidebar: **Mobile Access / Acesso móvel**.
-
-Configurações em `AppSettings`:
-
-- `remote_server_enabled` (default: off)
-- `remote_server_port` (8765)
+- `remote_server_enabled` (off by default)
+- `remote_server_port` (default `8765`)
 - `remote_local_network_enabled`
 - `remote_access_enabled`
 - `remote_device_approval_required`
 
-## Mobile (`mobile/`)
+Enabling the server does not make it suitable for public internet access. See
+[FORK.md](../FORK.md#security-posture) before testing a connection.
 
-Expo Router + TypeScript, telas alinhadas ao design Handy (rosa `#da5893` / `#faa2ca`):
+## Mobile client (`mobile/`)
 
-1. Boas-vindas
-2. Escanear QR
-3. Confirmar conexão
-4. Permissão de microfone
-5. Gravação / Reconexão
-6. Resultado
-7. Histórico / Computadores / Fila offline / Ajustes
+The companion client uses Expo Router and TypeScript. Its proof-of-concept flow
+covers onboarding, QR scanning, desktop approval, microphone permission,
+recording, reconnecting, results, history, paired computers, offline queueing,
+and settings.
 
-## Pós-processamento
+## Post-processing
 
-Extraído de `actions.rs` para `src-tauri/src/post_processing/`. Desktop e remote usam `process_transcription_output`. Chaves de API **nunca** são enviadas ao celular.
+Post-processing was extracted from `actions.rs` into
+`src-tauri/src/post_processing/`. Desktop and remote paths share
+`process_transcription_output`; provider API keys remain on the desktop.
 
-## Como testar
+## Local evaluation
 
 ```bash
 # Desktop
 bun install
 bun run tauri dev
-# Em Configurações → Acesso móvel → ativar servidor
-# curl http://127.0.0.1:8765/v1/health
 
-# Mobile
-cd mobile && bun install && bun run start
+# Enable Mobile Access in Settings, then verify the loopback listener
+curl http://127.0.0.1:8765/v1/health
+
+# Mobile, in a second terminal
+cd mobile
+bun install
+bun run start
 ```
 
-## Fases
+Use only devices and networks you control. The transport is plain HTTP and no
+TLS is provided by this extension.
 
-- **Agora (fundação):** servidor health/pairing/upload, UI desktop, app móvel com telas, packages
-- **MVP:** pareamento QR completo + upload WAV + histórico mínimo na LAN
-- **Beta:** fila offline, Tailscale. Streaming PCM ao vivo foi retirado do escopo por
-  enquanto (o esboço de WebSocket vive no histórico, no commit `6d6fd16`).
+## Versioning and distribution
 
-## Releases
+The application metadata currently uses version `0.9.7`. This is an internal
+development identifier, not a supported public release. The `v0.9.7` tag is
+kept for historical traceability, while its GitHub Release was removed.
 
-Fork releases mirror upstream Handy conventions:
+No GitHub Release, updater feed, signed package, or public download is
+supported for this proof of concept. The repository contains release automation
+from earlier development work, but it must not be dispatched or treated as
+authorization to distribute artifacts.
 
-- Tag and title: `vX.Y.Z` (same version as `src-tauri/tauri.conf.json`)
-- Desktop assets keep Tauri bundler names (`Handy_0.9.7_x64-setup.exe`, `Handy_0.9.7_amd64.deb`, etc.)
-- Release body: short casual English blurb + auto-generated `What's Changed`
-- Android APK is fork-only: `Handy_0.1.0_android.apk`
-- Current fork builds are unsigned Windows/Linux; macOS / `.sig` / `latest.json` need signing secrets from `release.yml`
-
-Latest: https://github.com/hugoriosbrito/Handy-RemoteServer/releases/tag/v0.9.7
+For the complete compatibility, security, and upstream-sync rules, see
+[FORK.md](../FORK.md).

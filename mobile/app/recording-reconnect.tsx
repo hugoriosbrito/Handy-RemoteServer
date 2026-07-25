@@ -12,6 +12,7 @@ import { useConnectionStore } from "@/stores/connectionStore";
 import { useRecordingStore } from "@/stores/recordingStore";
 import { useSettingsStore } from "@/stores/settingsStore";
 import { probeServerHealth, uploadWithRetry } from "@/lib/connection";
+import { apiErrorCode } from "@/api/client";
 
 type FailReason = "offline" | "upload";
 
@@ -83,6 +84,7 @@ export default function RecordingReconnectScreen() {
           postProcess: postProcessEnabled,
           baseUrl: baseUrl ?? undefined,
           attempts: 3,
+          recordingId: pending.recordingId ?? pending.id,
         });
         if (cancelled) return;
         removeFromOfflineQueue(pending.id);
@@ -97,9 +99,13 @@ export default function RecordingReconnectScreen() {
         void queryClient.invalidateQueries({ queryKey: ["history"] });
         setReconnecting(false);
         router.replace("/result");
-      } catch {
+      } catch (error) {
         if (cancelled) return;
-        updateQueueItem(pending.id, { status: "failed" });
+        updateQueueItem(pending.id, {
+          status: "failed",
+          errorCode: apiErrorCode(error) ?? undefined,
+          error: error instanceof Error ? error.message : undefined,
+        });
         const stillOnline = await probeServerHealth(baseUrl);
         setFailReason(stillOnline ? "upload" : "offline");
         setFailed(true);

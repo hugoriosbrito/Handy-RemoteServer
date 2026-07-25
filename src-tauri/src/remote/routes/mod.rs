@@ -5,7 +5,8 @@ mod history;
 mod models;
 mod pairing;
 mod post_processing;
-mod transcriptions;
+mod streaming;
+pub(crate) mod transcriptions;
 
 use crate::remote::state::RemoteServerState;
 use axum::extract::Request;
@@ -80,14 +81,18 @@ pub(crate) fn enforce_rate_limit(
 async fn log_requests(req: Request, next: Next) -> Response {
     let method = req.method().clone();
     let path = req.uri().path().to_string();
+    let request_id = crate::remote::auth::uuid_simple();
     let started = Instant::now();
-    let response = next.run(req).await;
+    let mut response = next.run(req).await;
     let status = response.status();
     let elapsed_ms = started.elapsed().as_millis();
     if status.is_client_error() || status.is_server_error() {
-        warn!("Remote {method} {path} -> {status} ({elapsed_ms} ms)");
+        warn!("Remote request={request_id} {method} {path} -> {status} ({elapsed_ms} ms)");
     } else {
-        info!("Remote {method} {path} -> {status} ({elapsed_ms} ms)");
+        info!("Remote request={request_id} {method} {path} -> {status} ({elapsed_ms} ms)");
+    }
+    if let Ok(value) = axum::http::HeaderValue::from_str(&request_id) {
+        response.headers_mut().insert("x-request-id", value);
     }
     response
 }
@@ -117,6 +122,10 @@ pub fn router(state: Arc<RemoteServerState>) -> Router {
             get(transcriptions::get_transcription),
         )
         .route(
+            "/v1/transcription-jobs/{id}",
+            get(transcriptions::get_transcription_job),
+        )
+        .route(
             "/v1/transcriptions/{id}/audio",
             get(transcriptions::get_transcription_audio),
         )
@@ -131,6 +140,7 @@ pub fn router(state: Arc<RemoteServerState>) -> Router {
         .route("/v1/models", get(models::list_models))
         .route("/v1/models/select", post(models::select_model))
         .route("/v1/post-processing", get(post_processing::get_info))
+        .route("/v1/stream", get(streaming::upgrade))
         .route(
             "/v1/post-processing/select-prompt",
             post(post_processing::select_prompt),

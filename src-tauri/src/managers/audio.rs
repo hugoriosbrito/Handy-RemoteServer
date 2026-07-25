@@ -295,7 +295,7 @@ fn create_audio_recorder(
         .with_audio_callback({
             let router = stream_router;
             move |frame| {
-                router.feed(frame);
+                router.feed_desktop(frame);
             }
         });
 

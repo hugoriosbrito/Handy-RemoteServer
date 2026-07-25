@@ -1,3 +1,4 @@
+use crate::remote::jobs::RemoteJobStatus;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 
@@ -109,7 +110,7 @@ pub struct PairingApproveResult {
     pub credentials: Option<DeviceCredentials>,
 }
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TranscriptionResponse {
     pub id: String,
@@ -119,6 +120,16 @@ pub struct TranscriptionResponse {
     pub prompt_name: Option<String>,
     pub model: Option<String>,
     pub duration_ms: u64,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TranscriptionJobResponse {
+    pub id: String,
+    pub status: RemoteJobStatus,
+    pub error_code: Option<String>,
+    pub error_message: Option<String>,
+    pub transcription: Option<TranscriptionResponse>,
 }
 
 #[derive(Debug, Clone, Serialize)]

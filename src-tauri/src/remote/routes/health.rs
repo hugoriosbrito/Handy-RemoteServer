@@ -26,7 +26,7 @@ pub async fn server_info(State(state): State<Arc<RemoteServerState>>) -> Json<Se
             transcription: true,
             post_processing: settings.post_process_enabled,
             history: true,
-            streaming: false,
+            streaming: true,
         },
     })
 }

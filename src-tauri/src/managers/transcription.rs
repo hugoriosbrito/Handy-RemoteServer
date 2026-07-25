@@ -16,6 +16,7 @@ use std::thread;
 use std::time::{Duration, Instant, SystemTime};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_specta::Event;
+use tokio::sync::broadcast;
 use transcribe_cpp::{
     Backend, Feature, Model, ModelOptions, RunExtension, RunOptions, Session, StreamOptions, Task,
     WhisperRunOptions,
@@ -115,6 +116,16 @@ pub struct StreamRouter {
     /// True while a stream is pending or active (channel is open). The audio
     /// callback checks this first to avoid the mutex lock when no stream runs.
     open: Arc<AtomicBool>,
+    /// Input source for the active stream. Keeping desktop and remote frames
+    /// separate prevents a phone session from receiving microphone samples.
+    owner: Arc<std::sync::atomic::AtomicU64>,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+enum StreamOwner {
+    None = 0,
+    Desktop = 1,
+    Remote = 2,
 }
 
 impl StreamRouter {
@@ -122,16 +133,18 @@ impl StreamRouter {
         Self {
             tx: Mutex::new(None),
             open: Arc::new(AtomicBool::new(false)),
+            owner: Arc::new(std::sync::atomic::AtomicU64::new(StreamOwner::None as u64)),
         }
     }
 
     /// Open a fresh command channel for a new streaming session, returning the
     /// receiver the worker should drain. Caller must ensure no prior channel is
     /// still open.
-    fn open(&self) -> mpsc::Receiver<StreamCmd> {
+    fn open(&self, owner: StreamOwner) -> mpsc::Receiver<StreamCmd> {
         let (tx, rx) = mpsc::channel::<StreamCmd>();
         *self.tx.lock().unwrap() = Some(tx);
         self.open.store(true, Ordering::Relaxed);
+        self.owner.store(owner as u64, Ordering::Release);
         rx
     }
 
@@ -139,6 +152,8 @@ impl StreamRouter {
     /// sender so the caller can send the final `Finalize`/`Cancel` command.
     fn take(&self) -> Option<mpsc::Sender<StreamCmd>> {
         self.open.store(false, Ordering::Relaxed);
+        self.owner
+            .store(StreamOwner::None as u64, Ordering::Release);
         self.tx.lock().unwrap().take()
     }
 
@@ -146,17 +161,38 @@ impl StreamRouter {
     /// when the worker exits without a finalize/cancel handshake).
     fn clear(&self) {
         self.open.store(false, Ordering::Relaxed);
+        self.owner
+            .store(StreamOwner::None as u64, Ordering::Release);
         *self.tx.lock().unwrap() = None;
     }
 
     /// Forward a 16 kHz frame to the active streaming worker. Cheap no-op (a
     /// single relaxed atomic load) when no stream is pending.
-    pub fn feed(&self, frame: &[f32]) {
-        if !self.open.load(Ordering::Relaxed) {
+    fn feed_for(&self, owner: StreamOwner, frame: &[f32]) {
+        if !self.open.load(Ordering::Relaxed) || self.owner.load(Ordering::Acquire) != owner as u64
+        {
             return;
         }
         if let Some(tx) = self.tx.lock().unwrap().as_ref() {
             let _ = tx.send(StreamCmd::Feed(frame.to_vec()));
+        }
+    }
+
+    /// Forward one captured desktop frame only when desktop owns the stream.
+    pub fn feed_desktop(&self, frame: &[f32]) {
+        self.feed_for(StreamOwner::Desktop, frame);
+    }
+
+    /// Forward one decoded remote frame only when a phone owns the stream.
+    pub fn feed_remote(&self, frame: &[f32]) {
+        self.feed_for(StreamOwner::Remote, frame);
+    }
+
+    fn owner(&self) -> StreamOwner {
+        match self.owner.load(Ordering::Acquire) {
+            1 => StreamOwner::Desktop,
+            2 => StreamOwner::Remote,
+            _ => StreamOwner::None,
         }
     }
 
@@ -267,10 +303,14 @@ pub struct TranscriptionManager {
     /// `is_model_loaded()` consults this so the model still reports "loaded"
     /// while the worker holds it.
     active_engine_lease: Arc<AtomicU64>,
+    /// Incremental stream text for the paired mobile client. Desktop overlay
+    /// events continue to be emitted independently through Tauri.
+    stream_updates: broadcast::Sender<StreamTextEvent>,
 }
 
 impl TranscriptionManager {
     pub fn new(app_handle: &AppHandle, model_manager: Arc<ModelManager>) -> Result<Self> {
+        let (stream_updates, _) = broadcast::channel(32);
         let manager = Self {
             engine: Arc::new(Mutex::new(None)),
             model_manager,
@@ -287,6 +327,7 @@ impl TranscriptionManager {
             next_stream_worker_id: Arc::new(AtomicU64::new(1)),
             active_stream_worker: Arc::new(AtomicU64::new(0)),
             active_engine_lease: Arc::new(AtomicU64::new(0)),
+            stream_updates,
         };
 
         // Start the idle watcher
@@ -776,9 +817,54 @@ impl TranscriptionManager {
     /// `None` so the caller falls back to batch transcription. Frames sent
     /// before the stream begins queue on the channel and are not lost.
     pub fn start_stream(&self) {
+        // The desktop remains authoritative. A remote stream is cancelled
+        // before local microphone frames are allowed to start a new session.
+        if self.router.owner() == StreamOwner::Remote {
+            self.cancel_stream();
+            let manager = self.clone();
+            thread::spawn(move || {
+                // The remote worker owns the engine until it observes Cancel.
+                // Wait briefly for that hand-off instead of ever routing desktop
+                // microphone frames into the remote session.
+                for _ in 0..50 {
+                    if manager.active_stream_worker.load(Ordering::Acquire) == 0 {
+                        let _ = manager.start_stream_for(StreamOwner::Desktop);
+                        return;
+                    }
+                    thread::sleep(Duration::from_millis(10));
+                }
+                warn!(
+                    "Desktop streaming could not acquire the engine after cancelling remote input"
+                );
+            });
+            return;
+        }
+        let _ = self.start_stream_for(StreamOwner::Desktop);
+    }
+
+    /// Start an exclusive remote stream. Returns false instead of silently
+    /// sharing the model engine with desktop transcription.
+    pub fn start_remote_stream(&self) -> bool {
+        if self
+            .app_handle
+            .try_state::<Arc<AudioRecordingManager>>()
+            .is_some_and(|audio| audio.is_recording())
+        {
+            warn!("Rejecting remote stream while desktop recording is active");
+            return false;
+        }
+        self.start_stream_for(StreamOwner::Remote)
+    }
+
+    /// Whether the active streaming worker belongs to a remote client.
+    pub fn is_remote_streaming(&self) -> bool {
+        self.router.owner() == StreamOwner::Remote && self.router.is_open()
+    }
+
+    fn start_stream_for(&self, owner: StreamOwner) -> bool {
         if self.router.is_open() || self.active_stream_worker.load(Ordering::Acquire) != 0 {
             warn!("start_stream called while a stream worker is already active");
-            return;
+            return false;
         }
         let worker_id = self.next_stream_worker_id.fetch_add(1, Ordering::Relaxed);
         if self
@@ -787,13 +873,20 @@ impl TranscriptionManager {
             .is_err()
         {
             warn!("start_stream lost a race with another stream worker");
-            return;
+            return false;
         }
-        let rx = self.router.open();
+        let rx = self.router.open(owner);
         self.stream_active.store(false, Ordering::Release);
 
         let manager = self.clone();
         thread::spawn(move || manager.run_stream_worker(rx, worker_id));
+        true
+    }
+
+    /// Subscribe to incremental text emitted by the active stream. The remote
+    /// WebSocket subscribes only after it has successfully acquired a session.
+    pub fn subscribe_stream_updates(&self) -> broadcast::Receiver<StreamTextEvent> {
+        self.stream_updates.subscribe()
     }
 
     fn run_stream_worker(&self, rx: mpsc::Receiver<StreamCmd>, worker_id: u64) {
@@ -1102,11 +1195,12 @@ impl TranscriptionManager {
     }
 
     fn emit_stream_text(&self, committed: &str, tentative: &str) {
-        let _ = StreamTextEvent {
+        let event = StreamTextEvent {
             committed: committed.to_string(),
             tentative: tentative.to_string(),
-        }
-        .emit(&self.app_handle);
+        };
+        let _ = event.clone().emit(&self.app_handle);
+        let _ = self.stream_updates.send(event);
     }
 
     pub fn transcribe(&self, audio: Vec<f32>) -> Result<String> {

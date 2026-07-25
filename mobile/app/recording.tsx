@@ -32,8 +32,9 @@ import { useTheme } from "@/theme/ThemeProvider";
 import { useRecordingStore, formatDuration } from "@/stores/recordingStore";
 import { useConnectionStore } from "@/stores/connectionStore";
 import { useSettingsStore } from "@/stores/settingsStore";
-import { api } from "@/api/client";
+import { api, apiErrorCode } from "@/api/client";
 import { uploadWithRetry, probeServerHealth } from "@/lib/connection";
+import { RemoteStreamingSession } from "@/lib/remoteStreaming";
 import * as FileSystem from "expo-file-system";
 import {
   startBackgroundRecording,
@@ -77,6 +78,10 @@ export default function RecordingScreen() {
 
   const recordingRef = useRef<Audio.Recording | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamSessionRef = useRef<RemoteStreamingSession | null>(null);
+  const streamingActiveRef = useRef(false);
+  const rotatingChunkRef = useRef(false);
   const startTimeRef = useRef(0);
   const pausedAccumRef = useRef(0);
   const liveTextRef = useRef("");
@@ -93,6 +98,13 @@ export default function RecordingScreen() {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
+    }
+  };
+
+  const clearStreamingTimer = () => {
+    if (streamIntervalRef.current) {
+      clearInterval(streamIntervalRef.current);
+      streamIntervalRef.current = null;
     }
   };
 
@@ -128,14 +140,33 @@ export default function RecordingScreen() {
     }
   };
 
-  const appendLiveText = (chunk: string) => {
-    const next = chunk.trim();
-    if (!next) return;
-    const combined = liveTextRef.current
-      ? `${liveTextRef.current} ${next}`.replace(/\s+/g, " ").trim()
-      : next;
+  const setLivePreview = (committed: string, tentative: string) => {
+    const combined = `${committed} ${tentative}`.replace(/\s+/g, " ").trim();
     liveTextRef.current = combined;
     setLiveText(combined);
+  };
+
+  const rotateStreamingChunk = async () => {
+    if (rotatingChunkRef.current || !streamingActiveRef.current) return;
+    const session = streamSessionRef.current;
+    const recording = recordingRef.current;
+    if (!session || !recording) return;
+    rotatingChunkRef.current = true;
+    try {
+      await recording.stopAndUnloadAsync();
+      const chunkUri = recording.getURI();
+      const nextRecording = await prepareAndStartRecording();
+      bindMetering(nextRecording);
+      recordingRef.current = nextRecording;
+      if (chunkUri) await session.sendAudioFile(chunkUri);
+    } catch (streamError) {
+      // Keep the recorder usable for a final durable upload if streaming drops.
+      streamingActiveRef.current = false;
+      clearStreamingTimer();
+      setError(streamError instanceof Error ? streamError.message : t("recording.uploadFailed"));
+    } finally {
+      rotatingChunkRef.current = false;
+    }
   };
 
   // Remember this URI for the final concatenated upload. Preview uploads never
@@ -181,6 +212,33 @@ export default function RecordingScreen() {
         startTimeRef.current = Date.now();
         pausedAccumRef.current = 0;
         startTimer();
+        if (streamingEnabled && token && baseUrl) {
+          const session = new RemoteStreamingSession(token, baseUrl, {
+            onPartial: setLivePreview,
+            onError: (code, message) => {
+              streamingActiveRef.current = false;
+              clearStreamingTimer();
+              setError(`${code}: ${message}`);
+            },
+          });
+          try {
+            await session.connect();
+            if (cancelled) {
+              session.cancel();
+            } else {
+              streamSessionRef.current = session;
+              streamingActiveRef.current = true;
+              clearStreamingTimer();
+              streamIntervalRef.current = setInterval(() => {
+                void rotateStreamingChunk();
+              }, STREAM_CHUNK_MS);
+            }
+          } catch {
+            // The advertised capability may be stale or the desktop may be
+            // busy. Keep the continuous recording and use the durable job path.
+            session.close();
+          }
+        }
         // Keep capturing with the screen off / app backgrounded (Android needs a
         // foreground service + notification permission; iOS uses UIBackgroundModes).
         const bgOk = await startBackgroundRecording(
@@ -201,6 +259,10 @@ export default function RecordingScreen() {
     return () => {
       cancelled = true;
       clearTimer();
+      clearStreamingTimer();
+      streamSessionRef.current?.cancel();
+      streamSessionRef.current = null;
+      streamingActiveRef.current = false;
       void stopBackgroundRecording();
       const rec = recordingRef.current;
       recordingRef.current = null;
@@ -288,6 +350,7 @@ export default function RecordingScreen() {
     if (finishingRef.current) return;
     finishingRef.current = true;
     clearTimer();
+    clearStreamingTimer();
     setStatus("processing");
     void playFeedbackSound("stop");
     void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -311,6 +374,7 @@ export default function RecordingScreen() {
         }
       }
       const durationMs = elapsedMs || pausedAccumRef.current;
+      const recordingId = `recording-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
 
       if (!token) {
         if (uri) {
@@ -328,6 +392,7 @@ export default function RecordingScreen() {
             uri,
             sizeBytes,
             status: "pending",
+            recordingId,
           });
         }
         setResult({
@@ -342,12 +407,33 @@ export default function RecordingScreen() {
       // Final upload is one continuous recording — never a stitch of preview chunks.
 
       try {
-        if (uri) {
+        const streamSession = streamSessionRef.current;
+        if (uri && streamingActiveRef.current && streamSession) {
+          await streamSession.sendAudioFile(uri);
+          const result = await streamSession.finish(postProcessEnabled);
+          streamSessionRef.current = null;
+          streamingActiveRef.current = false;
+          const finalText = (
+            result.finalText ||
+            result.rawText ||
+            liveTextRef.current ||
+            ""
+          ).trim();
+          setResult({
+            text: finalText,
+            durationMs,
+            audioUri: uri,
+            model: result.model ?? activeModel?.name,
+            postProcessed: result.postProcessed,
+            id: result.id,
+          });
+        } else if (uri) {
           const result = await uploadWithRetry(token, uri, {
             postProcess: postProcessEnabled,
             baseUrl: baseUrl ?? undefined,
             filename: "recording.m4a",
             attempts: 3,
+            recordingId,
           });
           const finalText = (
             result.finalText ||
@@ -375,7 +461,7 @@ export default function RecordingScreen() {
         }
         void queryClient.invalidateQueries({ queryKey: ["history"] });
         router.replace("/result");
-      } catch {
+      } catch (uploadError) {
         // Prefer showing whatever live text we already have instead of a false "offline".
         if (liveTextRef.current) {
           setResult({
@@ -396,6 +482,9 @@ export default function RecordingScreen() {
             durationMs,
             uri,
             status: "pending",
+            recordingId,
+            errorCode: apiErrorCode(uploadError) ?? undefined,
+            error: uploadError instanceof Error ? uploadError.message : undefined,
           });
           router.replace("/recording-reconnect");
           return;
@@ -422,7 +511,11 @@ export default function RecordingScreen() {
   const handleCancelConfirmed = async () => {
     setCancelConfirmOpen(false);
     clearTimer();
+    clearStreamingTimer();
     finishingRef.current = true;
+    streamSessionRef.current?.cancel();
+    streamSessionRef.current = null;
+    streamingActiveRef.current = false;
     const rec = recordingRef.current;
     recordingRef.current = null;
     if (rec) {

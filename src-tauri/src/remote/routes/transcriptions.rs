@@ -1,7 +1,9 @@
 use crate::audio_toolkit::wav_duration_ms;
 use crate::post_processing::process_transcription_output;
 use crate::remote::cache::BoundedCache;
+use crate::remote::dto::TranscriptionJobResponse;
 use crate::remote::dto::TranscriptionResponse;
+use crate::remote::jobs::RemoteJobStatus;
 use crate::remote::routes::health::json_error;
 use crate::remote::routes::require_auth;
 use crate::remote::state::RemoteServerState;
@@ -12,6 +14,7 @@ use axum::response::{IntoResponse, Response};
 use axum::Json;
 use log::{error, info};
 use once_cell::sync::Lazy;
+use std::path::PathBuf;
 use std::sync::Arc;
 
 /// Freshly produced responses, kept only until history can answer for them.
@@ -24,15 +27,16 @@ pub async fn create_transcription(
     State(state): State<Arc<RemoteServerState>>,
     headers: HeaderMap,
     mut multipart: Multipart,
-) -> Result<Json<TranscriptionResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+) -> Result<
+    (StatusCode, Json<TranscriptionJobResponse>),
+    (StatusCode, Json<crate::remote::dto::ApiError>),
+> {
     let device = require_auth(&state, &headers)?;
 
-    // Live preview chunks and the final recording can arrive as one or many
-    // multipart audio parts. Preview uploads must never write history.
-    let mut audio_parts: Vec<Vec<u8>> = Vec::new();
+    let mut audio: Option<Vec<u8>> = None;
     let mut filename = "upload.wav".to_string();
     let mut post_process = false;
-    let mut preview = false;
+    let mut recording_id: Option<String> = None;
 
     while let Some(field) = multipart
         .next_field()
@@ -50,8 +54,19 @@ pub async fn create_transcription(
                     .await
                     .map_err(|e| json_error(StatusCode::BAD_REQUEST, "read_file", e.to_string()))?
                     .to_vec();
-                if !bytes.is_empty() {
-                    audio_parts.push(bytes);
+                if bytes.is_empty() {
+                    return Err(json_error(
+                        StatusCode::BAD_REQUEST,
+                        "invalid_audio",
+                        "audio file is empty",
+                    ));
+                }
+                if audio.replace(bytes).is_some() {
+                    return Err(json_error(
+                        StatusCode::BAD_REQUEST,
+                        "multiple_files",
+                        "final uploads must contain exactly one audio file",
+                    ));
                 }
             }
             "postProcess" | "post_process" => {
@@ -61,28 +76,28 @@ pub async fn create_transcription(
                     .map_err(|e| json_error(StatusCode::BAD_REQUEST, "field", e.to_string()))?;
                 post_process = matches!(text.as_str(), "1" | "true" | "True" | "yes");
             }
-            "preview" => {
+            "recordingId" | "recording_id" => {
                 let text = field
                     .text()
                     .await
                     .map_err(|e| json_error(StatusCode::BAD_REQUEST, "field", e.to_string()))?;
-                preview = matches!(text.as_str(), "1" | "true" | "True" | "yes");
+                if !text.trim().is_empty() {
+                    recording_id = Some(text);
+                }
             }
             _ => {}
         }
     }
 
-    let _ = &filename;
-    if audio_parts.is_empty() {
+    let Some(audio) = audio else {
         return Err(json_error(
             StatusCode::BAD_REQUEST,
             "missing_file",
             "audio file is required",
         ));
-    }
+    };
 
-    let total_bytes: usize = audio_parts.iter().map(|p| p.len()).sum();
-    if total_bytes > 25 * 1024 * 1024 {
+    if audio.len() > 25 * 1024 * 1024 {
         return Err(json_error(
             StatusCode::PAYLOAD_TOO_LARGE,
             "too_large",
@@ -90,111 +105,213 @@ pub async fn create_transcription(
         ));
     }
 
-    // Decode each uploaded fragment and stitch them into one PCM stream. Live
-    // preview rotates m4a chunks; the final upload reuses those same files so
-    // history/reprocess get the full session rather than the last 4s fragment.
-    let mut samples: Vec<f32> = Vec::new();
-    for (idx, bytes) in audio_parts.into_iter().enumerate() {
-        let part = crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(|e| {
-            json_error(
-                StatusCode::BAD_REQUEST,
-                "invalid_audio",
-                format!("could not decode uploaded audio part {}: {}", idx + 1, e),
-            )
-        })?;
-        samples.extend(part);
-    }
+    let recording_id =
+        recording_id.unwrap_or_else(|| format!("recording_{}", crate::remote::auth::uuid_simple()));
+    let upload_bytes = audio.len();
+    let job = state
+        .jobs
+        .create_or_get(&device.id, recording_id, filename.clone(), post_process);
+    let raw_path = job_audio_path(&state, &job.id, &filename);
 
-    if samples.is_empty() {
-        return Err(json_error(
-            StatusCode::BAD_REQUEST,
-            "invalid_audio",
-            "uploaded audio produced no samples",
-        ));
-    }
-
-    info!(
-        "Remote transcription from device {} ({} samples, preview={})",
-        device.id,
-        samples.len(),
-        preview
-    );
-
-    let raw_text = state
-        .transcription
-        .transcribe(samples.clone())
-        .map_err(|e| {
-            error!("Remote transcription failed: {}", e);
+    if !raw_path.exists() {
+        std::fs::write(&raw_path, audio).map_err(|e| {
             json_error(
                 StatusCode::INTERNAL_SERVER_ERROR,
-                "transcription_failed",
+                "save_upload",
                 e.to_string(),
             )
         })?;
-
-    let settings = get_settings(&state.app);
-
-    // Preview chunks are for live UI only. Never persist WAV/history for them.
-    if preview {
-        return Ok(Json(TranscriptionResponse {
-            id: "preview".to_string(),
-            raw_text: raw_text.clone(),
-            final_text: raw_text,
-            post_processed: false,
-            prompt_name: None,
-            model: Some(settings.selected_model.clone()),
-            duration_ms: ((samples.len() as u64) * 1000) / 16_000,
-        }));
+        spawn_job(state.clone(), job.id.clone(), raw_path, post_process);
     }
 
-    // Persist a 16 kHz WAV into the recordings dir for history retention.
-    let file_name = format!(
-        "handy-remote-{}-{}.wav",
-        chrono::Utc::now().timestamp(),
-        crate::remote::auth::uuid_simple()
+    info!(
+        "Remote job {} accepted: {} bytes (device={})",
+        job.id, upload_bytes, device.id
     );
-    let wav_path = state.history.recordings_dir().join(&file_name);
-    crate::audio_toolkit::save_wav_file(&wav_path, &samples)
-        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "save_wav", e.to_string()))?;
 
-    let should_post = post_process && settings.post_process_enabled;
-    let processed = process_transcription_output(&state.app, &raw_text, should_post).await;
+    let current = state.jobs.get(&job.id).unwrap_or(job);
+    Ok((StatusCode::ACCEPTED, Json(job_response(current))))
+}
 
-    let prompt_name = settings
-        .post_process_selected_prompt_id
-        .as_ref()
-        .and_then(|id| {
-            settings
-                .post_process_prompts
-                .iter()
-                .find(|p| &p.id == id)
-                .map(|p| p.name.clone())
-        });
+/// Resume work accepted before a desktop restart. It is deliberately called
+/// only after the listener is live, so an immediately reconnecting phone can
+/// query the same idempotent job id while recovery is underway.
+pub(crate) fn resume_pending_jobs(state: Arc<RemoteServerState>) {
+    for job in state.jobs.resumable() {
+        let raw_path = job_audio_path(&state, &job.id, &job.file_name);
+        if raw_path.exists() {
+            info!("Remote job {}: resuming after restart", job.id);
+            spawn_job(state.clone(), job.id, raw_path, job.post_process);
+        } else {
+            state.jobs.fail(
+                &job.id,
+                "recovery_missing_audio",
+                "the temporary audio was unavailable after restart",
+            );
+        }
+    }
+}
 
-    let entry = state
+pub async fn get_transcription_job(
+    State(state): State<Arc<RemoteServerState>>,
+    headers: HeaderMap,
+    Path(id): Path<String>,
+) -> Result<Json<TranscriptionJobResponse>, (StatusCode, Json<crate::remote::dto::ApiError>)> {
+    let device = require_auth(&state, &headers)?;
+    let job = state.jobs.get(&id).ok_or_else(|| {
+        json_error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            "transcription job was not found",
+        )
+    })?;
+    if job.device_id != device.id {
+        return Err(json_error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            "transcription job was not found",
+        ));
+    }
+    Ok(Json(job_response(job)))
+}
+
+fn job_response(job: crate::remote::jobs::RemoteJob) -> TranscriptionJobResponse {
+    TranscriptionJobResponse {
+        id: job.id,
+        status: job.status,
+        error_code: job.error_code,
+        error_message: job.error_message,
+        transcription: job.transcription,
+    }
+}
+
+fn job_audio_path(state: &RemoteServerState, job_id: &str, filename: &str) -> PathBuf {
+    let extension = std::path::Path::new(filename)
+        .extension()
+        .and_then(|value| value.to_str())
+        .filter(|value| value.len() <= 8 && value.chars().all(|c| c.is_ascii_alphanumeric()))
+        .unwrap_or("audio");
+    state
         .history
-        .save_entry(
+        .recordings_dir()
+        .join(format!("handy-remote-job-{job_id}.{extension}"))
+}
+
+fn spawn_job(state: Arc<RemoteServerState>, job_id: String, raw_path: PathBuf, post_process: bool) {
+    tauri::async_runtime::spawn(async move {
+        state.jobs.set_status(&job_id, RemoteJobStatus::Decoding);
+        let decode_started = std::time::Instant::now();
+        let decode_path = raw_path.clone();
+        let samples = match tokio::task::spawn_blocking(move || {
+            std::fs::read(decode_path).and_then(|bytes| {
+                crate::audio_toolkit::decode_audio_to_samples(bytes).map_err(std::io::Error::other)
+            })
+        })
+        .await
+        {
+            Ok(Ok(samples)) if !samples.is_empty() => samples,
+            Ok(Ok(_)) => {
+                state.jobs.fail(
+                    &job_id,
+                    "invalid_audio",
+                    "uploaded audio produced no samples",
+                );
+                return;
+            }
+            Ok(Err(error)) => {
+                state.jobs.fail(
+                    &job_id,
+                    "invalid_audio",
+                    format!("could not decode uploaded audio: {error}"),
+                );
+                return;
+            }
+            Err(error) => {
+                state.jobs.fail(&job_id, "job_failed", error.to_string());
+                return;
+            }
+        };
+        info!(
+            "Remote job {job_id}: decoded {} samples in {} ms",
+            samples.len(),
+            decode_started.elapsed().as_millis()
+        );
+
+        state
+            .jobs
+            .set_status(&job_id, RemoteJobStatus::Transcribing);
+        let manager = state.transcription.clone();
+        let transcription_samples = samples.clone();
+        let inference_started = std::time::Instant::now();
+        let raw_text =
+            match tokio::task::spawn_blocking(move || manager.transcribe(transcription_samples))
+                .await
+            {
+                Ok(Ok(text)) => text,
+                Ok(Err(error)) => {
+                    error!("Remote job {job_id} transcription failed: {error}");
+                    state.jobs.fail(
+                        &job_id,
+                        "transcription_failed",
+                        "desktop transcription failed",
+                    );
+                    return;
+                }
+                Err(error) => {
+                    state.jobs.fail(&job_id, "job_failed", error.to_string());
+                    return;
+                }
+            };
+        info!(
+            "Remote job {job_id}: inference completed in {} ms",
+            inference_started.elapsed().as_millis()
+        );
+
+        let settings = get_settings(&state.app);
+        let should_post = post_process && settings.post_process_enabled;
+        if should_post {
+            state
+                .jobs
+                .set_status(&job_id, RemoteJobStatus::PostProcessing);
+        }
+        let processed = process_transcription_output(&state.app, &raw_text, should_post).await;
+        let file_name = format!(
+            "handy-remote-{}-{}.wav",
+            chrono::Utc::now().timestamp(),
+            crate::remote::auth::uuid_simple()
+        );
+        let wav_path = state.history.recordings_dir().join(&file_name);
+        if let Err(error) = crate::audio_toolkit::save_wav_file(&wav_path, &samples) {
+            state.jobs.fail(&job_id, "save_wav", error.to_string());
+            return;
+        }
+        let prompt_name = selected_prompt_name(&settings);
+        let entry = match state.history.save_entry(
             file_name,
             processed.final_text.clone(),
             should_post,
             processed.post_processed_text.clone(),
             processed.post_process_prompt.clone(),
-        )
-        .map_err(|e| json_error(StatusCode::INTERNAL_SERVER_ERROR, "history", e.to_string()))?;
-
-    let response = TranscriptionResponse {
-        id: entry.id.to_string(),
-        raw_text: raw_text.clone(),
-        final_text: processed.final_text,
-        post_processed: should_post && processed.post_processed_text.is_some(),
-        prompt_name,
-        model: Some(settings.selected_model.clone()),
-        duration_ms: ((samples.len() as u64) * 1000) / 16_000,
-    };
-
-    TRANSCRIPTION_CACHE.insert(response.id.clone(), response.clone());
-
-    Ok(Json(response))
+        ) {
+            Ok(entry) => entry,
+            Err(error) => {
+                state.jobs.fail(&job_id, "history", error.to_string());
+                return;
+            }
+        };
+        let response = TranscriptionResponse {
+            id: entry.id.to_string(),
+            raw_text,
+            final_text: processed.final_text,
+            post_processed: should_post && processed.post_processed_text.is_some(),
+            prompt_name,
+            model: Some(settings.selected_model.clone()),
+            duration_ms: ((samples.len() as u64) * 1000) / 16_000,
+        };
+        TRANSCRIPTION_CACHE.insert(response.id.clone(), response.clone());
+        state.jobs.complete(&job_id, response);
+        let _ = std::fs::remove_file(raw_path);
+    });
 }
 
 /// Resolve the friendly name of the currently-selected post-processing prompt.

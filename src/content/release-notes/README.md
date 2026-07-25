@@ -1,5 +1,9 @@
 # Release Notes
 
+> These are bundled in-app "What's New" notes for local development builds.
+> They are not GitHub Release announcements and do not indicate a supported
+> distribution channel for this proof of concept.
+
 Add user-facing release notes as Markdown files named by app version:
 
 ```text
@@ -9,6 +13,10 @@ src/content/release-notes/0.8.4.md
 The update modal shows the highest bundled release note newer than the
 persisted `whats_new_last_seen_version` and not newer than the running app
 version.
+
+The version in a filename identifies the application build that can display the
+note. It does not imply that a matching GitHub Release, signed package, or
+public download exists.
 
 Keep these files focused on headline user-facing changes. Release notes support
 paragraphs, headings, lists, links, code, quotes, strikethrough, tables, task
